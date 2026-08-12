@@ -800,197 +800,157 @@ export default function DistrictCard({ district, data }) {
             link.click();
           }}
         >
-         <IconDownload color="green" stroke={2} />
+          <IconDownload color="green" stroke={2} />
         </ActionIcon>
         <div ref={usersModalRef}>
-        <Box
-          mb="md"
-          style={{
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
-          <Group align="end" gap="sm">
-            {rankedUsers
-              .slice(0, 3)
-              .reverse()
-              .map((user, index) => {
-                const topUsersCount = Math.min(rankedUsers.length, 3);
-
-                const realIndex = topUsersCount - 1 - index;
-
-                return (
-                  <Card
-                    key={user.name}
-                    radius="xl"
-                    p="xs"
-                    style={{
-                      width: 100,
-
-                      minHeight:
-                        realIndex === 0 ? 130 : realIndex === 1 ? 115 : 100,
-
-                      background:
-                        realIndex === 0
-                          ? "linear-gradient(135deg,#ffd43b,#fab005)"
-                          : realIndex === 1
-                            ? "linear-gradient(135deg,#dee2e6,#adb5bd)"
-                            : "linear-gradient(135deg,#ffa94d,#e67700)",
-
-                      textAlign: "center",
-
-                      display: "flex",
-
-                      flexDirection: "column",
-
-                      alignItems: "center",
-
-                      justifyContent: "center",
-
-                      overflow: "visible",
-                    }}
-                  >
-                    <Text size="30px">
-                      {realIndex === 0 ? "🥇" : realIndex === 1 ? "🥈" : "🥉"}
-                    </Text>
-
-                    <Text fw={800} size="xs" mt={8} ta="center">
-                      {user.name}
-                    </Text>
-
-                    <Badge mt={5} variant="filled" color="dark">
-                      {user.total}
-                    </Badge>
-                  </Card>
-                );
-              })}
-          </Group>
-        </Box>
-
-       <Stack gap="md">
-  <Table
-    striped
-    highlightOnHover
-    withTableBorder
-    dir="rtl"
-    fz="xs"
-  >
-
-    <Table.Thead>
-      <Table.Tr>
-
-        <Table.Th>
-          <Text size="xs" fw={700}>المستخدم</Text>
-        </Table.Th>
-
-        <Table.Th>
-          <Text size="xs" fw={700}>تم الحل</Text>
-        </Table.Th>
-
-        <Table.Th>
-          <Text size="xs" fw={700}>انتظار التحقق</Text>
-        </Table.Th>
-
-        <Table.Th>
-          <Text size="xs" fw={700}>الإجمالي</Text>
-        </Table.Th>
-
-      </Table.Tr>
-    </Table.Thead>
-
-
-    <Table.Tbody>
-
-      {rankedUsers.map((user)=>(
-
-        <Table.Tr key={user.name}>
-
-          <Table.Td
+          <Box
+            mb="md"
             style={{
-              padding:"6px 8px"
+              display: "flex",
+              justifyContent: "center",
             }}
           >
+            <Group align="end" gap="sm">
+              {rankedUsers
+                .slice(0, 3)
+                .reverse()
+                .map((user, index) => {
+                  const topUsersCount = Math.min(rankedUsers.length, 3);
 
-            <Group gap={5} wrap="nowrap">
+                  const realIndex = topUsersCount - 1 - index;
 
-              <Avatar
-                size={22}
-                color="blue"
-                variant="light"
-              >
-                {user.name.charAt(0)}
-              </Avatar>
+                  return (
+                    <Card
+                      key={user.name}
+                      radius="xl"
+                      p="xs"
+                      style={{
+                        width: 100,
 
+                        minHeight:
+                          realIndex === 0 ? 130 : realIndex === 1 ? 115 : 100,
 
-              <Text
-                fw={700}
-                size="xs"
-                truncate
-              >
-                {user.name}
-              </Text>
+                        background:
+                          realIndex === 0
+                            ? "linear-gradient(135deg,#ffd43b,#fab005)"
+                            : realIndex === 1
+                              ? "linear-gradient(135deg,#dee2e6,#adb5bd)"
+                              : "linear-gradient(135deg,#ffa94d,#e67700)",
 
+                        textAlign: "center",
 
+                        display: "flex",
+
+                        flexDirection: "column",
+
+                        alignItems: "center",
+
+                        justifyContent: "center",
+
+                        overflow: "visible",
+                      }}
+                    >
+                      <Text size="30px">
+                        {realIndex === 0 ? "🥇" : realIndex === 1 ? "🥈" : "🥉"}
+                      </Text>
+
+                      <Text fw={800} size="xs" mt={8} ta="center">
+                        {user.name}
+                      </Text>
+
+                      <Badge mt={5} variant="filled" color="dark">
+                        {user.total}
+                      </Badge>
+                    </Card>
+                  );
+                })}
             </Group>
+          </Box>
 
-          </Table.Td>
+          <Stack gap="md">
+            <Table striped highlightOnHover withTableBorder dir="rtl" fz="xs">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>
+                    <Text size="xs" fw={700}>
+                      المستخدم
+                    </Text>
+                  </Table.Th>
 
+                  <Table.Th>
+                    <Text size="xs" fw={700}>
+                      تم الحل
+                    </Text>
+                  </Table.Th>
 
-          <Table.Td
-            style={{
-              padding:"6px 8px"
-            }}
-          >
-            <Badge
-              size="xs"
-              color="green"
-              variant="light"
-            >
-              {user.resolved}
-            </Badge>
-          </Table.Td>
+                  <Table.Th>
+                    <Text size="xs" fw={700}>
+                      انتظار التحقق
+                    </Text>
+                  </Table.Th>
 
+                  <Table.Th>
+                    <Text size="xs" fw={700}>
+                      الإجمالي
+                    </Text>
+                  </Table.Th>
+                </Table.Tr>
+              </Table.Thead>
 
+              <Table.Tbody>
+                {rankedUsers.map((user) => (
+                  <Table.Tr key={user.name}>
+                    <Table.Td
+                      style={{
+                        padding: "6px 8px",
+                      }}
+                    >
+                      <Group gap={5} wrap="nowrap">
+                        <Avatar size={22} color="blue" variant="light">
+                          {user.name.charAt(0)}
+                        </Avatar>
 
-          <Table.Td
-            style={{
-              padding:"6px 8px"
-            }}
-          >
-            <Badge
-              size="xs"
-              color="blue"
-              variant="light"
-            >
-              {user.field}
-            </Badge>
-          </Table.Td>
+                        <Text fw={700} size="xs" truncate>
+                          {user.name}
+                        </Text>
+                      </Group>
+                    </Table.Td>
 
+                    <Table.Td
+                      style={{
+                        padding: "6px 8px",
+                      }}
+                    >
+                      <Badge size="xs" color="green" variant="light">
+                        {user.resolved}
+                      </Badge>
+                    </Table.Td>
 
+                    <Table.Td
+                      style={{
+                        padding: "6px 8px",
+                      }}
+                    >
+                      <Badge size="xs" color="blue" variant="light">
+                        {user.field}
+                      </Badge>
+                    </Table.Td>
 
-          <Table.Td
-            style={{
-              padding:"6px 8px"
-            }}
-          >
-            <Badge
-              size="xs"
-              color="gray"
-              variant="light"
-            >
-              {user.total}
-            </Badge>
-          </Table.Td>
-
-
-        </Table.Tr>
-
-      ))}
-
-    </Table.Tbody>
-
-  </Table>
-</Stack></div>
+                    <Table.Td
+                      style={{
+                        padding: "6px 8px",
+                      }}
+                    >
+                      <Badge size="xs" color="gray" variant="light">
+                        {user.total}
+                      </Badge>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Stack>
+        </div>
       </Modal>
 
       <FailureListModal

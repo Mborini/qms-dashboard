@@ -1,16 +1,8 @@
 "use client";
 
-import {
-  Modal,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { Modal, Stack, Text } from "@mantine/core";
 
-export default function ActivitiesModal({
-  opened,
-  onClose,
-  activities,
-}) {
+export default function ActivitiesModal({ opened, onClose, activities }) {
   return (
     <Modal
       opened={opened}
@@ -32,38 +24,31 @@ export default function ActivitiesModal({
             }}
           >
             <Text>
-              <b>Activity Type:</b>{" "}
-              {activity.activityType}
+              <b>Activity Type:</b> {activity.activityType}
             </Text>
 
             <Text>
-              <b>User Name:</b>{" "}
-              {activity.userName}
+              <b>User Name:</b> {activity.userName}
             </Text>
 
             <Text>
-              <b>Old Value:</b>{" "}
-              {activity.oldValue || "-"}
+              <b>Old Value:</b> {activity.oldValue || "-"}
             </Text>
 
             <Text>
-              <b>New Value:</b>{" "}
-              {activity.newValue || "-"}
+              <b>New Value:</b> {activity.newValue || "-"}
             </Text>
 
             <Text>
-              <b>Staff Party:</b>{" "}
-              {activity.staffParty || "-"}
+              <b>Staff Party:</b> {activity.staffParty || "-"}
             </Text>
 
             <Text>
-              <b>Is AVTR Staff:</b>{" "}
-              {activity.isAvtrStaff ? "Yes" : "No"}
+              <b>Is AVTR Staff:</b> {activity.isAvtrStaff ? "Yes" : "No"}
             </Text>
 
             <Text>
-              <b>Comments:</b>{" "}
-              {activity.commentsAr || "-"}
+              <b>Comments:</b> {activity.commentsAr || "-"}
             </Text>
           </Stack>
         ))
