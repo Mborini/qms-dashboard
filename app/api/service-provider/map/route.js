@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 export async function GET(request) {
   try {
-    const token =
-      process.env.AVTR_TOKEN;
+    const token = process.env.AVTR_TOKEN;
+     
 
     if (!token) {
       return NextResponse.json(
