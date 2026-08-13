@@ -1,24 +1,12 @@
-
 "use client";
 
-import {
-  MapContainer,
-  TileLayer,
-  CircleMarker,
-  useMap,
-} from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, useMap } from "react-leaflet";
 
 import { IconTrash } from "@tabler/icons-react";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import {
-  renderToStaticMarkup,
-} from "react-dom/server";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import L from "leaflet";
 
@@ -35,7 +23,6 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
 
 import { Text } from "@mantine/core";
-
 
 // =====================================================
 // STATUS CONFIG
@@ -85,7 +72,6 @@ const STATUS_CONFIG = {
   },
 };
 
-
 // =====================================================
 // DEFAULT STATUS
 // =====================================================
@@ -95,7 +81,6 @@ const DEFAULT_STATUS = {
   color: "#228be6",
   icon: FaTriangleExclamation,
 };
-
 
 // =====================================================
 // GEOJSON LAYERS
@@ -159,23 +144,18 @@ const GEOJSON_LAYERS = [
   },
 ];
 
-
 // =====================================================
 // GEOJSON CACHE
 // =====================================================
 
 const geoJsonCache = new Map();
 
-
 // =====================================================
 // ESCAPE HTML
 // =====================================================
 
 function escapeHtml(value) {
-  if (
-    value === null ||
-    value === undefined
-  ) {
+  if (value === null || value === undefined) {
     return "";
   }
 
@@ -187,17 +167,13 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-
 // =====================================================
 // SAFE VALUE FOR INLINE HTML EVENT
 // =====================================================
 
 function encodePopupValue(value) {
-  return encodeURIComponent(
-    String(value ?? "")
-  ).replace(/'/g, "%27");
+  return encodeURIComponent(String(value ?? "")).replace(/'/g, "%27");
 }
-
 
 // =====================================================
 // FORMAT DATE
@@ -209,48 +185,36 @@ function formatDate(value) {
   }
 
   try {
-    return new Date(value).toLocaleString(
-      "ar-JO"
-    );
+    return new Date(value).toLocaleString("ar-JO");
   } catch {
     return String(value);
   }
 }
-
 
 // =====================================================
 // COPY TEXT
 // =====================================================
 
 function copyText(text, button) {
-  if (
-    text === null ||
-    text === undefined ||
-    text === ""
-  ) {
+  if (text === null || text === undefined || text === "") {
     return;
   }
 
-  const originalText =
-    button?.innerHTML;
+  const originalText = button?.innerHTML;
 
   const success = () => {
     if (!button) {
       return;
     }
 
-    button.innerHTML =
-      "✓ تم النسخ";
+    button.innerHTML = "✓ تم النسخ";
 
-    button.style.opacity =
-      "0.75";
+    button.style.opacity = "0.75";
 
     setTimeout(() => {
-      button.innerHTML =
-        originalText;
+      button.innerHTML = originalText;
 
-      button.style.opacity =
-        "1";
+      button.style.opacity = "1";
     }, 1500);
   };
 
@@ -264,98 +228,61 @@ function copyText(text, button) {
       .writeText(String(text))
       .then(success)
       .catch(() => {
-        fallbackCopy(
-          text,
-          success
-        );
+        fallbackCopy(text, success);
       });
 
     return;
   }
 
-  fallbackCopy(
-    text,
-    success
-  );
+  fallbackCopy(text, success);
 }
-
 
 // =====================================================
 // FALLBACK COPY
 // =====================================================
 
-function fallbackCopy(
-  text,
-  callback
-) {
-  if (
-    typeof document ===
-    "undefined"
-  ) {
+function fallbackCopy(text, callback) {
+  if (typeof document === "undefined") {
     return;
   }
 
-  const textarea =
-    document.createElement(
-      "textarea"
-    );
+  const textarea = document.createElement("textarea");
 
-  textarea.value =
-    String(text);
+  textarea.value = String(text);
 
-  textarea.style.position =
-    "fixed";
+  textarea.style.position = "fixed";
 
-  textarea.style.left =
-    "-9999px";
+  textarea.style.left = "-9999px";
 
-  textarea.style.top =
-    "0";
+  textarea.style.top = "0";
 
-  textarea.style.opacity =
-    "0";
+  textarea.style.opacity = "0";
 
-  textarea.style.pointerEvents =
-    "none";
+  textarea.style.pointerEvents = "none";
 
-  document.body.appendChild(
-    textarea
-  );
+  document.body.appendChild(textarea);
 
   textarea.focus();
   textarea.select();
 
   try {
-    document.execCommand(
-      "copy"
-    );
+    document.execCommand("copy");
 
     callback?.();
   } catch (error) {
-    console.error(
-      "Copy failed:",
-      error
-    );
+    console.error("Copy failed:", error);
   }
 
-  document.body.removeChild(
-    textarea
-  );
+  document.body.removeChild(textarea);
 }
-
 
 // =====================================================
 // EXPOSE COPY FUNCTION
 // =====================================================
 
-if (
-  typeof window !==
-  "undefined"
-) {
-  window.copyFailureText =
-    copyText;
+if (typeof window !== "undefined") {
+  window.copyFailureText = copyText;
 }
-
 
 // =====================================================
 // COPY BUTTON HTML
@@ -367,16 +294,11 @@ function createCopyButton({
   style = "",
   title = "اضغط للنسخ",
 }) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
+  if (value === null || value === undefined || value === "") {
     return "";
   }
 
-  const encodedValue =
-    encodePopupValue(value);
+  const encodedValue = encodePopupValue(value);
 
   return `
     <button
@@ -422,28 +344,16 @@ function createCopyButton({
   `;
 }
 
-
 // =====================================================
 // INFO ROW
 // =====================================================
 
-function createInfoRow(
-  label,
-  value,
-  options = {}
-) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
+function createInfoRow(label, value, options = {}) {
+  if (value === null || value === undefined || value === "") {
     return "";
   }
 
-  const {
-    valueStyle = "",
-    border = true,
-  } = options;
+  const { valueStyle = "", border = true } = options;
 
   return `
     <div
@@ -505,926 +415,623 @@ function createInfoRow(
   `;
 }
 
-
 // =====================================================
 // FAILURE POPUP
 // =====================================================
 
 function createFailurePopup(item) {
-  const config =
-    STATUS_CONFIG[item?.status] ||
-    DEFAULT_STATUS;
+  const config = STATUS_CONFIG[item?.status] || DEFAULT_STATUS;
 
-  const latitude =
-    Number(item?.latitude);
+  const latitude = Number(item?.latitude);
 
-  const longitude =
-    Number(item?.longitude);
+  const longitude = Number(item?.longitude);
 
   const hasCoordinates =
-    Number.isFinite(latitude) &&
-    Number.isFinite(longitude);
+    Number.isFinite(latitude) && Number.isFinite(longitude);
 
-  const coordinates =
-    hasCoordinates
-      ? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-      : "";
+  const coordinates = hasCoordinates
+    ? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+    : "";
 
-  const googleMapsUrl =
-    hasCoordinates
-      ? `https://www.google.com/maps?q=${latitude},${longitude}`
-      : "";
+  const googleMapsUrl = hasCoordinates
+    ? `https://www.google.com/maps?q=${latitude},${longitude}`
+    : "";
 
-  const statusIcon =
-    config.icon
-      ? renderToStaticMarkup(
-          config.icon({
-            size: 17,
-          })
-        )
-      : "";
+  const statusIcon = config.icon
+    ? renderToStaticMarkup(
+        config.icon({
+          size: 17,
+        }),
+      )
+    : "";
 
   // ===================================================
   // ALL DETAILS
   // ===================================================
 
   const allDetails = [
-    item?.id != null
-      ? `رقم المخالفة: ${item.id}`
-      : null,
+    item?.id != null ? `رقم المخالفة: ${item.id}` : null,
 
-    item?.kpiNameAr
-      ? `KPI: ${item.kpiNameAr}`
-      : null,
+    item?.kpiNameAr ? `KPI: ${item.kpiNameAr}` : null,
 
-    item?.districtName
-      ? `المنطقة: ${item.districtName}`
-      : null,
+    item?.districtName ? `المنطقة: ${item.districtName}` : null,
 
-    item?.blockName
-      ? `الحي: ${item.blockName}`
-      : null,
+    item?.blockName ? `الحي: ${item.blockName}` : null,
 
     `الحالة: ${config.label}`,
 
-    item?.createdAt
-      ? `التاريخ: ${formatDate(
-          item.createdAt
-        )}`
-      : null,
+    item?.createdAt ? `التاريخ: ${formatDate(item.createdAt)}` : null,
 
-    item?.username
-      ? `المستخدم: ${item.username}`
-      : null,
+    item?.username ? `المستخدم: ${item.username}` : null,
 
-    hasCoordinates
-      ? `الإحداثيات: ${coordinates}`
-      : null,
+    hasCoordinates ? `الإحداثيات: ${coordinates}` : null,
 
-    item?.description
-      ? `الوصف: ${item.description}`
-      : null,
+    item?.description ? `الوصف: ${item.description}` : null,
   ]
     .filter(Boolean)
     .join("\n");
 
+  const encodedAllDetails = encodePopupValue(allDetails);
 
-  const encodedAllDetails =
-    encodePopupValue(
-      allDetails
-    );
+ return `
+<div
+  dir="rtl"
+  style="
+    font-family: Arial, Tahoma, sans-serif;
+    width: 100%;
+    min-width: 270px;
+    max-width: 330px;
+    color: #212529;
+    background: #ffffff;
+    overflow: hidden;
+    border-radius: 14px;
+  "
+>
 
+  <!-- ================= HEADER ================= -->
 
-  return `
+  <div
+    style="
+      padding: 11px 12px;
+      background:
+        linear-gradient(
+          135deg,
+          ${config.color},
+          ${config.color}dd
+        );
+      color: #ffffff;
+    "
+  >
+
     <div
-      dir="rtl"
-
       style="
-        font-family:
-          Arial,
-          Tahoma,
-          sans-serif;
-
-        width: 100%;
-
-        min-width: 310px;
-
-        max-width: 390px;
-
-        color: #212529;
-
-        background: #ffffff;
-
-        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 7px;
       "
     >
 
-      <!-- ========================================= -->
-      <!-- HEADER -->
-      <!-- ========================================= -->
-
       <div
         style="
-          position: relative;
-
-          padding:
-            16px 16px 14px;
-
-          background:
-            linear-gradient(
-              135deg,
-              ${config.color},
-              ${config.color}dd
-            );
-
-          color: #ffffff;
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          min-width: 0;
         "
       >
 
         <div
           style="
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
             display: flex;
-
             align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.22);
+            flex-shrink: 0;
+          "
+        >
+          ${statusIcon}
+        </div>
 
-            justify-content:
-              space-between;
-
-            gap: 10px;
+        <div
+          style="
+            min-width: 0;
           "
         >
 
           <div
             style="
-              display: flex;
-
-              align-items: center;
-
-              gap: 9px;
+              font-size: 13px;
+              font-weight: 800;
+              line-height: 1.3;
             "
           >
-
-            <div
-              style="
-                width: 38px;
-
-                height: 38px;
-
-                border-radius: 11px;
-
-                display: flex;
-
-                align-items: center;
-
-                justify-content: center;
-
-                background:
-                  rgba(
-                    255,
-                    255,
-                    255,
-                    0.18
-                  );
-
-                border:
-                  1px solid
-                  rgba(
-                    255,
-                    255,
-                    255,
-                    0.25
-                  );
-
-                flex-shrink: 0;
-              "
-            >
-              ${statusIcon}
-            </div>
-
-
-            <div>
-
-              <div
-                style="
-                  font-size: 16px;
-
-                  font-weight: 800;
-
-                  line-height: 1.3;
-                "
-              >
-                تفاصيل المخالفة
-              </div>
-
-
-              ${
-                item?.id != null
-                  ? `
-                    <div
-                      style="
-                        margin-top: 3px;
-
-                        font-size: 11px;
-
-                        opacity: 0.85;
-                      "
-                    >
-                      #${escapeHtml(item.id)}
-                    </div>
-                  `
-                  : ""
-              }
-
-            </div>
-
+            تفاصيل المخالفة
           </div>
 
-
-          <div
-            style="
-              padding:
-                5px 9px;
-
-              border-radius:
-                20px;
-
-              background:
-                rgba(
-                  255,
-                  255,
-                  255,
-                  0.16
-                );
-
-              border:
-                1px solid
-                rgba(
-                  255,
-                  255,
-                  255,
-                  0.22
-                );
-
-              font-size: 11px;
-
-              font-weight: 700;
-
-              white-space:
-                nowrap;
-            "
-          >
-            ${escapeHtml(
-              config.label
-            )}
-          </div>
+          ${
+            item?.id != null
+              ? `
+                <div
+                  style="
+                    margin-top: 2px;
+                    font-size: 9px;
+                    opacity: 0.8;
+                  "
+                >
+                  #${escapeHtml(item.id)}
+                </div>
+              `
+              : ""
+          }
 
         </div>
 
       </div>
 
+      <div
+        style="
+          padding: 4px 7px;
+          border-radius: 14px;
+          background: rgba(255,255,255,0.14);
+          border: 1px solid rgba(255,255,255,0.2);
+          font-size: 9px;
+          font-weight: 700;
+          white-space: nowrap;
+          flex-shrink: 0;
+        "
+      >
+        ${escapeHtml(config.label)}
+      </div>
 
-      <!-- ========================================= -->
-      <!-- CONTENT -->
-      <!-- ========================================= -->
+    </div>
+
+  </div>
+
+
+  <!-- ================= CONTENT ================= -->
+
+  <div
+    style="
+      padding: 10px;
+      background: #ffffff;
+    "
+  >
+
+    <!-- ================= KPI ================= -->
+
+    ${
+      item?.kpiNameAr
+        ? `
+          <div
+            style="
+              padding: 8px 9px;
+              border: 1px solid #edf0f2;
+              border-radius: 9px;
+              background: #f8f9fa;
+              margin-bottom: 6px;
+            "
+          >
+
+            <div
+              style="
+                font-size: 9px;
+                color: #868e96;
+                font-weight: 700;
+                margin-bottom: 2px;
+              "
+            >
+              KPI
+            </div>
+
+            ${createCopyButton({
+              value: item.kpiNameAr,
+
+              displayValue: item.kpiNameAr,
+
+              style: `
+                width: 100%;
+                padding: 0;
+                font-size: 11px;
+                line-height: 1.45;
+                font-weight: 700;
+                text-align: right;
+              `,
+            })}
+
+          </div>
+        `
+        : ""
+    }
+
+
+    <!-- ================= BASIC INFO ================= -->
+
+    <div
+      style="
+        display: flex;
+        flex-direction: column;
+      "
+    >
+
+      ${
+        item?.id != null
+          ? createInfoRow(
+              "رقم المخالفة",
+              String(item.id),
+            )
+          : ""
+      }
+
+      ${
+        item?.districtName
+          ? createInfoRow(
+              "المنطقة",
+              item.districtName,
+            )
+          : ""
+      }
+
+      ${
+        item?.blockName
+          ? createInfoRow(
+              "الحي",
+              item.blockName,
+            )
+          : ""
+      }
+
+      ${
+        item?.username
+          ? createInfoRow(
+              "المستخدم",
+              item.username,
+            )
+          : ""
+      }
+
+      ${
+        item?.createdAt
+          ? createInfoRow(
+              "التاريخ",
+              formatDate(item.createdAt),
+              {
+                valueStyle: `
+                  font-size: 10px;
+                `,
+              },
+            )
+          : ""
+      }
+
+      <!-- STATUS -->
 
       <div
         style="
-          padding: 14px;
-
-          background:
-            #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 6px 8px;
+          border-bottom: 1px solid #f1f3f5;
         "
       >
 
-
-        <!-- ======================================= -->
-        <!-- KPI -->
-        <!-- ======================================= -->
-
-        ${
-          item?.kpiNameAr
-            ? `
-              <div
-                style="
-                  padding:
-                    10px 11px;
-
-                  border:
-                    1px solid #edf0f2;
-
-                  border-radius:
-                    10px;
-
-                  background:
-                    #f8f9fa;
-
-                  margin-bottom:
-                    8px;
-                "
-              >
-
-                <div
-                  style="
-                    font-size: 10px;
-
-                    color: #868e96;
-
-                    font-weight: 700;
-
-                    margin-bottom: 4px;
-                  "
-                >
-                  KPI
-                </div>
-
-                ${createCopyButton({
-                  value:
-                    item.kpiNameAr,
-
-                  displayValue:
-                    item.kpiNameAr,
-
-                  style: `
-                    width: 100%;
-
-                    padding: 0;
-
-                    font-size: 13px;
-
-                    line-height: 1.5;
-
-                    font-weight: 700;
-
-                    text-align: right;
-                  `,
-                })}
-
-              </div>
-            `
-            : ""
-        }
-
-
-        <!-- ======================================= -->
-        <!-- BASIC INFO -->
-        <!-- ======================================= -->
-
-        <div
+        <span
           style="
-            display: flex;
-
-            flex-direction:
-              column;
-
-            gap: 0;
+            color: #868e96;
+            font-size: 10px;
+            font-weight: 700;
           "
         >
+          الحالة
+        </span>
 
-          ${
-            item?.id != null
-              ? createInfoRow(
-                  "رقم المخالفة",
-                  String(item.id)
-                )
-              : ""
-          }
-
-
-          ${
-            item?.districtName
-              ? createInfoRow(
-                  "المنطقة",
-                  item.districtName
-                )
-              : ""
-          }
-
-
-          ${
-            item?.blockName
-              ? createInfoRow(
-                  "الحي",
-                  item.blockName
-                )
-              : ""
-          }
-
-
-          ${
-            item?.username
-              ? createInfoRow(
-                  "المستخدم",
-                  item.username
-                )
-              : ""
-          }
-
-
-          ${
-            item?.createdAt
-              ? createInfoRow(
-                  "التاريخ",
-                  formatDate(
-                    item.createdAt
-                  ),
-                  {
-                    valueStyle: `
-                      font-size: 11px;
-                    `,
-                  }
-                )
-              : ""
-          }
-
-
-          ${`
-            <div
-              style="
-                display: flex;
-
-                align-items: center;
-
-                justify-content:
-                  space-between;
-
-                gap: 12px;
-
-                padding:
-                  8px 10px;
-
-                border-bottom:
-                  1px solid #f1f3f5;
-              "
-            >
-
-              <span
-                style="
-                  color: #868e96;
-
-                  font-size: 11px;
-
-                  font-weight: 700;
-                "
-              >
-                الحالة
-              </span>
-
-              <span
-                style="
-                  color:
-                    ${config.color};
-
-                  font-size: 12px;
-
-                  font-weight: 800;
-                "
-              >
-                ${escapeHtml(
-                  config.label
-                )}
-              </span>
-
-            </div>
-          `}
-
-        </div>
-
-
-        <!-- ======================================= -->
-        <!-- COORDINATES -->
-        <!-- ======================================= -->
-
-        ${
-          hasCoordinates
-            ? `
-              <div
-                style="
-                  margin-top: 13px;
-
-                  padding: 12px;
-
-                  border-radius:
-                    12px;
-
-                  background:
-                    linear-gradient(
-                      135deg,
-                      #f8f9fa,
-                      #f1f3f5
-                    );
-
-                  border:
-                    1px solid #e9ecef;
-                "
-              >
-
-                <div
-                  style="
-                    display: flex;
-
-                    align-items: center;
-
-                    justify-content:
-                      space-between;
-
-                    margin-bottom: 8px;
-
-                    gap: 8px;
-                  "
-                >
-
-                  <div
-                    style="
-                      display: flex;
-
-                      align-items: center;
-
-                      gap: 6px;
-
-                      font-size: 12px;
-
-                      font-weight: 800;
-
-                      color: #343a40;
-                    "
-                  >
-                    📍 الإحداثيات
-                  </div>
-
-
-                  <span
-                    style="
-                      font-size: 9px;
-
-                      color: #868e96;
-
-                      direction: ltr;
-                    "
-                  >
-                    Latitude / Longitude
-                  </span>
-
-                </div>
-
-
-                ${createCopyButton({
-                  value: coordinates,
-
-                  displayValue:
-                    coordinates,
-
-                  style: `
-                    width: 100%;
-
-                    display: block;
-
-                    border:
-                      1px solid #dee2e6;
-
-                    background:
-                      #ffffff;
-
-                    border-radius:
-                      8px;
-
-                    padding:
-                      9px 10px;
-
-                    color: #212529;
-
-                    font-family:
-                      Consolas,
-                      monospace;
-
-                    font-size: 13px;
-
-                    font-weight: 700;
-
-                    text-align:
-                      center;
-
-                    direction:
-                      ltr;
-
-                    box-sizing:
-                      border-box;
-                  `,
-
-                  title:
-                    "اضغط لنسخ الإحداثيات",
-                })}
-
-
-                <a
-                  href="${googleMapsUrl}"
-
-                  target="_blank"
-
-                  rel="
-                    noopener
-                    noreferrer
-                  "
-
-                  style="
-                    display: flex;
-
-                    align-items:
-                      center;
-
-                    justify-content:
-                      center;
-
-                    gap: 6px;
-
-                    margin-top:
-                      8px;
-
-                    padding: 8px;
-
-                    border-radius:
-                      8px;
-
-                    background:
-                      ${config.color};
-
-                    color: #ffffff;
-
-                    text-decoration:
-                      none;
-
-                    font-size: 11px;
-
-                    font-weight: 800;
-                  "
-                >
-                  ↗ فتح الموقع على الخريطة
-                </a>
-
-              </div>
-            `
-            : ""
-        }
-
-
-        <!-- ======================================= -->
-        <!-- DESCRIPTION -->
-        <!-- ======================================= -->
-
-        ${
-          item?.description
-            ? `
-              <div
-                style="
-                  margin-top: 13px;
-
-                  padding:
-                    11px 12px;
-
-                  border-radius:
-                    10px;
-
-                  background:
-                    #ffffff;
-
-                  border:
-                    1px solid #e9ecef;
-                "
-              >
-
-                <div
-                  style="
-                    font-size: 10px;
-
-                    color: #868e96;
-
-                    font-weight: 800;
-
-                    margin-bottom:
-                      5px;
-                  "
-                >
-                  الوصف
-                </div>
-
-
-                ${createCopyButton({
-                  value:
-                    item.description,
-
-                  displayValue:
-                    item.description,
-
-                  style: `
-                    width: 100%;
-
-                    padding: 0;
-
-                    color: #343a40;
-
-                    font-size: 12px;
-
-                    line-height: 1.7;
-
-                    font-weight: 400;
-
-                    white-space:
-                      normal;
-
-                    word-break:
-                      break-word;
-
-                    text-align:
-                      right;
-                  `,
-
-                  title:
-                    "اضغط لنسخ الوصف",
-                })}
-
-              </div>
-            `
-            : ""
-        }
-
-
-        <!-- ======================================= -->
-        <!-- COPY ALL -->
-        <!-- ======================================= -->
-
-        <button
-          type="button"
-
-          onclick="
-            window.copyFailureText(
-              decodeURIComponent(
-                '${encodedAllDetails}'
-              ),
-              this
-            )
-          "
-
+        <span
           style="
-            width: 100%;
-
-            margin-top: 14px;
-
-            padding:
-              10px 12px;
-
-            border: 0;
-
-            border-radius:
-              9px;
-
-            background:
-              #212529;
-
-            color: #ffffff;
-
-            cursor: pointer;
-
-            font-size: 12px;
-
+            color: ${config.color};
+            font-size: 10px;
             font-weight: 800;
-
-            font-family:
-              Arial,
-              Tahoma,
-              sans-serif;
-
-            transition:
-              opacity 0.15s ease;
           "
         >
-          📋 نسخ جميع التفاصيل
-        </button>
-
+          ${escapeHtml(config.label)}
+        </span>
 
       </div>
 
     </div>
-  `;
-}
 
+
+    <!-- ================= COORDINATES ================= -->
+
+    ${
+      hasCoordinates
+        ? `
+          <div
+            style="
+              margin-top: 9px;
+              padding: 9px;
+              border-radius: 10px;
+              background:
+                linear-gradient(
+                  135deg,
+                  #f8f9fa,
+                  #f1f3f5
+                );
+              border: 1px solid #e9ecef;
+            "
+          >
+
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 6px;
+                gap: 6px;
+              "
+            >
+
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 5px;
+                  font-size: 10px;
+                  font-weight: 800;
+                  color: #343a40;
+                "
+              >
+                📍 الإحداثيات
+              </div>
+
+              <span
+                style="
+                  font-size: 8px;
+                  color: #868e96;
+                  direction: ltr;
+                "
+              >
+                Lat / Lng
+              </span>
+
+            </div>
+
+            ${createCopyButton({
+              value: coordinates,
+
+              displayValue: coordinates,
+
+              style: `
+                width: 100%;
+                display: block;
+                border: 1px solid #dee2e6;
+                background: #ffffff;
+                border-radius: 7px;
+                padding: 7px 8px;
+                color: #212529;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+                font-weight: 700;
+                text-align: center;
+                direction: ltr;
+                box-sizing: border-box;
+              `,
+
+              title: "اضغط لنسخ الإحداثيات",
+            })}
+
+            <a
+              href="${googleMapsUrl}"
+              target="_blank"
+              rel="noopener noreferrer"
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 5px;
+                margin-top: 6px;
+                padding: 7px;
+                border-radius: 7px;
+                background: ${config.color};
+                color: #ffffff;
+                text-decoration: none;
+                font-size: 10px;
+                font-weight: 800;
+              "
+            >
+              ↗ فتح الموقع على الخريطة
+            </a>
+
+          </div>
+        `
+        : ""
+    }
+
+
+    <!-- ================= DESCRIPTION ================= -->
+
+    ${
+      item?.description
+        ? `
+          <div
+            style="
+              margin-top: 9px;
+              padding: 8px 9px;
+              border-radius: 9px;
+              background: #ffffff;
+              border: 1px solid #e9ecef;
+            "
+          >
+
+            <div
+              style="
+                font-size: 9px;
+                color: #868e96;
+                font-weight: 800;
+                margin-bottom: 3px;
+              "
+            >
+              الوصف
+            </div>
+
+            ${createCopyButton({
+              value: item.description,
+
+              displayValue: item.description,
+
+              style: `
+                width: 100%;
+                padding: 0;
+                color: #343a40;
+                font-size: 10px;
+                line-height: 1.55;
+                font-weight: 400;
+                white-space: normal;
+                word-break: break-word;
+                text-align: right;
+              `,
+
+              title: "اضغط لنسخ الوصف",
+            })}
+
+          </div>
+        `
+        : ""
+    }
+
+
+    <!-- ================= COPY ALL ================= -->
+
+    <button
+      type="button"
+      onclick="
+        window.copyFailureText(
+          decodeURIComponent(
+            '${encodedAllDetails}'
+          ),
+          this
+        )
+      "
+      style="
+        width: 100%;
+        margin-top: 9px;
+        padding: 8px 10px;
+        border: 0;
+        border-radius: 8px;
+        background: #f1f3f5;
+        color: #495057;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 800;
+        font-family: Arial, Tahoma, sans-serif;
+        transition: all 0.15s ease;
+      "
+    >
+      📋 نسخ التفاصيل
+    </button>
+
+  </div>
+
+</div>
+`;
+}
 
 // =====================================================
 // FAILURE MARKER
 // =====================================================
 
-function FailureMarker({
-  item,
-}) {
+function FailureMarker({ item }) {
   const map = useMap();
 
-  const latitude =
-    Number(item?.latitude);
+  const latitude = Number(item?.latitude);
 
-  const longitude =
-    Number(item?.longitude);
+  const longitude = Number(item?.longitude);
 
-  const config =
-    STATUS_CONFIG[item?.status] ||
-    DEFAULT_STATUS;
+  const config = STATUS_CONFIG[item?.status] || DEFAULT_STATUS;
 
-  if (
-    !Number.isFinite(
-      latitude
-    ) ||
-    !Number.isFinite(
-      longitude
-    )
-  ) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return null;
   }
 
   return (
     <CircleMarker
-      center={[
-        latitude,
-        longitude,
-      ]}
+      center={[latitude, longitude]}
       radius={7}
       pathOptions={{
         color: "#ffffff",
 
         weight: 2,
 
-        fillColor:
-          config.color,
+        fillColor: config.color,
 
         fillOpacity: 0.95,
       }}
-      eventHandlers={{
-        click: () => {
-          L.popup({
-            maxWidth: 430,
+   eventHandlers={{
+  click: () => {
+    const POPUP_OFFSET_Y = -250; // + يرفع | - ينزل
 
-            minWidth: 330,
+    const popup = L.popup({
+      maxWidth: 430,
+      minWidth: 330,
+      closeButton: true,
+      autoPan: false,
+      className: "failure-details-popup",
+    })
+      .setLatLng([latitude, longitude])
+      .setContent(createFailurePopup(item));
 
-            closeButton: true,
+    popup.openOn(map);
 
-            autoPan: true,
+    setTimeout(() => {
+      map.panTo([latitude, longitude], {
+        animate: true,
+        duration: 1.2,
+        easeLinearity: 0.08,
+      });
 
-            autoPanPadding:
-              [20, 20],
-
-            className:
-              "failure-details-popup",
-          })
-            .setLatLng([
-              latitude,
-              longitude,
-            ])
-            .setContent(
-              createFailurePopup(
-                item
-              )
-            )
-            .openOn(map);
-        },
-      }}
+      setTimeout(() => {
+        map.panBy([0, POPUP_OFFSET_Y], {
+          animate: true,
+          duration: 1,
+          easeLinearity: 0.08,
+        });
+      }, 300);
+    }, 100);
+  },
+}}
     />
   );
 }
-
 
 // =====================================================
 // FAILURE LAYERS
 // =====================================================
 
-function FailureLayers({
-  locations,
-}) {
+function FailureLayers({ locations }) {
   return (
     <>
-      {locations.map(
-        (
-          item,
-          index
-        ) => (
-          <FailureMarker
-            key={
-              `failure-${
-                item?.id ??
-                `${item?.latitude}-${item?.longitude}-${index}`
-              }`
-            }
-            item={item}
-          />
-        )
-      )}
+      {locations.map((item, index) => (
+        <FailureMarker
+          key={`failure-${
+            item?.id ?? `${item?.latitude}-${item?.longitude}-${index}`
+          }`}
+          item={item}
+        />
+      ))}
     </>
   );
 }
-
 
 // =====================================================
 // HEATMAP
 // =====================================================
 
-function HeatmapLayer({
-  locations,
-}) {
+function HeatmapLayer({ locations }) {
   const map = useMap();
 
   useEffect(() => {
@@ -1432,144 +1039,80 @@ function HeatmapLayer({
       return;
     }
 
-    if (
-      !Array.isArray(
-        locations
-      ) ||
-      locations.length === 0
-    ) {
+    if (!Array.isArray(locations) || locations.length === 0) {
       return;
     }
 
     const points = [];
 
-    for (
-      const item of locations
-    ) {
-      const latitude =
-        Number(
-          item.latitude
-        );
+    for (const item of locations) {
+      const latitude = Number(item.latitude);
 
-      const longitude =
-        Number(
-          item.longitude
-        );
+      const longitude = Number(item.longitude);
 
-      if (
-        Number.isFinite(
-          latitude
-        ) &&
-        Number.isFinite(
-          longitude
-        )
-      ) {
-        points.push([
-          latitude,
-          longitude,
-          1,
-        ]);
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        points.push([latitude, longitude, 1]);
       }
     }
 
-    if (
-      points.length === 0
-    ) {
+    if (points.length === 0) {
       return;
     }
 
-    const heatLayer =
-      L.heatLayer(
-        points,
-        {
-          radius: 28,
+    const heatLayer = L.heatLayer(points, {
+      radius: 28,
 
-          blur: 22,
+      blur: 22,
 
-          maxZoom: 17,
+      maxZoom: 17,
 
-          minOpacity: 0.35,
+      minOpacity: 0.35,
 
-          max: 1,
-        }
-      );
+      max: 1,
+    });
 
-    heatLayer.addTo(
-      map
-    );
+    heatLayer.addTo(map);
 
     return () => {
-      if (
-        map.hasLayer(
-          heatLayer
-        )
-      ) {
-        map.removeLayer(
-          heatLayer
-        );
+      if (map.hasLayer(heatLayer)) {
+        map.removeLayer(heatLayer);
       }
     };
-  }, [
-    map,
-    locations,
-  ]);
+  }, [map, locations]);
 
   return null;
 }
-
 
 // =====================================================
 // GEOJSON LAYERS
 // =====================================================
 
-function GeoJsonLayers({
-  activeLayers,
-  setLoadedLayers,
-}) {
+function GeoJsonLayers({ activeLayers, setLoadedLayers }) {
   const map = useMap();
 
-  const activeKey =
-    useMemo(
-      () =>
-        GEOJSON_LAYERS
-          .filter(
-            (layer) =>
-              activeLayers[
-                layer.id
-              ]
-          )
-          .map(
-            (layer) =>
-              layer.id
-          )
-          .join("|"),
-      [activeLayers]
-    );
+  const activeKey = useMemo(
+    () =>
+      GEOJSON_LAYERS.filter((layer) => activeLayers[layer.id])
+        .map((layer) => layer.id)
+        .join("|"),
+    [activeLayers],
+  );
 
   useEffect(() => {
     if (!map) {
       return;
     }
 
-    let cancelled =
-      false;
+    let cancelled = false;
 
-    const leafletLayers =
-      [];
+    const leafletLayers = [];
 
     async function loadLayers() {
-      const activeConfigs =
-        GEOJSON_LAYERS.filter(
-          (layer) =>
-            activeLayers[
-              layer.id
-            ]
-        );
+      const activeConfigs = GEOJSON_LAYERS.filter(
+        (layer) => activeLayers[layer.id],
+      );
 
-      for (
-        const layerConfig of
-          activeConfigs
-      ) {
+      for (const layerConfig of activeConfigs) {
         if (cancelled) {
           return;
         }
@@ -1579,36 +1122,22 @@ function GeoJsonLayers({
           // CACHE
           // =====================================
 
-          let data =
-            geoJsonCache.get(
-              layerConfig.file
-            );
+          let data = geoJsonCache.get(layerConfig.file);
 
           // =====================================
           // FETCH
           // =====================================
 
           if (!data) {
-            const response =
-              await fetch(
-                layerConfig.file
-              );
+            const response = await fetch(layerConfig.file);
 
-            if (
-              !response.ok
-            ) {
-              throw new Error(
-                `Failed to load ${layerConfig.file}`
-              );
+            if (!response.ok) {
+              throw new Error(`Failed to load ${layerConfig.file}`);
             }
 
-            data =
-              await response.json();
+            data = await response.json();
 
-            geoJsonCache.set(
-              layerConfig.file,
-              data
-            );
+            geoJsonCache.set(layerConfig.file, data);
           }
 
           if (cancelled) {
@@ -1619,117 +1148,87 @@ function GeoJsonLayers({
           // CANVAS RENDERER
           // =====================================
 
-          const renderer =
-            L.canvas({
-              padding: 0.5,
-            });
+          const renderer = L.canvas({
+            padding: 0.5,
+          });
 
           // =====================================
           // GEOJSON
           // =====================================
 
-          const geoJsonLayer =
-            L.geoJSON(
-              data,
-              {
-                // =================================
-                // POINT
-                // =================================
+          const geoJsonLayer = L.geoJSON(data, {
+            // =================================
+            // POINT
+            // =================================
 
-                pointToLayer: (
-                  feature,
-                  latlng
-                ) => {
-                  return L.circleMarker(
-                    latlng,
-                    {
-                      renderer,
+            pointToLayer: (feature, latlng) => {
+              return L.circleMarker(latlng, {
+                renderer,
 
-                      radius: 4,
+                radius: 4,
 
-                      color:
-                        layerConfig.color,
+                color: layerConfig.color,
 
-                      weight: 1,
+                weight: 1,
 
-                      opacity: 0.9,
+                opacity: 0.9,
 
-                      fillColor:
-                        layerConfig.color,
+                fillColor: layerConfig.color,
 
-                      fillOpacity: 0.85,
+                fillOpacity: 0.85,
 
-                      interactive:
-                        false,
-                    }
-                  );
-                },
+                interactive: false,
+              });
+            },
 
-                // =================================
-                // POLYGON
-                // =================================
+            // =================================
+            // POLYGON
+            // =================================
 
-                style: () => ({
-                  renderer,
+            style: () => ({
+              renderer,
 
-                  color:
-                    layerConfig.color,
+              color: layerConfig.color,
 
-                  weight: 2,
+              weight: 2,
 
-                  opacity: 0.9,
+              opacity: 0.9,
 
-                  fillColor:
-                    layerConfig.color,
+              fillColor: layerConfig.color,
 
-                  fillOpacity: 0.04,
+              fillOpacity: 0.04,
 
-                  smoothFactor: 1.5,
-                }),
+              smoothFactor: 1.5,
+            }),
 
-                // =================================
-                // LINE
-                // =================================
+            // =================================
+            // LINE
+            // =================================
 
-                onEachFeature: (
-                  feature,
-                  layer
-                ) => {
-                  layer.options.renderer =
-                    renderer;
-                },
-              }
-            );
+            onEachFeature: (feature, layer) => {
+              layer.options.renderer = renderer;
+            },
+          });
 
           // =====================================
           // ADD
           // =====================================
 
-          geoJsonLayer.addTo(
-            map
-          );
+          geoJsonLayer.addTo(map);
 
-          leafletLayers.push(
-            geoJsonLayer
-          );
+          leafletLayers.push(geoJsonLayer);
 
           // =====================================
           // LOADED
           // =====================================
 
-          setLoadedLayers(
-            (prev) => ({
-              ...prev,
+          setLoadedLayers((prev) => ({
+            ...prev,
 
-              [layerConfig.id]:
-                true,
-            })
-          );
+            [layerConfig.id]: true,
+          }));
         } catch (error) {
-          console.error(
-            `Error loading ${layerConfig.file}:`,
-            error
-          );
+          console.error(`Error loading ${layerConfig.file}:`, error);
         }
       }
     }
@@ -1743,46 +1242,27 @@ function GeoJsonLayers({
     return () => {
       cancelled = true;
 
-      for (
-        const layer of
-          leafletLayers
-      ) {
-        if (
-          map.hasLayer(
-            layer
-          )
-        ) {
-          map.removeLayer(
-            layer
-          );
+      for (const layer of leafletLayers) {
+        if (map.hasLayer(layer)) {
+          map.removeLayer(layer);
         }
       }
     };
-  }, [
-    map,
-    activeKey,
-  ]);
+  }, [map, activeKey]);
 
   return null;
 }
-
 
 // =====================================================
 // LAYER CONTROLS
 // =====================================================
 
-function LayerControls({
-  activeLayers,
-  setActiveLayers,
-  loadedLayers,
-}) {
+function LayerControls({ activeLayers, setActiveLayers, loadedLayers }) {
   return (
     <div
       dir="rtl"
-
       style={{
-        position:
-          "absolute",
+        position: "absolute",
 
         top: 15,
 
@@ -1792,8 +1272,7 @@ function LayerControls({
 
         display: "flex",
 
-        flexDirection:
-          "column",
+        flexDirection: "column",
 
         gap: 5,
 
@@ -1801,267 +1280,165 @@ function LayerControls({
 
         padding: 7,
 
-        background:
-          "rgba(255,255,255,0.97)",
+        background: "rgba(255,255,255,0.97)",
 
         borderRadius: 10,
 
-        boxShadow:
-          "0 3px 12px rgba(0,0,0,0.20)",
+        boxShadow: "0 3px 12px rgba(0,0,0,0.20)",
 
-        pointerEvents:
-          "auto",
+        pointerEvents: "auto",
 
-        maxHeight:
-          "calc(100% - 40px)",
+        maxHeight: "calc(100% - 40px)",
 
-        overflowY:
-          "auto",
+        overflowY: "auto",
       }}
     >
-
       <Text
         size="xs"
         fw={700}
         ta="right"
         c="dimmed"
-
         style={{
-          padding:
-            "2px 4px 4px",
+          padding: "2px 4px 4px",
         }}
       >
         مواقع الحاويات
       </Text>
 
+      {GEOJSON_LAYERS.map((layer) => {
+        const active = !!activeLayers[layer.id];
 
-      {GEOJSON_LAYERS.map(
-        (layer) => {
-          const active =
-            !!activeLayers[
-              layer.id
-            ];
+        const loaded = !!loadedLayers[layer.id];
 
-          const loaded =
-            !!loadedLayers[
-              layer.id
-            ];
+        return (
+          <button
+            key={layer.id}
+            type="button"
+            onClick={() => {
+              setActiveLayers((prev) => ({
+                ...prev,
 
-          return (
-            <button
-              key={
-                layer.id
-              }
+                [layer.id]: !prev[layer.id],
+              }));
+            }}
+            style={{
+              appearance: "none",
 
-              type="button"
+              border: `1.5px solid ${layer.color}`,
 
-              onClick={() => {
-                setActiveLayers(
-                  (prev) => ({
-                    ...prev,
+              background: active ? layer.color : "#ffffff",
 
-                    [layer.id]:
-                      !prev[
-                        layer.id
-                      ],
-                  })
-                );
-              }}
+              color: active ? "#ffffff" : layer.color,
 
-              style={{
-                appearance:
-                  "none",
+              borderRadius: 7,
 
-                border:
-                  `1.5px solid ${layer.color}`,
+              padding: "6px 7px",
 
-                background:
-                  active
-                    ? layer.color
-                    : "#ffffff",
+              width: "100%",
 
-                color:
-                  active
-                    ? "#ffffff"
-                    : layer.color,
+              minWidth: 0,
 
-                borderRadius: 7,
+              cursor: "pointer",
 
-                padding:
-                  "6px 7px",
+              fontSize: 11,
 
-                width: "100%",
+              fontWeight: 700,
 
-                minWidth: 0,
+              display: "flex",
 
-                cursor:
-                  "pointer",
+              alignItems: "center",
 
-                fontSize: 11,
+              justifyContent: "center",
 
-                fontWeight: 700,
+              gap: 5,
 
-                display:
-                  "flex",
+              boxShadow: active
+                ? `0 2px 5px ${layer.color}45`
+                : "0 1px 2px rgba(0,0,0,.10)",
 
-                alignItems:
-                  "center",
+              transition: "all 0.15s ease",
 
-                justifyContent:
-                  "center",
+              whiteSpace: "nowrap",
 
-                gap: 5,
+              margin: 0,
+            }}
+          >
+            <IconTrash
+              size={14}
+              stroke={2}
+              color={active ? "#ffffff" : layer.color}
+            />
 
-                boxShadow:
-                  active
-                    ? `0 2px 5px ${layer.color}45`
-                    : "0 1px 2px rgba(0,0,0,.10)",
+            <span>{layer.name}</span>
 
-                transition:
-                  "all 0.15s ease",
+            {active && loaded && (
+              <span
+                style={{
+                  fontSize: 12,
 
-                whiteSpace:
-                  "nowrap",
-
-                margin: 0,
-              }}
-            >
-
-              <IconTrash
-                size={14}
-                stroke={2}
-                color={
-                  active
-                    ? "#ffffff"
-                    : layer.color
-                }
-              />
-
-
-              <span>
-                {layer.name}
+                  fontWeight: 900,
+                }}
+              >
+                ✓
               </span>
-
-
-              {active &&
-                loaded && (
-                  <span
-                    style={{
-                      fontSize: 12,
-
-                      fontWeight:
-                        900,
-                    }}
-                  >
-                    ✓
-                  </span>
-                )}
-
-            </button>
-          );
-        }
-      )}
-
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
-
 
 // =====================================================
 // MAIN MAP
 // =====================================================
 
-export default function OsmMap({
-  locations = [],
-  heatmap = false,
-}) {
-  const [
-    activeLayers,
-    setActiveLayers,
-  ] = useState({});
+export default function OsmMap({ locations = [], heatmap = false }) {
+  const [activeLayers, setActiveLayers] = useState({});
 
-  const [
-    loadedLayers,
-    setLoadedLayers,
-  ] = useState({});
-
+  const [loadedLayers, setLoadedLayers] = useState({});
 
   // ===================================================
   // VALID LOCATIONS
   // ===================================================
 
-  const validLocations =
-    useMemo(() => {
-      if (
-        !Array.isArray(
-          locations
-        )
-      ) {
-        return [];
-      }
+  const validLocations = useMemo(() => {
+    if (!Array.isArray(locations)) {
+      return [];
+    }
 
-      return locations.filter(
-        (item) => {
-          const lat =
-            Number(
-              item?.latitude
-            );
+    return locations.filter((item) => {
+      const lat = Number(item?.latitude);
 
-          const lng =
-            Number(
-              item?.longitude
-            );
+      const lng = Number(item?.longitude);
 
-          return (
-            Number.isFinite(
-              lat
-            ) &&
-            Number.isFinite(
-              lng
-            )
-          );
-        }
-      );
-    }, [locations]);
-
+      return Number.isFinite(lat) && Number.isFinite(lng);
+    });
+  }, [locations]);
 
   return (
     <div
       style={{
-        position:
-          "relative",
+        position: "relative",
 
         width: "100%",
 
         height: "100%",
       }}
     >
-
       {/* =================================================
           MAP
       ================================================= */}
 
       <MapContainer
-        center={[
-          31.9539,
-          35.9106,
-        ]}
-
+        center={[31.9539, 35.9106]}
         zoom={12}
-
         preferCanvas={true}
-
         zoomAnimation={true}
-
         fadeAnimation={true}
-
-        markerZoomAnimation={
-          false
-        }
-
+        markerZoomAnimation={false}
         style={{
-          position:
-            "absolute",
+          position: "absolute",
 
           inset: 0,
 
@@ -2072,7 +1449,6 @@ export default function OsmMap({
           zIndex: 1,
         }}
       >
-
         {/* =================================================
             OPEN STREET MAP
         ================================================= */}
@@ -2081,82 +1457,43 @@ export default function OsmMap({
           attribution="
             &copy; OpenStreetMap contributors
           "
-
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-
-          updateWhenZooming={
-            false
-          }
-
-          updateWhenIdle={
-            true
-          }
-
+          updateWhenZooming={false}
+          updateWhenIdle={true}
           keepBuffer={2}
         />
-
 
         {/* =================================================
             GEOJSON
         ================================================= */}
 
         <GeoJsonLayers
-          activeLayers={
-            activeLayers
-          }
-
-          setLoadedLayers={
-            setLoadedLayers
-          }
+          activeLayers={activeLayers}
+          setLoadedLayers={setLoadedLayers}
         />
-
 
         {/* =================================================
             HEATMAP
         ================================================= */}
 
-        {heatmap && (
-          <HeatmapLayer
-            locations={
-              validLocations
-            }
-          />
-        )}
-
+        {heatmap && <HeatmapLayer locations={validLocations} />}
 
         {/* =================================================
             FAILURES
         ================================================= */}
 
-        {!heatmap && (
-          <FailureLayers
-            locations={
-              validLocations
-            }
-          />
-        )}
-
+        {!heatmap && <FailureLayers locations={validLocations} />}
       </MapContainer>
-
 
       {/* =================================================
           LAYER BUTTONS
       ================================================= */}
 
       <LayerControls
-        activeLayers={
-          activeLayers
-        }
-
-        setActiveLayers={
-          setActiveLayers
-        }
-
-        loadedLayers={
-          loadedLayers
-        }
+        activeLayers={activeLayers}
+        setActiveLayers={setActiveLayers}
+        loadedLayers={loadedLayers}
       />
-
     </div>
   );
 }

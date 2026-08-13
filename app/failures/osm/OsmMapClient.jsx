@@ -43,9 +43,7 @@ const OsmMap = dynamic(() => import("./OsmMap"), {
 
 const getLocalDateString = (date) => {
   const year = date.getFullYear();
-
   const month = String(date.getMonth() + 1).padStart(2, "0");
-
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
@@ -58,7 +56,6 @@ const getLocalDateString = (date) => {
 const today = new Date();
 
 const yesterday = new Date(today);
-
 yesterday.setDate(yesterday.getDate() - 1);
 
 // =====================================================
@@ -115,35 +112,30 @@ const STATUSES = [
     color: "green",
     bg: "#e9f8ee",
   },
-
   {
     value: "ResolutionRejected",
     label: "رفض الحل",
     color: "red",
     bg: "#ffeaea",
   },
-
   {
     value: "PendingSpValidation",
     label: "بانتظار القبول",
     color: "gray",
     bg: "#f1f3f5",
   },
-
   {
     value: "InProgress",
     label: "قيد التنفيذ",
     color: "orange",
     bg: "#fff4e0",
   },
-
   {
     value: "PendingFieldMonitorVerification",
     label: "في انتظار التحقق الميداني",
     color: "cyan",
     bg: "#e7f5ff",
   },
-
   {
     value: "PendingSupervisorReview",
     label: "قيد مراجعة AVTR",
@@ -153,7 +145,7 @@ const STATUSES = [
 ];
 
 // =====================================================
-// Mantine Color Helpers
+// Status Dot Colors
 // =====================================================
 
 const STATUS_DOT_COLORS = {
@@ -175,9 +167,7 @@ export default function OsmMapClient() {
   // ===================================================
 
   const [district, setDistrict] = useState(null);
-
   const [kpiNameAr, setKpiNameAr] = useState(null);
-
   const [status, setStatus] = useState(null);
 
   // ===================================================
@@ -191,11 +181,11 @@ export default function OsmMapClient() {
   // ===================================================
 
   const [dateFrom, setDateFrom] = useState(
-    getLocalDateString(yesterday),
+    getLocalDateString(yesterday)
   );
 
   const [dateTo, setDateTo] = useState(
-    getLocalDateString(today),
+    getLocalDateString(today)
   );
 
   // ===================================================
@@ -249,15 +239,13 @@ export default function OsmMapClient() {
     ...item,
 
     count: locations.filter(
-      (location) =>
-        location?.status === item.value,
+      (location) => location?.status === item.value
     ).length,
   }));
 
-  const activeStatusCounts =
-    statusCounts.filter(
-      (item) => item.count > 0,
-    );
+  const activeStatusCounts = statusCounts.filter(
+    (item) => item.count > 0
+  );
 
   // ===================================================
   // Execute
@@ -266,45 +254,34 @@ export default function OsmMapClient() {
   const handleExecute = async () => {
     try {
       setLoadingMap(true);
-
       setError("");
-
       setHasExecuted(true);
 
       const params = new URLSearchParams();
 
       if (district) {
-        params.set(
-          "districtNames",
-          district,
-        );
+        params.set("districtNames", district);
       }
 
       if (kpiNameAr) {
-        params.set(
-          "kpiNameAr",
-          kpiNameAr,
-        );
+        params.set("kpiNameAr", kpiNameAr);
       }
 
       if (status) {
-        params.set(
-          "status",
-          status,
-        );
+        params.set("status", status);
       }
 
       if (dateFrom) {
         params.set(
           "dateFrom",
-          `${dateFrom}T21:00:00.000Z`,
+          `${dateFrom}T21:00:00.000Z`
         );
       }
 
       if (dateTo) {
         params.set(
           "dateTo",
-          `${dateTo}T20:59:59.999Z`,
+          `${dateTo}T20:59:59.999Z`
         );
       }
 
@@ -313,55 +290,37 @@ export default function OsmMapClient() {
 
       console.log("MAP REQUEST:", url);
 
-      const response = await fetch(
-        url,
-        {
-          method: "GET",
-          cache: "no-store",
-        },
-      );
+      const response = await fetch(url, {
+        method: "GET",
+        cache: "no-store",
+      });
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data?.error ||
-            "فشل تحميل المواقع",
+          data?.error || "فشل تحميل المواقع"
         );
       }
 
-      const items =
-        Array.isArray(data?.items)
-          ? data.items
-          : [];
+      const items = Array.isArray(data?.items)
+        ? data.items
+        : [];
 
-      console.log(
-        "MAP RESPONSE:",
-        data,
-      );
-
-      console.log(
-        "COUNT:",
-        items.length,
-      );
+      console.log("MAP RESPONSE:", data);
+      console.log("COUNT:", items.length);
 
       setLocations(items);
-
       setHeatmap(false);
     } catch (error) {
-      console.error(
-        "MAP ERROR:",
-        error,
-      );
+      console.error("MAP ERROR:", error);
 
       setError(
         error?.message ||
-          "حدث خطأ أثناء تحميل المواقع",
+          "حدث خطأ أثناء تحميل المواقع"
       );
 
       setLocations([]);
-
       setHeatmap(false);
     } finally {
       setLoadingMap(false);
@@ -374,25 +333,20 @@ export default function OsmMapClient() {
 
   const handleClear = () => {
     setDistrict(null);
-
     setKpiNameAr(null);
-
     setStatus(null);
 
     setDateFrom(
-      getLocalDateString(yesterday),
+      getLocalDateString(yesterday)
     );
 
     setDateTo(
-      getLocalDateString(today),
+      getLocalDateString(today)
     );
 
     setLocations([]);
-
     setHeatmap(false);
-
     setError("");
-
     setHasExecuted(false);
   };
 
@@ -402,8 +356,7 @@ export default function OsmMapClient() {
 
   const selectedStatusLabel =
     STATUSES.find(
-      (item) =>
-        item.value === status,
+      (item) => item.value === status
     )?.label;
 
   // ===================================================
@@ -462,21 +415,21 @@ export default function OsmMapClient() {
       ================================================= */}
 
       <Paper
-        radius={20}
+        radius={18}
         p="sm"
+        className="map-filter-card"
         style={{
           ...glassStyle,
 
           position: "absolute",
 
           top: 14,
-
           left: "50%",
 
-          width: "min(820px, calc(100vw - 30px))",
+          width:
+            "min(1050px, calc(100vw - 28px))",
 
-          transform:
-            "translateX(-50%)",
+          transform: "translateX(-50%)",
 
           zIndex: 2000,
 
@@ -484,11 +437,15 @@ export default function OsmMapClient() {
 
           overflow: "visible",
 
+          boxSizing: "border-box",
+
           transition:
-            "box-shadow 200ms ease",
+            "box-shadow 200ms ease, width 200ms ease",
         }}
       >
-        {/* Small Header */}
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
         <Group
           justify="space-between"
@@ -514,35 +471,42 @@ export default function OsmMapClient() {
             </Text>
           </Box>
 
-          {hasExecuted &&
-            !loadingMap && (
-              <Badge
-                size="sm"
-                variant="light"
-                color={
-                  locations.length
-                    ? "green"
-                    : "gray"
-                }
-              >
-                {locations.length} مخالفة
-              </Badge>
-            )}
+          {hasExecuted && !loadingMap && (
+            <Badge
+              size="sm"
+              variant="light"
+              color={
+                locations.length
+                  ? "green"
+                  : "gray"
+              }
+            >
+              {locations.length} مخالفة
+            </Badge>
+          )}
         </Group>
 
+        {/* =================================================
+            FILTER ROW
+        ================================================= */}
+
         <Group
-          gap="xs"
-          wrap="nowrap"
+          gap={7}
           align="end"
+          className="map-filter-row"
           style={{
             width: "100%",
+            flexWrap: "nowrap",
           }}
         >
-          {/* DATE FROM */}
+          {/* =================================================
+              DATE FROM
+          ================================================= */}
 
           <Box
+            className="filter-field"
             style={{
-              flex: 1,
+              flex: "1 1 0",
               minWidth: 0,
             }}
           >
@@ -560,7 +524,7 @@ export default function OsmMapClient() {
               value={dateFrom}
               onChange={(event) =>
                 setDateFrom(
-                  event.target.value,
+                  event.target.value
                 )
               }
               style={{
@@ -580,11 +544,14 @@ export default function OsmMapClient() {
             />
           </Box>
 
-          {/* DATE TO */}
+          {/* =================================================
+              DATE TO
+          ================================================= */}
 
           <Box
+            className="filter-field"
             style={{
-              flex: 1,
+              flex: "1 1 0",
               minWidth: 0,
             }}
           >
@@ -602,7 +569,7 @@ export default function OsmMapClient() {
               value={dateTo}
               onChange={(event) =>
                 setDateTo(
-                  event.target.value,
+                  event.target.value
                 )
               }
               style={{
@@ -622,9 +589,12 @@ export default function OsmMapClient() {
             />
           </Box>
 
-          {/* DISTRICT */}
+          {/* =================================================
+              DISTRICT
+          ================================================= */}
 
           <Select
+            className="filter-field"
             dir="rtl"
             label="المنطقة"
             placeholder="المنطقة"
@@ -636,7 +606,7 @@ export default function OsmMapClient() {
             data={districtOptions}
             nothingFoundMessage="لا توجد مناطق"
             style={{
-              flex: 1,
+              flex: "1 1 0",
               minWidth: 0,
             }}
             comboboxProps={{
@@ -682,9 +652,12 @@ export default function OsmMapClient() {
             }}
           />
 
-          {/* KPI */}
+          {/* =================================================
+              KPI
+          ================================================= */}
 
           <Select
+            className="filter-field kpi-field"
             dir="rtl"
             label="KPI"
             placeholder="KPI"
@@ -697,8 +670,8 @@ export default function OsmMapClient() {
             nothingFoundMessage="لا توجد KPIs"
             maxDropdownHeight={350}
             style={{
-              flex: 2,
-              minWidth: 220,
+              flex: "2 1 0",
+              minWidth: 0,
             }}
             comboboxProps={{
               withinPortal: true,
@@ -706,17 +679,13 @@ export default function OsmMapClient() {
             }}
             renderOption={({ option }) => {
               const parts =
-                option.label.split(
-                  " - ",
-                );
+                option.label.split(" - ");
 
-              const number =
-                parts[0];
+              const number = parts[0];
 
-              const text =
-                parts
-                  .slice(1)
-                  .join(" - ");
+              const text = parts
+                .slice(1)
+                .join(" - ");
 
               return (
                 <div
@@ -727,17 +696,14 @@ export default function OsmMapClient() {
                       "flex-start",
                     gap: 7,
                     width: "100%",
-                    textAlign:
-                      "right",
+                    textAlign: "right",
                   }}
                 >
                   <span
                     style={{
-                      color:
-                        "#2f9e44",
+                      color: "#2f9e44",
                       fontWeight: 800,
-                      whiteSpace:
-                        "nowrap",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {number}
@@ -745,8 +711,7 @@ export default function OsmMapClient() {
 
                   <span
                     style={{
-                      color:
-                        "#212529",
+                      color: "#212529",
                       fontWeight: 500,
                     }}
                   >
@@ -794,9 +759,12 @@ export default function OsmMapClient() {
             }}
           />
 
-          {/* STATUS */}
+          {/* =================================================
+              STATUS
+          ================================================= */}
 
           <Select
+            className="filter-field"
             dir="rtl"
             label="الحالة"
             placeholder="الحالة"
@@ -808,7 +776,7 @@ export default function OsmMapClient() {
             data={statusOptions}
             nothingFoundMessage="لا توجد حالات"
             style={{
-              flex: 1,
+              flex: "1 1 0",
               minWidth: 0,
             }}
             comboboxProps={{
@@ -854,30 +822,34 @@ export default function OsmMapClient() {
             }}
           />
 
-          {/* BUTTONS */}
+          {/* =================================================
+              BUTTONS
+          ================================================= */}
 
           <Group
-            gap={4}
-            wrap="nowrap"
+            gap={5}
+            className="map-action-buttons"
             style={{
-              flex: 1.35,
-              minWidth: 0,
+              flex: "1.35 1 0",
+              minWidth: 175,
+              flexShrink: 0,
             }}
           >
+            {/* EXECUTE */}
+
             <Button
               size="xs"
               fullWidth
-              onClick={
-                handleExecute
-              }
-              loading={
-                loadingMap
-              }
+              onClick={handleExecute}
+              loading={loadingMap}
               radius="md"
               style={{
                 height: 32,
+                minWidth: 0,
                 fontSize: 11,
-                padding: "0 8px",
+                padding: "0 10px",
+                whiteSpace: "nowrap",
+                flex: 1,
                 boxShadow:
                   "0 4px 12px rgba(34,139,230,0.22)",
               }}
@@ -885,25 +857,27 @@ export default function OsmMapClient() {
               تنفيذ
             </Button>
 
+            {/* HEATMAP */}
+
             <Button
               size="xs"
               variant="light"
               color="red"
               onClick={() =>
-                setHeatmap(
-                  (prev) => !prev,
-                )
+                setHeatmap((prev) => !prev)
               }
               fullWidth
               disabled={
-                locations.length ===
-                0
+                locations.length === 0
               }
               radius="md"
               style={{
                 height: 32,
+                minWidth: 0,
                 fontSize: 11,
-                padding: "0 8px",
+                padding: "0 10px",
+                whiteSpace: "nowrap",
+                flex: 1,
               }}
             >
               {heatmap
@@ -911,22 +885,23 @@ export default function OsmMapClient() {
                 : "حرارية"}
             </Button>
 
+            {/* CLEAR */}
+
             <Button
               size="xs"
               variant="light"
               color="gray"
               fullWidth
-              onClick={
-                handleClear
-              }
-              disabled={
-                loadingMap
-              }
+              onClick={handleClear}
+              disabled={loadingMap}
               radius="md"
               style={{
                 height: 32,
+                minWidth: 0,
                 fontSize: 11,
-                padding: "0 8px",
+                padding: "0 10px",
+                whiteSpace: "nowrap",
+                flex: 1,
               }}
             >
               مسح
@@ -939,93 +914,210 @@ export default function OsmMapClient() {
           RESULT SUMMARY
       ================================================= */}
 
-      {hasExecuted &&
-        !loadingMap && (
-          <Box
-            style={{
-              position: "absolute",
-              top: 14,
-              left: 14,
-              width: 310,
-              maxWidth:
-                "calc(100vw - 28px)",
-              zIndex: 2000,
-              direction: "rtl",
-            }}
-          >
-            {/* =================================================
-                ERROR
-            ================================================= */}
+      {hasExecuted && !loadingMap && (
+        <Box
+          style={{
+            position: "absolute",
+            bottom: 10,
+            left: 14,
+            width: 310,
+            maxWidth:
+              "calc(100vw - 28px)",
+            zIndex: 2000,
+            direction: "rtl",
+          }}
+        >
+          {/* =================================================
+              ERROR
+          ================================================= */}
 
-            {error ? (
-              <Box
-                style={{
-                  ...glassStyle,
+          {error ? (
+            <Box
+              style={{
+                ...glassStyle,
 
-                  border:
-                    "1px solid rgba(250,82,82,0.35)",
+                border:
+                  "1px solid rgba(250,82,82,0.35)",
 
-                  borderRadius: 18,
+                borderRadius: 18,
 
-                  padding:
-                    "12px 14px",
-                }}
+                padding: "12px 14px",
+              }}
+            >
+              <Group
+                justify="space-between"
+                align="center"
+                gap={8}
+                wrap="nowrap"
               >
-                <Group
-                  justify="space-between"
-                  align="center"
-                  gap={8}
-                  wrap="nowrap"
-                >
-                  <Box>
-                    <Text
-                      size="xs"
-                      fw={900}
-                      c="red"
-                    >
-                      تعذر تحميل البيانات
-                    </Text>
-
-                    <Text
-                      size="10px"
-                      c="dimmed"
-                      mt={3}
-                    >
-                      {error}
-                    </Text>
-                  </Box>
-
-                  <Badge
-                    color="red"
-                    variant="light"
-                    size="sm"
+                <Box>
+                  <Text
+                    size="xs"
+                    fw={900}
+                    c="red"
                   >
-                    خطأ
+                    تعذر تحميل البيانات
+                  </Text>
+
+                  <Text
+                    size="10px"
+                    c="dimmed"
+                    mt={3}
+                  >
+                    {error}
+                  </Text>
+                </Box>
+
+                <Badge
+                  color="red"
+                  variant="light"
+                  size="sm"
+                >
+                  خطأ
+                </Badge>
+              </Group>
+            </Box>
+          ) : locations.length === 0 ? (
+            /* =================================================
+               NO DATA
+            ================================================= */
+
+            <Box
+              style={{
+                ...glassStyle,
+
+                border:
+                  "1px solid rgba(134,142,150,0.25)",
+
+                borderRadius: 18,
+
+                padding: "13px 14px",
+              }}
+            >
+              <Group
+                align="center"
+                gap={10}
+                wrap="nowrap"
+              >
+                <Box
+                  style={{
+                    width: 38,
+                    height: 38,
+                    minWidth: 38,
+                    borderRadius: 13,
+                    background:
+                      "rgba(134,142,150,0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 17,
+                    color: "#868e96",
+                  }}
+                >
+                  ✓
+                </Box>
+
+                <Box
+                  style={{
+                    flex: 1,
+                  }}
+                >
+                  <Text
+                    size="sm"
+                    fw={900}
+                  >
+                    لا توجد مخالفات
+                  </Text>
+
+                  <Text
+                    size="10px"
+                    c="dimmed"
+                    mt={2}
+                  >
+                    لا توجد مخالفات حسب
+                    التصفية المحددة
+                  </Text>
+                </Box>
+
+                <Badge
+                  color="gray"
+                  variant="light"
+                  size="sm"
+                >
+                  0
+                </Badge>
+              </Group>
+
+              <Group
+                gap={4}
+                mt={9}
+                wrap="wrap"
+              >
+                <Badge
+                  size="xs"
+                  variant="outline"
+                  color="gray"
+                >
+                  {dateFrom} ← {dateTo}
+                </Badge>
+
+                {district && (
+                  <Badge
+                    size="xs"
+                    variant="light"
+                  >
+                    {district}
                   </Badge>
-                </Group>
-              </Box>
-            ) : locations.length ===
-              0 ? (
-              /* =================================================
-                 NO DATA
-              ================================================= */
+                )}
 
-              <Box
-                style={{
-                  ...glassStyle,
+                {kpiNameAr && (
+                  <Badge
+                    size="xs"
+                    variant="light"
+                    color="green"
+                  >
+                    KPI محدد
+                  </Badge>
+                )}
 
-                  border:
-                    "1px solid rgba(134,142,150,0.25)",
+                {status && (
+                  <Badge
+                    size="xs"
+                    variant="light"
+                    color="blue"
+                  >
+                    {selectedStatusLabel}
+                  </Badge>
+                )}
+              </Group>
+            </Box>
+          ) : (
+            /* =================================================
+               HAS DATA
+            ================================================= */
 
-                  borderRadius: 18,
+            <Box
+              style={{
+                ...glassStyle,
 
-                  padding:
-                    "13px 14px",
-                }}
+                border:
+                  "1px solid rgba(64,192,87,0.28)",
+
+                borderRadius: 18,
+
+                padding: "13px 14px",
+              }}
+            >
+              {/* HEADER */}
+
+              <Group
+                justify="space-between"
+                align="center"
+                mb={9}
+                wrap="nowrap"
               >
                 <Group
-                  align="center"
-                  gap={10}
+                  gap={9}
                   wrap="nowrap"
                 >
                   <Box
@@ -1035,30 +1127,23 @@ export default function OsmMapClient() {
                       minWidth: 38,
                       borderRadius: 13,
                       background:
-                        "rgba(134,142,150,0.12)",
+                        "rgba(64,192,87,0.12)",
                       display: "flex",
-                      alignItems:
-                        "center",
-                      justifyContent:
-                        "center",
+                      alignItems: "center",
+                      justifyContent: "center",
                       fontSize: 17,
-                      color:
-                        "#868e96",
+                      color: "#40c057",
                     }}
                   >
                     ✓
                   </Box>
 
-                  <Box
-                    style={{
-                      flex: 1,
-                    }}
-                  >
+                  <Box>
                     <Text
                       size="sm"
                       fw={900}
                     >
-                      لا توجد مخالفات
+                      تم العثور على مخالفات
                     </Text>
 
                     <Text
@@ -1066,436 +1151,393 @@ export default function OsmMapClient() {
                       c="dimmed"
                       mt={2}
                     >
-                      لا توجد مخالفات حسب
-                      التصفية المحددة
+                      النتائج المطابقة للتصفية
                     </Text>
                   </Box>
-
-                  <Badge
-                    color="gray"
-                    variant="light"
-                    size="sm"
-                  >
-                    0
-                  </Badge>
                 </Group>
 
-                <Group
-                  gap={4}
-                  mt={9}
-                  wrap="wrap"
+                <Badge
+                  color="green"
+                  variant="filled"
+                  size="lg"
+                  radius="md"
                 >
-                  <Badge
-                    size="xs"
-                    variant="outline"
-                    color="gray"
-                  >
-                    {dateFrom} ←{" "}
-                    {dateTo}
-                  </Badge>
+                  {locations.length}
+                </Badge>
+              </Group>
 
-                  {district && (
-                    <Badge
-                      size="xs"
-                      variant="light"
-                    >
-                      {district}
-                    </Badge>
-                  )}
+              {/* BASIC STATISTICS */}
 
-                  {kpiNameAr && (
-                    <Badge
-                      size="xs"
-                      variant="light"
-                      color="green"
-                    >
-                      KPI محدد
-                    </Badge>
-                  )}
-
-                  {status && (
-                    <Badge
-                      size="xs"
-                      variant="light"
-                      color="blue"
-                    >
-                      {selectedStatusLabel}
-                    </Badge>
-                  )}
-                </Group>
-              </Box>
-            ) : (
-              /* =================================================
-                 HAS DATA
-              ================================================= */
-
-              <Box
-                style={{
-                  ...glassStyle,
-
-                  border:
-                    "1px solid rgba(64,192,87,0.28)",
-
-                  borderRadius: 18,
-
-                  padding:
-                    "13px 14px",
-                }}
+              <SimpleGrid
+                cols={3}
+                spacing={5}
               >
-                {/* Header */}
+                <Box
+                  style={{
+                    background:
+                      "rgba(255,255,255,0.62)",
 
+                    border:
+                      "1px solid rgba(0,0,0,0.06)",
+
+                    borderRadius: 10,
+
+                    padding: "7px 5px",
+
+                    textAlign: "center",
+                  }}
+                >
+                  <Text
+                    size="9px"
+                    c="dimmed"
+                    fw={700}
+                  >
+                    المواقع
+                  </Text>
+
+                  <Text
+                    size="sm"
+                    fw={900}
+                    c="green"
+                  >
+                    {locations.length}
+                  </Text>
+                </Box>
+
+                <Box
+                  style={{
+                    background:
+                      "rgba(255,255,255,0.62)",
+
+                    border:
+                      "1px solid rgba(0,0,0,0.06)",
+
+                    borderRadius: 10,
+
+                    padding: "7px 5px",
+
+                    textAlign: "center",
+                  }}
+                >
+                  <Text
+                    size="9px"
+                    c="dimmed"
+                    fw={700}
+                  >
+                    المنطقة
+                  </Text>
+
+                  <Text
+                    size="xs"
+                    fw={900}
+                    truncate
+                  >
+                    {district || "الكل"}
+                  </Text>
+                </Box>
+
+                <Box
+                  style={{
+                    background:
+                      "rgba(255,255,255,0.62)",
+
+                    border:
+                      "1px solid rgba(0,0,0,0.06)",
+
+                    borderRadius: 10,
+
+                    padding: "7px 5px",
+
+                    textAlign: "center",
+                  }}
+                >
+                  <Text
+                    size="9px"
+                    c="dimmed"
+                    fw={700}
+                  >
+                    الحالة
+                  </Text>
+
+                  <Text
+                    size="xs"
+                    fw={900}
+                    truncate
+                  >
+                    {selectedStatusLabel ||
+                      "الكل"}
+                  </Text>
+                </Box>
+              </SimpleGrid>
+
+              {/* STATUS COUNTS */}
+
+              <Box mt={9}>
                 <Group
                   justify="space-between"
                   align="center"
-                  mb={9}
-                  wrap="nowrap"
+                  mb={5}
                 >
-                  <Group
-                    gap={9}
-                    wrap="nowrap"
+                  <Text
+                    size="9px"
+                    c="dimmed"
+                    fw={800}
                   >
-                    <Box
-                      style={{
-                        width: 38,
-                        height: 38,
-                        minWidth: 38,
-                        borderRadius: 13,
-                        background:
-                          "rgba(64,192,87,0.12)",
-                        display:
-                          "flex",
-                        alignItems:
-                          "center",
-                        justifyContent:
-                          "center",
-                        fontSize: 17,
-                        color:
-                          "#40c057",
-                      }}
-                    >
-                      ✓
-                    </Box>
+                    توزيع الحالات
+                  </Text>
 
-                    <Box>
-                      <Text
-                        size="sm"
-                        fw={900}
-                      >
-                        تم العثور على مخالفات
-                      </Text>
-
-                      <Text
-                        size="10px"
-                        c="dimmed"
-                        mt={2}
-                      >
-                        النتائج المطابقة للتصفية
-                      </Text>
-                    </Box>
-                  </Group>
-
-                  <Badge
-                    color="green"
-                    variant="filled"
-                    size="lg"
-                    radius="md"
+                  <Text
+                    size="9px"
+                    c="dimmed"
                   >
-                    {locations.length}
-                  </Badge>
+                    {activeStatusCounts.length} حالات
+                  </Text>
                 </Group>
 
-                {/* =================================================
-                    BASIC STATISTICS
-                ================================================= */}
-
-                <SimpleGrid
-                  cols={3}
-                  spacing={5}
+                <Box
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 3,
+                  }}
                 >
-                  <Box
-                    style={{
-                      background:
-                        "rgba(255,255,255,0.62)",
+                  {activeStatusCounts.map(
+                    (item) => (
+                      <Group
+                        key={item.value}
+                        justify="space-between"
+                        gap={6}
+                        wrap="nowrap"
+                        style={{
+                          minHeight: 26,
 
-                      border:
-                        "1px solid rgba(0,0,0,0.06)",
+                          padding: "4px 7px",
 
-                      borderRadius: 10,
+                          borderRadius: 9,
 
-                      padding:
-                        "7px 5px",
+                          background: item.bg,
 
-                      textAlign:
-                        "center",
-                    }}
-                  >
-                    <Text
-                      size="9px"
-                      c="dimmed"
-                      fw={700}
-                    >
-                      المواقع
-                    </Text>
+                          border:
+                            `1px solid ${item.bg}`,
 
-                    <Text
-                      size="sm"
-                      fw={900}
-                      c="green"
-                    >
-                      {locations.length}
-                    </Text>
-                  </Box>
-
-                  <Box
-                    style={{
-                      background:
-                        "rgba(255,255,255,0.62)",
-
-                      border:
-                        "1px solid rgba(0,0,0,0.06)",
-
-                      borderRadius: 10,
-
-                      padding:
-                        "7px 5px",
-
-                      textAlign:
-                        "center",
-                    }}
-                  >
-                    <Text
-                      size="9px"
-                      c="dimmed"
-                      fw={700}
-                    >
-                      المنطقة
-                    </Text>
-
-                    <Text
-                      size="xs"
-                      fw={900}
-                      truncate
-                    >
-                      {district ||
-                        "الكل"}
-                    </Text>
-                  </Box>
-
-                  <Box
-                    style={{
-                      background:
-                        "rgba(255,255,255,0.62)",
-
-                      border:
-                        "1px solid rgba(0,0,0,0.06)",
-
-                      borderRadius: 10,
-
-                      padding:
-                        "7px 5px",
-
-                      textAlign:
-                        "center",
-                    }}
-                  >
-                    <Text
-                      size="9px"
-                      c="dimmed"
-                      fw={700}
-                    >
-                      الحالة
-                    </Text>
-
-                    <Text
-                      size="xs"
-                      fw={900}
-                      truncate
-                    >
-                      {selectedStatusLabel ||
-                        "الكل"}
-                    </Text>
-                  </Box>
-                </SimpleGrid>
-
-                {/* =================================================
-                    STATUS COUNTS
-                ================================================= */}
-
-                <Box mt={9}>
-                  <Group
-                    justify="space-between"
-                    align="center"
-                    mb={5}
-                  >
-                    <Text
-                      size="9px"
-                      c="dimmed"
-                      fw={800}
-                    >
-                      توزيع الحالات
-                    </Text>
-
-                    <Text
-                      size="9px"
-                      c="dimmed"
-                    >
-                      {activeStatusCounts.length}{" "}
-                      حالات
-                    </Text>
-                  </Group>
-
-                  <Box
-                    style={{
-                      display:
-                        "flex",
-
-                      flexDirection:
-                        "column",
-
-                      gap: 3,
-                    }}
-                  >
-                    {activeStatusCounts.map(
-                      (item) => (
+                          transition:
+                            "transform 150ms ease",
+                        }}
+                      >
                         <Group
-                          key={
-                            item.value
-                          }
-                          justify="space-between"
-                          gap={6}
+                          gap={7}
                           wrap="nowrap"
                           style={{
-                            minHeight: 26,
-
-                            padding:
-                              "4px 7px",
-
-                            borderRadius:
-                              9,
-
-                            background:
-                              item.bg,
-
-                            border:
-                              `1px solid ${item.bg}`,
-
-                            transition:
-                              "transform 150ms ease",
+                            minWidth: 0,
                           }}
                         >
-                          <Group
-                            gap={7}
-                            wrap="nowrap"
+                          <Box
                             style={{
-                              minWidth: 0,
+                              width: 8,
+                              height: 8,
+                              minWidth: 8,
+                              borderRadius: "50%",
+                              background:
+                                STATUS_DOT_COLORS[
+                                  item.color
+                                ],
+                              boxShadow:
+                                `0 0 0 3px ${item.bg}`,
                             }}
+                          />
+
+                          <Text
+                            size="10px"
+                            fw={650}
+                            truncate
                           >
-                            {/* Status Dot */}
-
-                            <Box
-                              style={{
-                                width: 8,
-
-                                height: 8,
-
-                                minWidth: 8,
-
-                                borderRadius:
-                                  "50%",
-
-                                background:
-                                  STATUS_DOT_COLORS[
-                                    item.color
-                                  ],
-
-                                boxShadow:
-                                  `0 0 0 3px ${item.bg}`,
-                              }}
-                            />
-
-                            <Text
-                              size="10px"
-                              fw={650}
-                              truncate
-                            >
-                              {item.label}
-                            </Text>
-                          </Group>
-
-                          <Badge
-                            size="xs"
-                            variant="light"
-                            color={
-                              item.color
-                            }
-                            radius="md"
-                            style={{
-                              minWidth: 30,
-                              justifyContent:
-                                "center",
-                              fontWeight:
-                                900,
-                            }}
-                          >
-                            {item.count}
-                          </Badge>
+                            {item.label}
+                          </Text>
                         </Group>
-                      ),
-                    )}
-                  </Box>
+
+                        <Badge
+                          size="xs"
+                          variant="light"
+                          color={item.color}
+                          radius="md"
+                          style={{
+                            minWidth: 30,
+                            justifyContent:
+                              "center",
+                            fontWeight: 900,
+                          }}
+                        >
+                          {item.count}
+                        </Badge>
+                      </Group>
+                    )
+                  )}
                 </Box>
+              </Box>
 
-                {/* =================================================
-                    FILTER SUMMARY
-                ================================================= */}
+              {/* FILTER SUMMARY */}
 
-                <Group
-                  gap={4}
-                  mt={9}
-                  wrap="wrap"
+              <Group
+                gap={4}
+                mt={9}
+                wrap="wrap"
+              >
+                <Badge
+                  size="xs"
+                  variant="outline"
+                  color="gray"
                 >
+                  {dateFrom} ← {dateTo}
+                </Badge>
+
+                {kpiNameAr && (
                   <Badge
                     size="xs"
-                    variant="outline"
-                    color="gray"
+                    variant="light"
+                    color="green"
                   >
-                    {dateFrom} ←{" "}
-                    {dateTo}
+                    KPI محدد
                   </Badge>
+                )}
 
-                  {kpiNameAr && (
-                    <Badge
-                      size="xs"
-                      variant="light"
-                      color="green"
-                    >
-                      KPI محدد
-                    </Badge>
-                  )}
-
-                  {heatmap && (
-                    <Badge
-                      size="xs"
-                      variant="light"
-                      color="red"
-                    >
-                      عرض حراري
-                    </Badge>
-                  )}
-                </Group>
-              </Box>
-            )}
-          </Box>
-        )}
+                {heatmap && (
+                  <Badge
+                    size="xs"
+                    variant="light"
+                    color="red"
+                  >
+                    عرض حراري
+                  </Badge>
+                )}
+              </Group>
+            </Box>
+          )}
+        </Box>
+      )}
 
       {/* =================================================
-          MOBILE / DESKTOP RESPONSIVE
+          RESPONSIVE CSS
       ================================================= */}
 
       <style jsx>{`
-        @media (max-width: 900px) {
+        .map-filter-card {
+          transition:
+            box-shadow 200ms ease,
+            width 200ms ease;
+        }
+
+        .map-filter-row {
+          align-items: flex-end;
+        }
+
+        .map-action-buttons {
+          flex-shrink: 0;
+        }
+
+        .map-action-buttons button {
+          white-space: nowrap !important;
+          overflow: visible !important;
+          text-overflow: clip !important;
+        }
+
+        @media (max-width: 1100px) {
           .map-filter-card {
             width: calc(100vw - 24px) !important;
+          }
+
+          .map-filter-row {
+            gap: 5px;
+          }
+
+          .map-action-buttons {
+            min-width: 170px !important;
+          }
+        }
+
+        @media (max-width: 850px) {
+          .map-filter-card {
+            width: calc(100vw - 20px) !important;
+          }
+
+          .map-filter-row {
+            flex-wrap: wrap !important;
+          }
+
+          .map-filter-row > .filter-field {
+            flex: 1 1 calc(25% - 5px) !important;
+            min-width: 130px !important;
+          }
+
+          .map-filter-row > .kpi-field {
+            flex: 2 1 calc(50% - 5px) !important;
+            min-width: 220px !important;
+          }
+
+          .map-filter-row
+            .map-action-buttons {
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .map-filter-card {
+            top: 8px !important;
+            width: calc(100vw - 16px) !important;
+            border-radius: 15px !important;
+          }
+
+          .map-filter-row {
+            gap: 6px !important;
+          }
+
+          .map-filter-row
+            > .filter-field,
+          .map-filter-row
+            > .kpi-field {
+            flex: 1 1 calc(50% - 6px) !important;
+            min-width: 0 !important;
+          }
+
+          .map-filter-row
+            > .kpi-field {
+            flex-basis: 100% !important;
+          }
+
+          .map-filter-row
+            .map-action-buttons {
+            display: grid !important;
+            grid-template-columns:
+              repeat(3, minmax(0, 1fr));
+            gap: 5px !important;
+            width: 100% !important;
+          }
+
+          .map-filter-row
+            .map-action-buttons
+            button {
+            width: 100% !important;
+            min-width: 0 !important;
+            padding-left: 5px !important;
+            padding-right: 5px !important;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .map-filter-row
+            > .filter-field {
+            flex: 1 1 100% !important;
+          }
+
+          .map-filter-row
+            > .kpi-field {
+            flex-basis: 100% !important;
+          }
+
+          .map-filter-row
+            .map-action-buttons {
+            grid-template-columns:
+              repeat(3, minmax(0, 1fr));
           }
         }
       `}</style>
