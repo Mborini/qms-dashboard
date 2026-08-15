@@ -30,10 +30,12 @@ export default function FailureStats({ items = [] }) {
     const result = {};
 
     items.forEach((item) => {
-      const district = item.districtName || "غير معروف";
-
-      const block = item.blockName || "غير معروف";
-
+const district = item.districtName
+  ? `منطقة ${item.districtName}`
+  : "مخالفات حسب مؤشرات الأداء";
+const block = item.blockName?.trim()
+  ? item.blockName
+  : `KPI:${item.kpiNameAr || "غير محدد"}`;
       const status = item.status || "Unknown";
 
       let lastUser = null;

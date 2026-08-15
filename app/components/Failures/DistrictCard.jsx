@@ -352,7 +352,7 @@ export default function DistrictCard({ district, data }) {
               textOverflow: "ellipsis",
             }}
           >
-            منطقة {district}
+             {district}
           </Text>
         </Group>
 
@@ -555,7 +555,13 @@ export default function DistrictCard({ district, data }) {
         }}
         spacing="xs"
       >
-        {Object.entries(data.blocks || {}).map(([block, blockData]) => (
+        {Object.entries(data.blocks || {}).map(([block, blockData]) => {
+  const isKpiGroup = block.startsWith("KPI:");
+  const displayName = isKpiGroup
+    ? block.replace("KPI:", "")
+    : block;
+
+  return (
           <Card
             key={block}
             radius="md"
@@ -577,13 +583,19 @@ export default function DistrictCard({ district, data }) {
 
             <Group justify="space-between" mb={5}>
               <Group gap={5}>
-                <Badge size="sm" radius="xl" variant="light" color="blue" p={5}>
-                  <IconMapPin size={14} />
-                </Badge>
+               <Badge
+  size="sm"
+  radius="xl"
+  variant="light"
+  color={isKpiGroup ? "violet" : "blue"}
+  p={5}
+>
+  {isKpiGroup ? "المؤشر" : <IconMapPin size={14} />}
+</Badge>
 
-                <Text fw={700} size="md">
-                  حي {block}
-                </Text>
+<Text fw={700} size="xs">
+  {isKpiGroup ? displayName : `حي ${displayName}`}
+</Text>
               </Group>
 
               <Badge size="md" radius="xl" variant="filled" color="blue">
@@ -678,8 +690,9 @@ export default function DistrictCard({ district, data }) {
                 ),
               )}
             </Stack>
-          </Card>
-        ))}
+       </Card>
+);
+})}
       </SimpleGrid>
 
       {/* ================= USER MODAL ================= */}
