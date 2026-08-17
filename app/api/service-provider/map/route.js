@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(request) {
   try {
-    const token = process.env.AVTR_TOKEN;
+    const token = process.env.Main_AVTR_TOKEN_Admin;
      
 
     if (!token) {

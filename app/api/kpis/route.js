@@ -26,7 +26,7 @@ const PAGE_SIZE = 100;
 // TOKEN
 // =====================================================
 
-const TOKEN = process.env.AVTR_TOKEN;
+const TOKEN = process.env.Main_AVTR_TOKEN_Admin;
 
 // =====================================================
 // HEADERS
