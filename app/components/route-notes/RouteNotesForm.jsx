@@ -4,7 +4,9 @@ import {
   useEffect,
   useState,
 } from "react";
-
+import {
+  IconRefresh,
+} from "@tabler/icons-react";
 import {
   Box,
   Button,
@@ -48,6 +50,8 @@ export default function RouteNotesForm({
   onSaveNote,
   editingNote,
   onCancelEdit,
+  districtDisabled = false,
+  onResetDistrict,
 }) {
   // ========================================
   // State
@@ -541,23 +545,42 @@ export default function RouteNotesForm({
 
             {/* المنطقة */}
 
-            <Select
-              label="المنطقة"
-              placeholder="اختر المنطقة"
-              data={districts}
-              value={district}
-              onChange={
-                handleDistrictChange
-              }
-              searchable
-              clearable
-              required
-              leftSection={
-                <IconMapPin
-                  size={18}
-                />
-              }
-            />
+<Group
+  align="flex-end"
+  gap="sm"
+  wrap="nowrap"
+  style={{
+    width: "100%",
+  }}
+>
+  <Select
+    label="المنطقة"
+    placeholder="اختر المنطقة"
+    data={districts}
+    value={district}
+    onChange={onDistrictChange}
+    disabled={districtDisabled}
+    style={{
+      flex: "1 1 0",
+      minWidth: 0,
+    }}
+  />
+
+  {district && (
+    <Button
+      color="orange"
+      variant="light"
+      
+      onClick={onResetDistrict}
+      style={{
+        flex: "0 0 auto",
+        whiteSpace: "nowrap",
+      }}
+    >
+       <IconRefresh size={17} />
+    </Button>
+  )}
+</Group>
 
             {/* القطعة */}
 

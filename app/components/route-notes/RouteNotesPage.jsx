@@ -21,88 +21,79 @@ export default function RouteNotesPage() {
   // State
   // ========================================
 
-  const [district, setDistrict] =
-    useState(null);
+  const [district, setDistrict] = useState(null);
 
-  const [notes, setNotes] =
-    useState([]);
+  const [notes, setNotes] = useState([]);
 
-  const [editingNote, setEditingNote] =
-    useState(null);
+  const [editingNote, setEditingNote] = useState(null);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
   // ========================================
-  // Add / Update
+  // Add / Update Note
   // ========================================
 
-  const handleSaveNote = (note) => {
-    setError("");
 
-    // ======================================
-    // Check duplicate
-    //
-    // المنطقة + القطعة
-    //
-    // أثناء التعديل نستثني نفس ID
-    // ======================================
+const handleSaveNote = (note) => {
+  setError("");
 
-    const duplicate = notes.find(
-      (item) =>
-        item.id !== note.id &&
-        item.district === note.district &&
-        item.block === note.block
-    );
+  // ======================================
+  // إذا كانت هناك ملاحظات مسجلة
+  // يجب أن تكون جميعها لنفس المنطقة
+  // ======================================
 
-    // ======================================
-    // Duplicate
-    // ======================================
+  if (notes.length > 0) {
+    const currentDistrict =
+      notes[0].district;
 
-    if (duplicate) {
+    if (
+      note.district !== currentDistrict
+    ) {
       setError(
-        `القطعة "${note.block}" في منطقة "${note.district}" مسجلة مسبقًا.`
+        `المنطقة الحالية هي "${currentDistrict}" ولا يمكن تسجيل ملاحظات لمنطقة "${note.district}".`
       );
 
-      // إلغاء وضع التعديل
-      setEditingNote(null);
-
-      // نخلي المنطقة موجودة
-      // لكن الفورم نفسه سيتم تنظيفه
-      setDistrict(note.district);
+      setDistrict(currentDistrict);
 
       return false;
     }
+  }
 
-    // ======================================
-    // Update
-    // ======================================
+  // ======================================
+  // Update
+  // ======================================
 
-    if (editingNote) {
-      setNotes((current) =>
-        current.map((item) =>
-          item.id === note.id
-            ? note
-            : item
-        )
-      );
+  if (editingNote) {
+    setNotes((current) =>
+      current.map((item) =>
+        item.id === note.id
+          ? {
+              ...item,
+              ...note,
+            }
+          : item
+      )
+    );
 
-      setEditingNote(null);
-
-      return true;
-    }
-
-    // ======================================
-    // Add
-    // ======================================
-
-    setNotes((current) => [
-      note,
-      ...current,
-    ]);
+    setEditingNote(null);
 
     return true;
-  };
+  }
+
+  // ======================================
+  // Add
+  // ======================================
+
+  setNotes((current) => [
+    note,
+    ...current,
+  ]);
+
+  // تثبيت المنطقة
+  setDistrict(note.district);
+
+  return true;
+};
 
   // ========================================
   // Start Edit
@@ -111,6 +102,7 @@ export default function RouteNotesPage() {
   const handleEdit = (note) => {
     setError("");
 
+    // تثبيت المنطقة أثناء التعديل
     setDistrict(note.district);
 
     setEditingNote(note);
@@ -124,6 +116,12 @@ export default function RouteNotesPage() {
     setEditingNote(null);
 
     setError("");
+
+    // إذا كانت هناك ملاحظات
+    // نحافظ على منطقتها
+    if (notes.length > 0) {
+      setDistrict(notes[0].district);
+    }
   };
 
   // ========================================
@@ -142,22 +140,65 @@ export default function RouteNotesPage() {
       return;
     }
 
-    setNotes((current) =>
-      current.filter(
-        (item) =>
-          item.id !== id
-      )
-    );
+    setNotes((current) => {
+      const updated = current.filter(
+        (item) => item.id !== id
+      );
 
+      // ====================================
+      // إذا لم تعد هناك ملاحظات
+      // نسمح باختيار منطقة جديدة
+      // ====================================
+
+      if (updated.length === 0) {
+        setDistrict(null);
+      }
+
+      return updated;
+    });
+
+    // ======================================
     // إذا كان يحذف الملاحظة
     // التي يتم تعديلها حاليًا
-    if (
-      editingNote?.id === id
-    ) {
+    // ======================================
+
+    if (editingNote?.id === id) {
       setEditingNote(null);
     }
   };
+// ========================================
+// Reset District
+// ========================================
 
+const handleResetDistrict = () => {
+  setError("");
+
+  // لا يوجد شيء لإعادة تعيينه
+  if (!district) {
+    return;
+  }
+
+  // إذا كانت هناك ملاحظات
+  // نطلب تأكيد قبل حذفها
+  if (notes.length > 0) {
+    const confirmed = window.confirm(
+      `هل أنت متأكد من إعادة تعيين المنطقة؟\n\nسيتم حذف ${notes.length} ملاحظة مسجلة للمنطقة "${district}".`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+  }
+
+  // تنظيف كل شيء
+  setNotes([]);
+
+  setDistrict(null);
+
+  setEditingNote(null);
+
+  setError("");
+};
   // ========================================
   // UI
   // ========================================
@@ -167,7 +208,6 @@ export default function RouteNotesPage() {
       p="xl"
       gap="lg"
       dir="rtl"
-
     >
       {/* ================================== */}
       {/* Page Header */}
@@ -189,9 +229,7 @@ export default function RouteNotesPage() {
           radius="md"
           variant="light"
           icon={
-            <IconAlertCircle
-              size={18}
-            />
+            <IconAlertCircle size={18} />
           }
           withCloseButton
           onClose={() =>
@@ -220,21 +258,15 @@ export default function RouteNotesPage() {
             lg: 5,
           }}
         >
-          <RouteNotesForm
-            district={district}
-            onDistrictChange={
-              setDistrict
-            }
-            onSaveNote={
-              handleSaveNote
-            }
-            editingNote={
-              editingNote
-            }
-            onCancelEdit={
-              handleCancelEdit
-            }
-          />
+        <RouteNotesForm
+  district={district}
+  onDistrictChange={setDistrict}
+  onSaveNote={handleSaveNote}
+  editingNote={editingNote}
+  onCancelEdit={handleCancelEdit}
+  districtDisabled={notes.length > 0}
+  onResetDistrict={handleResetDistrict}
+/>
         </Grid.Col>
 
         {/* ================================= */}
@@ -250,12 +282,8 @@ export default function RouteNotesPage() {
           <RouteNotesList
             district={district}
             notes={notes}
-            onEdit={
-              handleEdit
-            }
-            onDelete={
-              handleDelete
-            }
+            onEdit={handleEdit}
+            onDelete={handleDelete}
           />
         </Grid.Col>
       </Grid>
