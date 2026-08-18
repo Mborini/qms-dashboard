@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 
 import {
@@ -15,7 +13,68 @@ import {
   IconChartBar,
   IconMap,
   IconArrowUpRight,
+  IconRoute,
 } from "@tabler/icons-react";
+
+const cardStyle = {
+  position: "relative" as const,
+
+  height: 300,
+  minHeight: 300,
+
+  padding: 28,
+
+  borderRadius: 24,
+
+  background:
+    "linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,255,255,0.38))",
+
+  border:
+    "1px solid rgba(255,255,255,0.78)",
+
+  backdropFilter: "blur(18px)",
+  WebkitBackdropFilter: "blur(18px)",
+
+  boxShadow:
+    "0 20px 60px rgba(40,70,90,0.15)",
+
+  overflow: "hidden",
+
+  transition: "all 220ms ease",
+
+  display: "flex",
+  flexDirection: "column" as const,
+};
+
+function CardArrow() {
+  return (
+    <Box
+      style={{
+        width: 38,
+        height: 38,
+
+        flexShrink: 0,
+
+        borderRadius: "50%",
+
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+
+        background:
+          "rgba(255,255,255,0.48)",
+
+        border:
+          "1px solid rgba(255,255,255,0.62)",
+
+        color:
+          "rgba(30,60,80,0.65)",
+      }}
+    >
+      <IconArrowUpRight size={19} />
+    </Box>
+  );
+}
 
 export default function Page() {
   return (
@@ -23,34 +82,35 @@ export default function Page() {
       dir="rtl"
       style={{
         minHeight: "100vh",
+
         position: "relative",
+
         overflow: "hidden",
 
-        /*
-         * خلفية الصفحة
-         * تم تخفيف اللون الغامق بشكل كبير
-         */
         backgroundImage: `
           linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.28),
-            rgba(255, 255, 255, 0.12)
+            rgba(255,255,255,0.28),
+            rgba(255,255,255,0.12)
           ),
           url("/images/failures-bg.jpg")
         `,
 
         backgroundSize: "cover",
+
         backgroundPosition: "center",
+
         backgroundAttachment: "fixed",
       }}
     >
       {/* =====================================================
-          BACKGROUND SOFT OVERLAY
+          BACKGROUND OVERLAY
       ===================================================== */}
 
       <Box
         style={{
           position: "absolute",
+
           inset: 0,
 
           background:
@@ -61,7 +121,7 @@ export default function Page() {
       />
 
       {/* =====================================================
-          BLUE GLOW
+          BLUE BACKGROUND GLOW
       ===================================================== */}
 
       <Box
@@ -74,7 +134,7 @@ export default function Page() {
           borderRadius: "50%",
 
           background:
-            "rgba(34, 139, 230, 0.16)",
+            "rgba(34,139,230,0.15)",
 
           filter: "blur(110px)",
 
@@ -86,7 +146,7 @@ export default function Page() {
       />
 
       {/* =====================================================
-          TEAL GLOW
+          PURPLE BACKGROUND GLOW
       ===================================================== */}
 
       <Box
@@ -99,7 +159,7 @@ export default function Page() {
           borderRadius: "50%",
 
           background:
-            "rgba(18, 184, 134, 0.13)",
+            "rgba(132,94,247,0.12)",
 
           filter: "blur(110px)",
 
@@ -115,7 +175,7 @@ export default function Page() {
       ===================================================== */}
 
       <Container
-        size="lg"
+        size="xl"
         style={{
           position: "relative",
 
@@ -138,7 +198,7 @@ export default function Page() {
           style={{
             width: "100%",
 
-            maxWidth: 900,
+            maxWidth: 1250,
           }}
         >
           {/* =================================================
@@ -149,14 +209,15 @@ export default function Page() {
             style={{
               textAlign: "center",
 
-              marginBottom: 35,
+              marginBottom: 38,
             }}
           >
             <Text
               size="xs"
               fw={800}
               style={{
-                color: "rgba(20, 40, 60, 0.65)",
+                color:
+                  "rgba(20,40,60,0.65)",
 
                 letterSpacing: 2,
 
@@ -172,7 +233,7 @@ export default function Page() {
                 color: "#172b3a",
 
                 fontSize:
-                  "clamp(28px, 5vw, 46px)",
+                  "clamp(28px,5vw,46px)",
 
                 lineHeight: 1.15,
 
@@ -188,7 +249,7 @@ export default function Page() {
               mt={10}
               style={{
                 color:
-                  "rgba(30, 50, 65, 0.72)",
+                  "rgba(30,50,65,0.72)",
               }}
             >
               مركز موحد لمتابعة وتحليل المخالفات
@@ -203,82 +264,50 @@ export default function Page() {
             cols={{
               base: 1,
               sm: 2,
+              lg: 3,
             }}
             spacing="lg"
           >
-            {/* ===============================================
-                STATISTICS
-            =============================================== */}
+            {/* =================================================
+                STATISTICS — BLUE
+            ================================================= */}
 
             <Link
               href="/failures/stats"
               style={{
                 textDecoration: "none",
+
                 color: "inherit",
               }}
             >
               <Box
                 className="glass-card"
-                style={{
-                  position: "relative",
-
-                  minHeight: 260,
-
-                  padding: 28,
-
-                  borderRadius: 24,
-
-                  /*
-                   * Glass
-                   */
-
-                  background:
-                    "linear-gradient(135deg, rgba(255,255,255,0.68), rgba(255,255,255,0.36))",
-
-                  border:
-                    "1px solid rgba(255,255,255,0.72)",
-
-                  backdropFilter:
-                    "blur(18px)",
-
-                  WebkitBackdropFilter:
-                    "blur(18px)",
-
-                  boxShadow:
-                    "0 20px 60px rgba(40,70,90,0.16)",
-
-                  overflow: "hidden",
-
-                  transition:
-                    "all 220ms ease",
-                }}
+                style={cardStyle}
               >
-                {/* Card Glow */}
+                {/* Blue Glow */}
 
                 <Box
                   style={{
                     position: "absolute",
 
-                    width: 190,
-                    height: 190,
+                    width: 200,
+                    height: 200,
 
                     borderRadius: "50%",
 
                     background:
-                      "rgba(34,139,230,0.15)",
+                      "rgba(34,139,230,0.18)",
 
-                    filter: "blur(45px)",
+                    filter: "blur(48px)",
 
-                    top: -80,
-                    right: -70,
+                    top: -85,
+                    right: -75,
 
                     pointerEvents: "none",
                   }}
                 />
 
-                {/* =========================================
-                    TOP
-                ========================================= */}
+                {/* Top */}
 
                 <Group
                   justify="space-between"
@@ -293,18 +322,17 @@ export default function Page() {
                     size={62}
                     radius={18}
                     variant="light"
-                    color="blue"
                     style={{
                       background:
-                        "rgba(255,255,255,0.48)",
+                        "rgba(34,139,230,0.10)",
 
                       border:
-                        "1px solid rgba(255,255,255,0.65)",
+                        "1px solid rgba(34,139,230,0.18)",
 
                       color: "#228be6",
 
                       boxShadow:
-                        "0 8px 25px rgba(34,139,230,0.10)",
+                        "0 8px 25px rgba(34,139,230,0.12)",
                     }}
                   >
                     <IconChartBar
@@ -313,41 +341,13 @@ export default function Page() {
                     />
                   </ThemeIcon>
 
-                  <Box
-                    style={{
-                      width: 38,
-                      height: 38,
-
-                      borderRadius: "50%",
-
-                      display: "flex",
-
-                      alignItems: "center",
-
-                      justifyContent: "center",
-
-                      background:
-                        "rgba(255,255,255,0.45)",
-
-                      border:
-                        "1px solid rgba(255,255,255,0.55)",
-
-                      color:
-                        "rgba(30,60,80,0.65)",
-                    }}
-                  >
-                    <IconArrowUpRight
-                      size={19}
-                    />
-                  </Box>
+                  <CardArrow />
                 </Group>
 
-                {/* =========================================
-                    CONTENT
-                ========================================= */}
+                {/* Content */}
 
                 <Box
-                  mt={55}
+                  mt={42}
                   style={{
                     position: "relative",
 
@@ -371,25 +371,20 @@ export default function Page() {
                     style={{
                       color:
                         "rgba(30,55,70,0.68)",
-
-                      maxWidth: 330,
                     }}
                   >
-                    تحليل شامل للمخالفات
-                    وعرض المؤشرات والإحصائيات
-                    حسب المناطق والحالات و
-                    KPIs.
+                    تحليل شامل للمخالفات ومتابعة
+                    المؤشرات حسب المناطق والحالات
+                    و KPIs.
                   </Text>
                 </Box>
 
-                {/* =========================================
-                    LINK
-                ========================================= */}
+                {/* Footer */}
 
                 <Text
                   size="xs"
                   fw={800}
-                  mt={18}
+                  mt="auto"
                   style={{
                     position: "relative",
 
@@ -403,79 +398,46 @@ export default function Page() {
               </Box>
             </Link>
 
-            {/* ===============================================
-                MAP
-            =============================================== */}
+            {/* =================================================
+                ROUTE NOTES — PURPLE
+            ================================================= */}
 
             <Link
-              href="/failures/osm"
+              href="/route-notes"
               style={{
                 textDecoration: "none",
+
                 color: "inherit",
               }}
             >
               <Box
                 className="glass-card"
-                style={{
-                  position: "relative",
-
-                  minHeight: 260,
-
-                  padding: 28,
-
-                  borderRadius: 24,
-
-                  /*
-                   * Glass
-                   */
-
-                  background:
-                    "linear-gradient(135deg, rgba(255,255,255,0.68), rgba(255,255,255,0.36))",
-
-                  border:
-                    "1px solid rgba(255,255,255,0.72)",
-
-                  backdropFilter:
-                    "blur(18px)",
-
-                  WebkitBackdropFilter:
-                    "blur(18px)",
-
-                  boxShadow:
-                    "0 20px 60px rgba(40,70,90,0.16)",
-
-                  overflow: "hidden",
-
-                  transition:
-                    "all 220ms ease",
-                }}
+                style={cardStyle}
               >
-                {/* Card Glow */}
+                {/* Purple Glow */}
 
                 <Box
                   style={{
                     position: "absolute",
 
-                    width: 190,
-                    height: 190,
+                    width: 200,
+                    height: 200,
 
                     borderRadius: "50%",
 
                     background:
-                      "rgba(18,184,134,0.15)",
+                      "rgba(132,94,247,0.18)",
 
-                    filter: "blur(45px)",
+                    filter: "blur(48px)",
 
-                    top: -80,
-                    right: -70,
+                    top: -85,
+                    right: -75,
 
                     pointerEvents: "none",
                   }}
                 />
 
-                {/* =========================================
-                    TOP
-                ========================================= */}
+                {/* Top */}
 
                 <Group
                   justify="space-between"
@@ -490,18 +452,147 @@ export default function Page() {
                     size={62}
                     radius={18}
                     variant="light"
-                    color="teal"
                     style={{
                       background:
-                        "rgba(255,255,255,0.48)",
+                        "rgba(132,94,247,0.10)",
 
                       border:
-                        "1px solid rgba(255,255,255,0.65)",
+                        "1px solid rgba(132,94,247,0.18)",
 
-                      color: "#12b886",
+                      color: "#7950f2",
 
                       boxShadow:
-                        "0 8px 25px rgba(18,184,134,0.10)",
+                        "0 8px 25px rgba(132,94,247,0.12)",
+                    }}
+                  >
+                    <IconRoute
+                      size={32}
+                      stroke={1.7}
+                    />
+                  </ThemeIcon>
+
+                  <CardArrow />
+                </Group>
+
+                {/* Content */}
+
+                <Box
+                  mt={42}
+                  style={{
+                    position: "relative",
+
+                    zIndex: 2,
+                  }}
+                >
+                  <Text
+                    fw={900}
+                    size="xl"
+                    style={{
+                      color: "#172b3a",
+                    }}
+                  >
+                    ملاحظات التتبع
+                  </Text>
+
+                  <Text
+                    size="sm"
+                    mt={8}
+                    lh={1.7}
+                    style={{
+                      color:
+                        "rgba(30,55,70,0.68)",
+                    }}
+                  >
+                    إنشاء ملاحظات التتبع الخاصة
+                    بالمسارات والآليات، وتنظيمها
+                    ومتابعتها بسهولة.
+                  </Text>
+                </Box>
+
+                {/* Footer */}
+
+                <Text
+                  size="xs"
+                  fw={800}
+                  mt="auto"
+                  style={{
+                    position: "relative",
+
+                    zIndex: 2,
+
+                    color: "#7048e8",
+                  }}
+                >
+                  فتح ملاحظات التتبع ←
+                </Text>
+              </Box>
+            </Link>
+
+            {/* =================================================
+                MAP — ORANGE
+            ================================================= */}
+
+            <Link
+              href="/failures/osm"
+              style={{
+                textDecoration: "none",
+
+                color: "inherit",
+              }}
+            >
+              <Box
+                className="glass-card"
+                style={cardStyle}
+              >
+                {/* Orange Glow */}
+
+                <Box
+                  style={{
+                    position: "absolute",
+
+                    width: 200,
+                    height: 200,
+
+                    borderRadius: "50%",
+
+                    background:
+                      "rgba(253,126,20,0.18)",
+
+                    filter: "blur(48px)",
+
+                    top: -85,
+                    right: -75,
+
+                    pointerEvents: "none",
+                  }}
+                />
+
+                {/* Top */}
+
+                <Group
+                  justify="space-between"
+                  align="flex-start"
+                  style={{
+                    position: "relative",
+
+                    zIndex: 2,
+                  }}
+                >
+                  <ThemeIcon
+                    size={62}
+                    radius={18}
+                    variant="light"
+                    style={{
+                      background:
+                        "rgba(253,126,20,0.10)",
+
+                      border:
+                        "1px solid rgba(253,126,20,0.18)",
+
+                      color: "#f76707",
+
+                      boxShadow:
+                        "0 8px 25px rgba(253,126,20,0.12)",
                     }}
                   >
                     <IconMap
@@ -510,41 +601,13 @@ export default function Page() {
                     />
                   </ThemeIcon>
 
-                  <Box
-                    style={{
-                      width: 38,
-                      height: 38,
-
-                      borderRadius: "50%",
-
-                      display: "flex",
-
-                      alignItems: "center",
-
-                      justifyContent: "center",
-
-                      background:
-                        "rgba(255,255,255,0.45)",
-
-                      border:
-                        "1px solid rgba(255,255,255,0.55)",
-
-                      color:
-                        "rgba(30,60,80,0.65)",
-                    }}
-                  >
-                    <IconArrowUpRight
-                      size={19}
-                    />
-                  </Box>
+                  <CardArrow />
                 </Group>
 
-                {/* =========================================
-                    CONTENT
-                ========================================= */}
+                {/* Content */}
 
                 <Box
-                  mt={55}
+                  mt={42}
                   style={{
                     position: "relative",
 
@@ -568,30 +631,26 @@ export default function Page() {
                     style={{
                       color:
                         "rgba(30,55,70,0.68)",
-
-                      maxWidth: 330,
                     }}
                   >
-                    استعراض مواقع المخالفات
-                    جغرافياً مع إمكانية التصفية
-                    وعرض النقاط والخريطة الحرارية.
+                    استعراض مواقع المخالفات على
+                    الخريطة مع أدوات التصفية
+                    والخريطة الحرارية.
                   </Text>
                 </Box>
 
-                {/* =========================================
-                    LINK
-                ========================================= */}
+                {/* Footer */}
 
                 <Text
                   size="xs"
                   fw={800}
-                  mt={18}
+                  mt="auto"
                   style={{
                     position: "relative",
 
                     zIndex: 2,
 
-                    color: "#099268",
+                    color: "#e8590c",
                   }}
                 >
                   فتح الخريطة ←
@@ -603,30 +662,34 @@ export default function Page() {
       </Container>
 
       {/* =====================================================
-          HOVER STYLE
+          HOVER
       ===================================================== */}
 
-      <style jsx>{`
+      <style>{`
+        .glass-card {
+          transform: translateY(0) scale(1);
+        }
+
         .glass-card:hover {
-          transform: translateY(-7px) scale(1.015);
+          transform:
+            translateY(-7px)
+            scale(1.015);
 
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.82),
-            rgba(255, 255, 255, 0.48)
-          ) !important;
+          background:
+            linear-gradient(
+              135deg,
+              rgba(255,255,255,0.84),
+              rgba(255,255,255,0.50)
+            ) !important;
 
-          border-color: rgba(
-            255,
-            255,
-            255,
-            0.95
-          ) !important;
+          border-color:
+            rgba(255,255,255,0.96) !important;
 
           box-shadow:
-            0 28px 80px rgba(40, 70, 90, 0.22),
+            0 28px 80px
+              rgba(40,70,90,0.22),
             inset 0 1px 0
-              rgba(255, 255, 255, 0.8);
+              rgba(255,255,255,0.85);
         }
 
         .glass-card:active {
@@ -637,11 +700,22 @@ export default function Page() {
 
         @media (max-width: 576px) {
           .glass-card {
-            min-height: 230px !important;
+            height: 280px !important;
+            min-height: 280px !important;
 
             padding: 22px !important;
 
             border-radius: 20px !important;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .glass-card {
+            transition: none !important;
+          }
+
+          .glass-card:hover {
+            transform: none !important;
           }
         }
       `}</style>

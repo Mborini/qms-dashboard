@@ -11,7 +11,6 @@ import {
   Group,
   Switch,
   Text,
-  Center,
   Stack,
   Badge,
 } from "@mantine/core";
@@ -37,9 +36,9 @@ export default function StatsPage() {
     const date = new Date();
 
     return `${date.getFullYear()}-${String(
-      date.getMonth() + 1,
+      date.getMonth() + 1
     ).padStart(2, "0")}-${String(
-      date.getDate(),
+      date.getDate()
     ).padStart(2, "0")}`;
   }
 
@@ -49,9 +48,11 @@ export default function StatsPage() {
 
   const [items, setItems] = useState([]);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
   const [showCollapsible, setShowCollapsible] =
     useState(false);
@@ -69,32 +70,36 @@ export default function StatsPage() {
   function getDateRange(date) {
     const current = new Date(date);
 
-    const year = current.getFullYear();
+    const year =
+      current.getFullYear();
 
     const month = String(
-      current.getMonth() + 1,
+      current.getMonth() + 1
     ).padStart(2, "0");
 
     const day = String(
-      current.getDate(),
+      current.getDate()
     ).padStart(2, "0");
 
-    const previous = new Date(current);
+    const previous =
+      new Date(current);
 
     previous.setDate(
-      previous.getDate() - 1,
+      previous.getDate() - 1
     );
 
     const previousYear =
       previous.getFullYear();
 
-    const previousMonth = String(
-      previous.getMonth() + 1,
-    ).padStart(2, "0");
+    const previousMonth =
+      String(
+        previous.getMonth() + 1
+      ).padStart(2, "0");
 
-    const previousDay = String(
-      previous.getDate(),
-    ).padStart(2, "0");
+    const previousDay =
+      String(
+        previous.getDate()
+      ).padStart(2, "0");
 
     return {
       from: `${previousYear}-${previousMonth}-${previousDay}T21:00:00.000Z`,
@@ -121,22 +126,22 @@ export default function StatsPage() {
 
       params.append(
         "dateFrom",
-        range.from,
+        range.from
       );
 
       params.append(
         "dateTo",
-        range.to,
+        range.to
       );
 
       params.append(
         "limit",
-        "1000",
+        "1000"
       );
 
       params.append(
         "offset",
-        "0",
+        "0"
       );
 
       console.log(
@@ -144,16 +149,17 @@ export default function StatsPage() {
         {
           dateFrom: range.from,
           dateTo: range.to,
-        },
+        }
       );
 
-      const response = await fetch(
-        `/api/kpis?${params.toString()}`,
-        {
-          method: "GET",
-          cache: "no-store",
-        },
-      );
+      const response =
+        await fetch(
+          `/api/kpis?${params.toString()}`,
+          {
+            method: "GET",
+            cache: "no-store",
+          }
+        );
 
       // =================================================
       // RESPONSE ERROR
@@ -193,19 +199,19 @@ export default function StatsPage() {
 
       console.log(
         "KPI ITEMS:",
-        result.length,
+        result.length
       );
     } catch (error) {
       console.error(
         "KPI ERROR:",
-        error,
+        error
       );
 
       setItems([]);
 
       setError(
         error?.message ||
-          "حدث خطأ أثناء تحميل البيانات",
+          "حدث خطأ أثناء تحميل البيانات"
       );
     } finally {
       setLoading(false);
@@ -227,22 +233,28 @@ export default function StatsPage() {
   return (
     <Box
       dir="rtl"
+      className="stats-page"
       style={{
         minHeight: "100vh",
 
+        width: "100%",
+
+        maxWidth: "100vw",
+
         position: "relative",
 
-        overflow: "hidden",
+        overflowX: "hidden",
 
         background:
           "linear-gradient(135deg, #f8fbff 0%, #eef6ff 45%, #f4fbf8 100%)",
       }}
     >
       {/* =================================================
-          BACKGROUND GLOW
+          BACKGROUND BLUE GLOW
       ================================================= */}
 
       <Box
+        className="background-glow-blue"
         style={{
           position: "fixed",
 
@@ -255,7 +267,8 @@ export default function StatsPage() {
           background:
             "rgba(34,139,230,0.10)",
 
-          filter: "blur(110px)",
+          filter:
+            "blur(110px)",
 
           top: -180,
 
@@ -265,7 +278,12 @@ export default function StatsPage() {
         }}
       />
 
+      {/* =================================================
+          BACKGROUND GREEN GLOW
+      ================================================= */}
+
       <Box
+        className="background-glow-green"
         style={{
           position: "fixed",
 
@@ -278,7 +296,8 @@ export default function StatsPage() {
           background:
             "rgba(18,184,134,0.08)",
 
-          filter: "blur(110px)",
+          filter:
+            "blur(110px)",
 
           bottom: -180,
 
@@ -294,10 +313,13 @@ export default function StatsPage() {
 
       <Container
         size="xl"
+        className="stats-container"
         style={{
           position: "relative",
 
           zIndex: 2,
+
+          width: "100%",
 
           paddingTop: 30,
 
@@ -309,6 +331,7 @@ export default function StatsPage() {
         ================================================= */}
 
         <Box
+          className="stats-header"
           style={{
             textAlign: "center",
 
@@ -331,6 +354,7 @@ export default function StatsPage() {
 
           <Title
             order={1}
+            className="stats-title"
             fw={900}
             style={{
               color: "#1f2937",
@@ -345,6 +369,7 @@ export default function StatsPage() {
           </Title>
 
           <Text
+            className="stats-subtitle"
             size="sm"
             mt={7}
             style={{
@@ -357,196 +382,210 @@ export default function StatsPage() {
         </Box>
 
         {/* =================================================
-            FILTER GLASS CARD
+            FILTER CARD
         ================================================= */}
 
-       <Box
-  style={{
-    width: "100%",
-    borderRadius: 22,
-    padding: "14px 18px",
-    marginBottom: 22,
-
-    background: "rgba(255,255,255,0.72)",
-    border: "1px solid rgba(255,255,255,0.9)",
-
-    backdropFilter: "blur(18px)",
-    WebkitBackdropFilter: "blur(18px)",
-
-    boxShadow:
-      "0 12px 40px rgba(31,41,55,0.07)",
-  }}
->
-  <Group
-    justify="center"
-    align="flex-end"
-    gap="md"
-    wrap="nowrap"
-  >
-    {/* =================================================
-        DATE FROM
-    ================================================= */}
-
-    <Box>
-      <Group
-        gap={5}
-        mb={4}
-        wrap="nowrap"
-      >
-        <IconCalendar
-          size={14}
-          color="#228be6"
-        />
-
-        <Text
-          size="xs"
-          fw={800}
-          c="#475569"
+        <Box
+          className="filter-card"
           style={{
-            whiteSpace: "nowrap",
+            width: "100%",
+
+            borderRadius: 22,
+
+            padding: "14px 18px",
+
+            marginBottom: 22,
+
+            background:
+              "rgba(255,255,255,0.72)",
+
+            border:
+              "1px solid rgba(255,255,255,0.9)",
+
+            backdropFilter:
+              "blur(18px)",
+
+            WebkitBackdropFilter:
+              "blur(18px)",
+
+            boxShadow:
+              "0 12px 40px rgba(31,41,55,0.07)",
           }}
         >
-          من تاريخ
-        </Text>
-      </Group>
+          <Group
+            className="filters"
+            justify="center"
+            align="flex-end"
+            gap="md"
+            wrap="nowrap"
+          >
+            {/* =================================================
+                DATE FROM
+            ================================================= */}
 
-      <input
-        type="date"
-        value={dateFrom}
-        onChange={(e) =>
-          setDateFrom(e.target.value)
-        }
-        style={{
-          height: 36,
-          borderRadius: 11,
-          border: "1px solid #dbe4ee",
-          padding: "0 10px",
-          fontSize: 12,
-          background:
-            "rgba(255,255,255,0.9)",
-          width: 145,
-          outline: "none",
-        }}
-      />
-    </Box>
+            <Box className="filter-item">
+              <Group
+                gap={5}
+                mb={4}
+                wrap="nowrap"
+              >
+                <IconCalendar
+                  size={14}
+                  color="#228be6"
+                />
 
-    {/* =================================================
-        DATE TO
-    ================================================= */}
+                <Text
+                  size="xs"
+                  fw={800}
+                  c="#475569"
+                  style={{
+                    whiteSpace:
+                      "nowrap",
+                  }}
+                >
+                  من تاريخ
+                </Text>
+              </Group>
 
-    <Box>
-      <Group
-        gap={5}
-        mb={4}
-        wrap="nowrap"
-      >
-        <IconCalendar
-          size={14}
-          color="#228be6"
-        />
+              <input
+                className="date-input"
+                type="date"
+                value={dateFrom}
+                onChange={(e) =>
+                  setDateFrom(
+                    e.target.value
+                  )
+                }
+              />
+            </Box>
 
-        <Text
-          size="xs"
-          fw={800}
-          c="#475569"
-          style={{
-            whiteSpace: "nowrap",
-          }}
-        >
-          إلى تاريخ
-        </Text>
-      </Group>
+            {/* =================================================
+                DATE TO
+            ================================================= */}
 
-      <input
-        type="date"
-        value={dateTo}
-        onChange={(e) =>
-          setDateTo(e.target.value)
-        }
-        style={{
-          height: 36,
-          borderRadius: 11,
-          border: "1px solid #dbe4ee",
-          padding: "0 10px",
-          fontSize: 12,
-          background:
-            "rgba(255,255,255,0.9)",
-          width: 145,
-          outline: "none",
-        }}
-      />
-    </Box>
+            <Box className="filter-item">
+              <Group
+                gap={5}
+                mb={4}
+                wrap="nowrap"
+              >
+                <IconCalendar
+                  size={14}
+                  color="#228be6"
+                />
 
-    {/* =================================================
-        SEARCH
-    ================================================= */}
+                <Text
+                  size="xs"
+                  fw={800}
+                  c="#475569"
+                  style={{
+                    whiteSpace:
+                      "nowrap",
+                  }}
+                >
+                  إلى تاريخ
+                </Text>
+              </Group>
 
-    <Button
-      size="sm"
-      radius="xl"
-      loading={loading}
-      leftSection={
-        <IconSearch size={15} />
-      }
-      onClick={getData}
-      style={{
-        height: 36,
-        padding: "0 20px",
-        flexShrink: 0,
+              <input
+                className="date-input"
+                type="date"
+                value={dateTo}
+                onChange={(e) =>
+                  setDateTo(
+                    e.target.value
+                  )
+                }
+              />
+            </Box>
 
-        boxShadow:
-          "0 6px 18px rgba(34,139,230,0.20)",
-      }}
-    >
-      استعلام
-    </Button>
+            {/* =================================================
+                SEARCH
+            ================================================= */}
 
-    {/* =================================================
-        VIEW SWITCH
-    ================================================= */}
+            <Button
+              className="search-button"
+              size="sm"
+              radius="xl"
+              loading={loading}
+              leftSection={
+                <IconSearch
+                  size={15}
+                />
+              }
+              onClick={getData}
+              style={{
+                height: 36,
 
-    <Box
-      style={{
-        height: 36,
-        padding: "0 12px",
+                padding:
+                  "0 20px",
 
-        display: "flex",
-        alignItems: "center",
+                flexShrink: 0,
 
-        borderRadius: 12,
+                boxShadow:
+                  "0 6px 18px rgba(34,139,230,0.20)",
+              }}
+            >
+              استعلام
+            </Button>
 
-        background:
-          "rgba(248,250,252,0.85)",
+            {/* =================================================
+                VIEW SWITCH
+            ================================================= */}
 
-        border:
-          "1px solid #e5eaf0",
+            <Box
+              className="switch-box"
+              style={{
+                height: 36,
 
-        flexShrink: 0,
-      }}
-    >
-      <Switch
-        size="sm"
-        label={
-          showCollapsible
-            ? "العرض التفصيلي"
-            : "العرض المختصر"
-        }
-        checked={showCollapsible}
-        onChange={(event) =>
-          setShowCollapsible(
-            event.currentTarget.checked
-          )
-        }
-      />
-    </Box>
-  </Group>
-</Box>
+                padding:
+                  "0 12px",
+
+                display: "flex",
+
+                alignItems:
+                  "center",
+
+                borderRadius: 12,
+
+                background:
+                  "rgba(248,250,252,0.85)",
+
+                border:
+                  "1px solid #e5eaf0",
+
+                flexShrink: 0,
+              }}
+            >
+              <Switch
+                size="sm"
+                label={
+                  showCollapsible
+                    ? "العرض التفصيلي"
+                    : "العرض المختصر"
+                }
+                checked={
+                  showCollapsible
+                }
+                onChange={(event) =>
+                  setShowCollapsible(
+                    event
+                      .currentTarget
+                      .checked
+                  )
+                }
+              />
+            </Box>
+          </Group>
+        </Box>
+
         {/* =================================================
             ERROR CARD
         ================================================= */}
 
         {error && !loading && (
           <Box
+            className="error-card"
             style={{
               marginBottom: 20,
 
@@ -569,6 +608,7 @@ export default function StatsPage() {
             }}
           >
             <Group
+              className="error-content"
               justify="space-between"
               wrap="nowrap"
               gap="md"
@@ -576,6 +616,9 @@ export default function StatsPage() {
               <Group
                 gap={10}
                 wrap="nowrap"
+                style={{
+                  minWidth: 0,
+                }}
               >
                 <Box
                   style={{
@@ -591,7 +634,8 @@ export default function StatsPage() {
                     background:
                       "#fff0f0",
 
-                    color: "#e03131",
+                    color:
+                      "#e03131",
 
                     display: "flex",
 
@@ -607,7 +651,11 @@ export default function StatsPage() {
                   />
                 </Box>
 
-                <Box>
+                <Box
+                  style={{
+                    minWidth: 0,
+                  }}
+                >
                   <Text
                     size="sm"
                     fw={800}
@@ -617,6 +665,7 @@ export default function StatsPage() {
                   </Text>
 
                   <Text
+                    className="error-message"
                     size="xs"
                     c="dimmed"
                     mt={2}
@@ -627,6 +676,7 @@ export default function StatsPage() {
               </Group>
 
               <Button
+                className="retry-button"
                 variant="light"
                 color="red"
                 size="xs"
@@ -650,6 +700,7 @@ export default function StatsPage() {
 
         {loading ? (
           <Box
+            className="state-card"
             style={{
               minHeight: 320,
 
@@ -700,6 +751,7 @@ export default function StatsPage() {
           ================================================= */
 
           <Box
+            className="state-card"
             style={{
               minHeight: 300,
 
@@ -772,6 +824,7 @@ export default function StatsPage() {
           ================================================= */
 
           <Box
+            className="state-card"
             style={{
               minHeight: 300,
 
@@ -822,7 +875,8 @@ export default function StatsPage() {
                   justifyContent:
                     "center",
 
-                  color: "#94a3b8",
+                  color:
+                    "#94a3b8",
                 }}
               >
                 <IconChartBar
@@ -860,16 +914,18 @@ export default function StatsPage() {
           ================================================= */
 
           <Box
+            className="results-wrapper"
             style={{
-              position: "relative",
+              position:
+                "relative",
+
+              width: "100%",
+
+              maxWidth: "100%",
+
+              minWidth: 0,
             }}
           >
-          
-
-            {/* =================================================
-                STATISTICS
-            ================================================= */}
-
             {showCollapsible ? (
               <FailureStatsCollapsible
                 items={items}
@@ -883,21 +939,329 @@ export default function StatsPage() {
         )}
       </Container>
 
-      {/* =================================================
-          MOBILE
-      ================================================= */}
+      {/* =====================================================
+          RESPONSIVE CSS
+          DESKTOP لا يتأثر
+      ===================================================== */}
 
       <style jsx>{`
-        input[type="date"]:focus {
-          border-color: #74c0fc !important;
-          box-shadow:
-            0 0 0 3px
-            rgba(34, 139, 230, 0.08);
+        * {
+          box-sizing: border-box;
         }
 
+        .stats-page {
+          width: 100%;
+          max-width: 100vw;
+          overflow-x: hidden;
+        }
+
+        /* ===================================================
+           DATE INPUT
+        =================================================== */
+
+        .date-input {
+          height: 36px;
+
+          width: 145px;
+
+          border-radius: 11px;
+
+          border:
+            1px solid #dbe4ee;
+
+          padding:
+            0 10px;
+
+          font-size: 12px;
+
+          background:
+            rgba(255,255,255,0.9);
+
+          color: #334155;
+
+          outline: none;
+        }
+
+        .date-input:focus {
+          border-color:
+            #74c0fc;
+
+          box-shadow:
+            0 0 0 3px
+            rgba(34,139,230,0.08);
+        }
+
+        /* ===================================================
+           RESULTS
+        =================================================== */
+
+        .results-wrapper {
+          width: 100%;
+
+          max-width: 100%;
+
+          min-width: 0;
+        }
+
+        /* ===================================================
+           MOBILE ONLY
+        =================================================== */
+
         @media (max-width: 576px) {
-          input[type="date"] {
-            width: 130px !important;
+          .stats-container {
+            width: 100% !important;
+
+            max-width: 100% !important;
+
+            padding:
+              16px 10px 25px !important;
+          }
+
+          /* ===============================================
+             HEADER
+          =============================================== */
+
+          .stats-header {
+            margin-bottom:
+              16px !important;
+          }
+
+          .stats-title {
+            font-size:
+              25px !important;
+          }
+
+          .stats-subtitle {
+            font-size:
+              11px !important;
+
+            line-height:
+              1.7;
+
+            max-width:
+              300px;
+
+            margin-left:
+              auto;
+
+            margin-right:
+              auto;
+          }
+
+          /* ===============================================
+             FILTER CARD
+          =============================================== */
+
+          .filter-card {
+            padding:
+              12px !important;
+
+            margin-bottom:
+              16px !important;
+
+            border-radius:
+              18px !important;
+          }
+
+          /* ===============================================
+             FILTERS
+          =============================================== */
+
+          .filters {
+            width:
+              100% !important;
+
+            display:
+              flex !important;
+
+            flex-direction:
+              column !important;
+
+            align-items:
+              stretch !important;
+
+            justify-content:
+              stretch !important;
+
+            gap:
+              10px !important;
+
+            flex-wrap:
+              nowrap !important;
+          }
+
+          /* ===============================================
+             DATE
+          =============================================== */
+
+          .filter-item {
+            width:
+              100% !important;
+
+            min-width:
+              0 !important;
+
+            flex:
+              none !important;
+          }
+
+          .date-input {
+            width:
+              100% !important;
+
+            height:
+              42px !important;
+
+            border-radius:
+              12px !important;
+
+            font-size:
+              14px !important;
+          }
+
+          /* ===============================================
+             SEARCH
+          =============================================== */
+
+          .search-button {
+            width:
+              100% !important;
+
+            min-width:
+              0 !important;
+
+            height:
+              42px !important;
+
+            margin-top:
+              2px;
+          }
+
+          /* ===============================================
+             SWITCH
+          =============================================== */
+
+          .switch-box {
+            width:
+              100% !important;
+
+            height:
+              42px !important;
+
+            justify-content:
+              center !important;
+
+            border-radius:
+              12px !important;
+          }
+
+          /* ===============================================
+             ERROR
+          =============================================== */
+
+          .error-card {
+            padding:
+              12px !important;
+
+            border-radius:
+              16px !important;
+          }
+
+          .error-content {
+            flex-direction:
+              column !important;
+
+            align-items:
+              stretch !important;
+          }
+
+          .retry-button {
+            width:
+              100% !important;
+
+            height:
+              40px !important;
+          }
+
+          .error-message {
+            overflow-wrap:
+              anywhere;
+
+            word-break:
+              break-word;
+
+            line-height:
+              1.7;
+          }
+
+          /* ===============================================
+             STATES
+          =============================================== */
+
+          .state-card {
+            min-height:
+              250px !important;
+
+            border-radius:
+              20px !important;
+          }
+
+          /* ===============================================
+             RESULTS
+          =============================================== */
+
+          .results-wrapper {
+            width:
+              100% !important;
+
+            max-width:
+              100% !important;
+
+            min-width:
+              0 !important;
+
+            overflow-x:
+              auto;
+
+            -webkit-overflow-scrolling:
+              touch;
+          }
+        }
+
+        /* ===================================================
+           VERY SMALL PHONES
+        =================================================== */
+
+        @media (max-width: 380px) {
+          .stats-container {
+            padding-left:
+              8px !important;
+
+            padding-right:
+              8px !important;
+          }
+
+          .stats-title {
+            font-size:
+              22px !important;
+          }
+
+          .stats-subtitle {
+            font-size:
+              10px !important;
+          }
+
+          .filter-card {
+            padding:
+              10px !important;
+          }
+
+          .date-input {
+            height:
+              40px !important;
+
+            font-size:
+              13px !important;
           }
         }
       `}</style>
