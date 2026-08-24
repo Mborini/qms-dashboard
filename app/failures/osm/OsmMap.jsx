@@ -844,8 +844,7 @@ function createFailurePopup(item) {
                 font-weight: 800;
               "
             >
-              ↗ فتح الموقع على الخريطة
-            </a>
+Google Map            </a>
 
           </div>
         `
@@ -934,7 +933,38 @@ function createFailurePopup(item) {
     >
       📋 نسخ التفاصيل
     </button>
-
+${
+  item?.id != null
+    ? `
+      <a
+        href="https://provider.avtr.jo/failures/${encodeURIComponent(
+          item.id
+        )}"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          width: 100%;
+          margin-top: 10px;
+          padding: 8px 10px;
+          border-radius: 8px;
+          background: #40C057;
+          color: #ffffff;
+          text-decoration: none;
+          font-size: 10px;
+          font-weight: 800;
+          font-family: Arial, Tahoma, sans-serif;
+          box-sizing: border-box;
+        "
+      >
+عرض المخالفة في QMS
+      </a>
+    `
+    : ""
+}
   </div>
 
 </div>

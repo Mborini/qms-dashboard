@@ -263,9 +263,18 @@ export default function OsmMapClient() {
         params.set("districtNames", district);
       }
 
-      if (kpiNameAr) {
-        params.set("kpiNameAr", kpiNameAr);
-      }
+     if (kpiNameAr) {
+  const kpiNameWithoutNumber =
+    kpiNameAr.replace(
+      /^\s*\d+(?:\.\d+)?\s*-\s*/,
+      ""
+    );
+
+  params.set(
+    "kpiNameAr",
+    kpiNameWithoutNumber
+  );
+}
 
       if (status) {
         params.set("status", status);
