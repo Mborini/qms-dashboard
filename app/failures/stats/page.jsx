@@ -14,6 +14,7 @@ import {
   Stack,
   Badge,
 } from "@mantine/core";
+import { bungee } from "../../layout";
 
 import FailureStatsCollapsible from "../../components/FailureStats1";
 import FailureStats from "../../components/Failures/FailureStats";
@@ -330,56 +331,71 @@ export default function StatsPage() {
             HEADER
         ================================================= */}
 
-        <Box
-          className="stats-header"
-          style={{
-            textAlign: "center",
+            <Box
+  style={{
+    textAlign: "center",
+    marginBottom: 22,
+  }}
+>
+  <Box
+    style={{
+      display: "inline-flex",
+      alignItems: "baseline",
+      justifyContent: "center",
+      gap: 6,
+    }}
+  >
+    <Text
+      component="span"
+      style={{
+        fontFamily: "Inter, sans-serif",
+        fontSize: "clamp(36px, 5vw, 56px)",
+        fontWeight: 600,
+        letterSpacing: "-2px",
+        color: "#263746",
+        lineHeight: 1,
+      }}
+    >
+      Ops
+    </Text>
 
-            marginBottom: 25,
-          }}
-        >
-          <Text
-            size="xs"
-            fw={800}
-            style={{
-              color: "#228be6",
+    <Text
+      component="span"
+      className={bungee.className}
+      style={{
+        fontSize: "clamp(32px, 4.5vw, 52px)",
+        lineHeight: 1,
 
-              letterSpacing: 2,
+        background:
+          "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
 
-              marginBottom: 7,
-            }}
-          >
-            AVTR • OPERATIONS
-          </Text>
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        backgroundClip: "text",
 
-          <Title
-            order={1}
-            className="stats-title"
-            fw={900}
-            style={{
-              color: "#1f2937",
+        display: "inline-block",
 
-              fontSize:
-                "clamp(24px, 4vw, 38px)",
+        letterSpacing: "0px",
+      }}
+    >
+      Matrix
+    </Text>
+  </Box>
 
-              lineHeight: 1.2,
-            }}
-          >
-            إحصائيات المخالفات
-          </Title>
-
-          <Text
-            className="stats-subtitle"
-            size="sm"
-            mt={7}
-            style={{
-              color: "#64748b",
-            }}
-          >
-            منصة الرصد والتحليل التشغيلي
-            للمخالفات ومؤشرات الأداء
-          </Text>
-        </Box>
+  <Text
+    mt={16}
+    style={{
+      fontFamily: "Inter, sans-serif",
+      fontSize: 12,
+      fontWeight: 600,
+      letterSpacing: "2.4px",
+      textTransform: "uppercase",
+      color: "rgba(30,50,65,0.52)",
+    }}
+  >
+    Operations Intelligence
+  </Text>
+</Box>
 
         {/* =================================================
             FILTER CARD

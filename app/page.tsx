@@ -7,6 +7,7 @@ import {
   Text,
   Group,
   ThemeIcon,
+  Badge,
 } from "@mantine/core";
 
 import {
@@ -14,7 +15,12 @@ import {
   IconMap,
   IconArrowUpRight,
   IconRoute,
+  IconTrash,
+  IconMapPin,
+  IconFileTypeXls,
+  IconMap2,
 } from "@tabler/icons-react";
+import { bungee } from "./layout";
 
 const cardStyle = {
   position: "relative" as const,
@@ -29,14 +35,12 @@ const cardStyle = {
   background:
     "linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,255,255,0.38))",
 
-  border:
-    "1px solid rgba(255,255,255,0.78)",
+  border: "1px solid rgba(255,255,255,0.78)",
 
   backdropFilter: "blur(18px)",
   WebkitBackdropFilter: "blur(18px)",
 
-  boxShadow:
-    "0 20px 60px rgba(40,70,90,0.15)",
+  boxShadow: "0 20px 60px rgba(40,70,90,0.15)",
 
   overflow: "hidden",
 
@@ -61,14 +65,11 @@ function CardArrow() {
         alignItems: "center",
         justifyContent: "center",
 
-        background:
-          "rgba(255,255,255,0.48)",
+        background: "rgba(255,255,255,0.48)",
 
-        border:
-          "1px solid rgba(255,255,255,0.62)",
+        border: "1px solid rgba(255,255,255,0.62)",
 
-        color:
-          "rgba(30,60,80,0.65)",
+        color: "rgba(30,60,80,0.65)",
       }}
     >
       <IconArrowUpRight size={19} />
@@ -133,8 +134,7 @@ export default function Page() {
 
           borderRadius: "50%",
 
-          background:
-            "rgba(34,139,230,0.15)",
+          background: "rgba(34,139,230,0.15)",
 
           filter: "blur(110px)",
 
@@ -158,8 +158,7 @@ export default function Page() {
 
           borderRadius: "50%",
 
-          background:
-            "rgba(132,94,247,0.12)",
+          background: "rgba(132,94,247,0.12)",
 
           filter: "blur(110px)",
 
@@ -189,7 +188,7 @@ export default function Page() {
 
           justifyContent: "center",
 
-          paddingTop: 40,
+          paddingTop: 0,
 
           paddingBottom: 40,
         }}
@@ -205,459 +204,529 @@ export default function Page() {
               HEADER
           ================================================= */}
 
-          <Box
-            style={{
-              textAlign: "center",
+         <Box
+  style={{
+    textAlign: "center",
+    marginBottom: 44,
+  }}
+>
+  <Box
+    style={{
+      display: "inline-flex",
+      alignItems: "baseline",
+      justifyContent: "center",
+      gap: 6,
+    }}
+  >
+    <Text
+      component="span"
+      style={{
+        fontFamily: "Inter, sans-serif",
+        fontSize: "clamp(36px, 5vw, 56px)",
+        fontWeight: 600,
+        letterSpacing: "-2px",
+        color: "#263746",
+        lineHeight: 1,
+      }}
+    >
+      Ops
+    </Text>
 
-              marginBottom: 38,
-            }}
-          >
-            <Text
-              size="xs"
-              fw={800}
-              style={{
-                color:
-                  "rgba(20,40,60,0.65)",
+    <Text
+      component="span"
+      className={bungee.className}
+      style={{
+        fontSize: "clamp(32px, 4.5vw, 52px)",
+        lineHeight: 1,
 
-                letterSpacing: 2,
+        background:
+          "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
 
-                marginBottom: 10,
-              }}
-            >
-              AVTR • OPERATIONS
-            </Text>
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        backgroundClip: "text",
 
-            <Text
-              fw={900}
-              style={{
-                color: "#172b3a",
+        display: "inline-block",
 
-                fontSize:
-                  "clamp(28px,5vw,46px)",
+        letterSpacing: "0px",
+      }}
+    >
+      Matrix
+    </Text>
+  </Box>
 
-                lineHeight: 1.15,
-
-                textShadow:
-                  "0 3px 15px rgba(255,255,255,0.5)",
-              }}
-            >
-              لوحة المخالفات
-            </Text>
-
-            <Text
-              size="sm"
-              mt={10}
-              style={{
-                color:
-                  "rgba(30,50,65,0.72)",
-              }}
-            >
-              مركز موحد لمتابعة وتحليل المخالفات
-            </Text>
-          </Box>
+  <Text
+    mt={16}
+    style={{
+      fontFamily: "Inter, sans-serif",
+      fontSize: 12,
+      fontWeight: 600,
+      letterSpacing: "2.4px",
+      textTransform: "uppercase",
+      color: "rgba(30,50,65,0.52)",
+    }}
+  >
+    Operations Intelligence
+  </Text>
+</Box>
 
           {/* =================================================
               CARDS
           ================================================= */}
 
-          <SimpleGrid
-            cols={{
-              base: 1,
-              sm: 2,
-              lg: 3,
-            }}
-            spacing="lg"
-          >
-            {/* =================================================
-                STATISTICS — BLUE
-            ================================================= */}
-
-            <Link
-              href="/failures/stats"
-              style={{
-                textDecoration: "none",
-
-                color: "inherit",
-              }}
-            >
-              <Box
-                className="glass-card"
-                style={cardStyle}
-              >
-                {/* Blue Glow */}
-
-                <Box
-                  style={{
-                    position: "absolute",
-
-                    width: 200,
-                    height: 200,
-
-                    borderRadius: "50%",
-
-                    background:
-                      "rgba(34,139,230,0.18)",
-
-                    filter: "blur(48px)",
-
-                    top: -85,
-                    right: -75,
-
-                    pointerEvents: "none",
-                  }}
-                />
-
-                {/* Top */}
-
-                <Group
-                  justify="space-between"
-                  align="flex-start"
-                  style={{
-                    position: "relative",
-
-                    zIndex: 2,
-                  }}
-                >
-                  <ThemeIcon
-                    size={62}
-                    radius={18}
-                    variant="light"
-                    style={{
-                      background:
-                        "rgba(34,139,230,0.10)",
-
-                      border:
-                        "1px solid rgba(34,139,230,0.18)",
-
-                      color: "#228be6",
-
-                      boxShadow:
-                        "0 8px 25px rgba(34,139,230,0.12)",
-                    }}
-                  >
-                    <IconChartBar
-                      size={32}
-                      stroke={1.7}
-                    />
-                  </ThemeIcon>
-
-                  <CardArrow />
-                </Group>
-
-                {/* Content */}
-
-                <Box
-                  mt={42}
-                  style={{
-                    position: "relative",
-
-                    zIndex: 2,
-                  }}
-                >
-                  <Text
-                    fw={900}
-                    size="xl"
-                    style={{
-                      color: "#172b3a",
-                    }}
-                  >
-                    الإحصائيات
-                  </Text>
-
-                  <Text
-                    size="sm"
-                    mt={8}
-                    lh={1.7}
-                    style={{
-                      color:
-                        "rgba(30,55,70,0.68)",
-                    }}
-                  >
-                    تحليل شامل للمخالفات ومتابعة
-                    المؤشرات حسب المناطق والحالات
-                    و KPIs.
-                  </Text>
-                </Box>
-
-                {/* Footer */}
-
-                <Text
-                  size="xs"
-                  fw={800}
-                  mt="auto"
-                  style={{
-                    position: "relative",
-
-                    zIndex: 2,
-
-                    color: "#1971c2",
-                  }}
-                >
-                  فتح الإحصائيات ←
-                </Text>
-              </Box>
-            </Link>
-
-            {/* =================================================
-                ROUTE NOTES — PURPLE
-            ================================================= */}
-
-            <Link
-              href="/route-notes"
-              style={{
-                textDecoration: "none",
-
-                color: "inherit",
-              }}
-            >
-              <Box
-                className="glass-card"
-                style={cardStyle}
-              >
-                {/* Purple Glow */}
-
-                <Box
-                  style={{
-                    position: "absolute",
-
-                    width: 200,
-                    height: 200,
-
-                    borderRadius: "50%",
-
-                    background:
-                      "rgba(132,94,247,0.18)",
-
-                    filter: "blur(48px)",
-
-                    top: -85,
-                    right: -75,
-
-                    pointerEvents: "none",
-                  }}
-                />
-
-                {/* Top */}
-
-                <Group
-                  justify="space-between"
-                  align="flex-start"
-                  style={{
-                    position: "relative",
-
-                    zIndex: 2,
-                  }}
-                >
-                  <ThemeIcon
-                    size={62}
-                    radius={18}
-                    variant="light"
-                    style={{
-                      background:
-                        "rgba(132,94,247,0.10)",
-
-                      border:
-                        "1px solid rgba(132,94,247,0.18)",
-
-                      color: "#7950f2",
-
-                      boxShadow:
-                        "0 8px 25px rgba(132,94,247,0.12)",
-                    }}
-                  >
-                    <IconRoute
-                      size={32}
-                      stroke={1.7}
-                    />
-                  </ThemeIcon>
-
-                  <CardArrow />
-                </Group>
-
-                {/* Content */}
-
-                <Box
-                  mt={42}
-                  style={{
-                    position: "relative",
-
-                    zIndex: 2,
-                  }}
-                >
-                  <Text
-                    fw={900}
-                    size="xl"
-                    style={{
-                      color: "#172b3a",
-                    }}
-                  >
-                    ملاحظات التتبع
-                  </Text>
-
-                  <Text
-                    size="sm"
-                    mt={8}
-                    lh={1.7}
-                    style={{
-                      color:
-                        "rgba(30,55,70,0.68)",
-                    }}
-                  >
-                    إنشاء ملاحظات التتبع الخاصة
-                    بالمسارات والآليات، وتنظيمها
-                    ومتابعتها بسهولة.
-                  </Text>
-                </Box>
-
-                {/* Footer */}
-
-                <Text
-                  size="xs"
-                  fw={800}
-                  mt="auto"
-                  style={{
-                    position: "relative",
-
-                    zIndex: 2,
-
-                    color: "#7048e8",
-                  }}
-                >
-                  فتح ملاحظات التتبع ←
-                </Text>
-              </Box>
-            </Link>
-
-            {/* =================================================
-                MAP — ORANGE
-            ================================================= */}
-
-            <Link
-              href="/failures/osm"
-              style={{
-                textDecoration: "none",
-
-                color: "inherit",
-              }}
-            >
-              <Box
-                className="glass-card"
-                style={cardStyle}
-              >
-                {/* Orange Glow */}
-
-                <Box
-                  style={{
-                    position: "absolute",
-
-                    width: 200,
-                    height: 200,
-
-                    borderRadius: "50%",
-
-                    background:
-                      "rgba(253,126,20,0.18)",
-
-                    filter: "blur(48px)",
-
-                    top: -85,
-                    right: -75,
-
-                    pointerEvents: "none",
-                  }}
-                />
-
-                {/* Top */}
-
-                <Group
-                  justify="space-between"
-                  align="flex-start"
-                  style={{
-                    position: "relative",
-
-                    zIndex: 2,
-                  }}
-                >
-                  <ThemeIcon
-                    size={62}
-                    radius={18}
-                    variant="light"
-                    style={{
-                      background:
-                        "rgba(253,126,20,0.10)",
-
-                      border:
-                        "1px solid rgba(253,126,20,0.18)",
-
-                      color: "#f76707",
-
-                      boxShadow:
-                        "0 8px 25px rgba(253,126,20,0.12)",
-                    }}
-                  >
-                    <IconMap
-                      size={32}
-                      stroke={1.7}
-                    />
-                  </ThemeIcon>
-
-                  <CardArrow />
-                </Group>
-
-                {/* Content */}
-
-                <Box
-                  mt={42}
-                  style={{
-                    position: "relative",
-
-                    zIndex: 2,
-                  }}
-                >
-                  <Text
-                    fw={900}
-                    size="xl"
-                    style={{
-                      color: "#172b3a",
-                    }}
-                  >
-                    الخريطة
-                  </Text>
-
-                  <Text
-                    size="sm"
-                    mt={8}
-                    lh={1.7}
-                    style={{
-                      color:
-                        "rgba(30,55,70,0.68)",
-                    }}
-                  >
-                    استعراض مواقع المخالفات على
-                    الخريطة مع أدوات التصفية
-                    والخريطة الحرارية.
-                  </Text>
-                </Box>
-
-                {/* Footer */}
-
-                <Text
-                  size="xs"
-                  fw={800}
-                  mt="auto"
-                  style={{
-                    position: "relative",
-
-                    zIndex: 2,
-
-                    color: "#e8590c",
-                  }}
-                >
-                  فتح الخريطة ←
-                </Text>
-              </Box>
-            </Link>
-          </SimpleGrid>
+        <SimpleGrid
+        dir="ltr"
+  cols={{
+    base: 1,
+    sm: 2,
+    lg: 4,
+  }}
+  spacing="lg"
+>
+  {/* =================================================
+      STATISTICS — BLUE
+  ================================================= */}
+
+  <Link
+    href="/failures/stats"
+    style={{
+      textDecoration: "none",
+      color: "inherit",
+    }}
+  >
+    <Box className="glass-card" style={cardStyle}>
+      <Box
+        style={{
+          position: "absolute",
+          width: 200,
+          height: 200,
+          borderRadius: "50%",
+          background: "rgba(34,139,230,0.18)",
+          filter: "blur(48px)",
+          top: -85,
+          right: -75,
+          pointerEvents: "none",
+        }}
+      />
+
+      <Group
+        justify="space-between"
+        align="flex-start"
+        style={{
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        <ThemeIcon
+          size={62}
+          radius={18}
+          variant="light"
+          style={{
+            background: "rgba(34,139,230,0.10)",
+            border: "1px solid rgba(34,139,230,0.18)",
+            color: "#228be6",
+            boxShadow: "0 8px 25px rgba(34,139,230,0.12)",
+          }}
+        >
+          <IconChartBar size={32} stroke={1.7} />
+        </ThemeIcon>
+
+        <CardArrow />
+      </Group>
+
+      <Box
+        mt={42}
+        style={{
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        <Text
+          fw={900}
+          size="xl"
+          style={{
+            color: "#172b3a",
+          }}
+        >
+          Violations Statistics
+        </Text>
+
+        <Text
+          size="sm"
+          mt={8}
+          lh={1.7}
+          style={{
+            color: "rgba(30,55,70,0.68)",
+          }}
+        >
+          Analyze violations by areas, statuses, and KPIs.
+        </Text>
+      </Box>
+
+      <Text
+        size="xs"
+        fw={800}
+        mt="auto"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          color: "#1971c2",
+        }}
+      >
+        Open Statistics →
+      </Text>
+    </Box>
+  </Link>
+
+  {/* =================================================
+      MAP — ORANGE
+  ================================================= */}
+
+  <Link
+    href="/failures/osm"
+    style={{
+      textDecoration: "none",
+      color: "inherit",
+    }}
+  >
+    <Box className="glass-card" style={cardStyle}>
+      <Box
+        style={{
+          position: "absolute",
+          width: 200,
+          height: 200,
+          borderRadius: "50%",
+          background: "rgba(253,126,20,0.18)",
+          filter: "blur(48px)",
+          top: -85,
+          right: -75,
+          pointerEvents: "none",
+        }}
+      />
+
+      <Group
+        justify="space-between"
+        align="flex-start"
+        style={{
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        <ThemeIcon
+          size={62}
+          radius={18}
+          variant="light"
+          style={{
+            background: "rgba(253,126,20,0.10)",
+            border: "1px solid rgba(253,126,20,0.18)",
+            color: "#f76707",
+            boxShadow: "0 8px 25px rgba(253,126,20,0.12)",
+          }}
+        >
+          <IconMap size={32} stroke={1.7} />
+        </ThemeIcon>
+
+        <CardArrow />
+      </Group>
+
+      <Box
+        mt={42}
+        style={{
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        <Text
+          fw={900}
+          size="xl"
+          style={{
+            color: "#172b3a",
+          }}
+        >
+          Violations Map
+        </Text>
+
+        <Text
+          size="sm"
+          mt={8}
+          lh={1.7}
+          style={{
+            color: "rgba(30,55,70,0.68)",
+          }}
+        >
+          View violations with filters and heatmap.
+        </Text>
+      </Box>
+
+      <Text
+        size="xs"
+        fw={800}
+        mt="auto"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          color: "#e8590c",
+        }}
+      >
+        Open Map →
+      </Text>
+    </Box>
+  </Link>
+
+  {/* =================================================
+      ROUTE NOTES — PURPLE
+  ================================================= */}
+
+  <Link
+    href="/route-notes"
+    style={{
+      textDecoration: "none",
+      color: "inherit",
+    }}
+  >
+    <Box className="glass-card" style={cardStyle}>
+      <Box
+        style={{
+          position: "absolute",
+          width: 200,
+          height: 200,
+          borderRadius: "50%",
+          background: "rgba(132,94,247,0.18)",
+          filter: "blur(48px)",
+          top: -85,
+          right: -75,
+          pointerEvents: "none",
+        }}
+      />
+
+      <Group
+        justify="space-between"
+        align="flex-start"
+        style={{
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        <ThemeIcon
+          size={62}
+          radius={18}
+          variant="light"
+          style={{
+            background: "rgba(132,94,247,0.10)",
+            border: "1px solid rgba(132,94,247,0.18)",
+            color: "#7950f2",
+            boxShadow: "0 8px 25px rgba(132,94,247,0.12)",
+          }}
+        >
+          <IconRoute size={32} stroke={1.7} />
+        </ThemeIcon>
+
+        <CardArrow />
+      </Group>
+
+      <Box
+        mt={42}
+        style={{
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        <Text
+          fw={900}
+          size="xl"
+          style={{
+            color: "#172b3a",
+          }}
+        >
+          Route Notes
+        </Text>
+
+        <Text
+          size="sm"
+          mt={8}
+          lh={1.7}
+          style={{
+            color: "rgba(30,55,70,0.68)",
+          }}
+        >
+          Create and manage route notes easily.
+        </Text>
+      </Box>
+
+      <Text
+        size="xs"
+        fw={800}
+        mt="auto"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          color: "#7048e8",
+        }}
+      >
+        Open Route Notes →
+      </Text>
+    </Box>
+  </Link>
+
+  {/* =================================================
+      BIN COLLECTION — TEAL / GREEN
+  ================================================= */}
+
+  <Box
+    className="glass-card"
+    style={{
+      ...cardStyle,
+      position: "relative",
+    }}
+  >
+    <Box
+      style={{
+        position: "absolute",
+        width: 220,
+        height: 220,
+        borderRadius: "50%",
+        background: "rgba(18,184,134,0.18)",
+        filter: "blur(48px)",
+        top: -90,
+        right: -80,
+        pointerEvents: "none",
+      }}
+    />
+
+    <Group
+      justify="space-between"
+      align="flex-start"
+      style={{
+        position: "relative",
+        zIndex: 2,
+      }}
+    >
+      <ThemeIcon
+        size={62}
+        radius={18}
+        variant="light"
+        style={{
+          background: "rgba(18,184,134,0.10)",
+          border: "1px solid rgba(18,184,134,0.18)",
+          color: "#0ca678",
+          boxShadow: "0 8px 25px rgba(18,184,134,0.12)",
+        }}
+      >
+        <IconTrash size={32} stroke={1.7} />
+      </ThemeIcon>
+
+      <CardArrow />
+    </Group>
+
+    <Box
+      mt={42}
+      style={{
+        position: "relative",
+        zIndex: 2,
+      }}
+    >
+      <Text
+        fw={900}
+        size="xl"
+        style={{
+          color: "#172b3a",
+        }}
+      >
+        Bin Collection System
+      </Text>
+
+      <Text
+        size="sm"
+        mt={8}
+        lh={1.7}
+        style={{
+          color: "rgba(30,55,70,0.68)",
+        }}
+      >
+        Manage bin locations and collection areas.
+      </Text>
+    </Box>
+
+    <Group
+      mt="auto"
+      gap={8}
+      wrap="wrap"
+      style={{
+        position: "relative",
+        zIndex: 3,
+      }}
+    >
+      {/* Map */}
+
+      <Link
+        href="/binCollection/map"
+        style={{
+          textDecoration: "none",
+        }}
+      >
+        <Badge
+          size="md"
+          radius="md"
+          variant="light"
+          color="teal"
+          leftSection={<IconMapPin size={14} />}
+          style={{
+            cursor: "pointer",
+            textTransform: "none",
+          }}
+        >
+          Open Map
+        </Badge>
+      </Link>
+<Link
+        href="/binCollection/collection-areas/manage"
+        style={{
+          textDecoration: "none",
+        }}
+      >
+        <Badge
+          size="md"
+          radius="md"
+          variant="light"
+          color="cyan"
+          leftSection={<IconMap2 size={14} />}
+          style={{
+            cursor: "pointer",
+            textTransform: "none",
+          }}
+        >
+           Areas
+        </Badge>
+      </Link>
+      {/* Export */}
+
+      <Link
+        href="/binCollection/export-bins"
+        style={{
+          textDecoration: "none",
+        }}
+      >
+        <Badge
+          size="md"
+          radius="md"
+          variant="light"
+          color="green"
+          leftSection={<IconFileTypeXls size={14} />}
+          style={{
+            cursor: "pointer",
+            textTransform: "none",
+          }}
+        >
+         Saved Collection
+        </Badge>
+      </Link>
+
+      {/* Collection Areas */}
+
+      
+    </Group>
+  </Box>
+</SimpleGrid>
         </Box>
       </Container>
 
@@ -698,6 +767,18 @@ export default function Page() {
             scale(1.005);
         }
 
+        .glass-card .mantine-Badge-root {
+          transition:
+            transform 160ms ease,
+            box-shadow 160ms ease;
+        }
+
+        .glass-card .mantine-Badge-root:hover {
+          transform: translateY(-2px);
+          box-shadow:
+            0 6px 18px rgba(40,70,90,0.12);
+        }
+
         @media (max-width: 576px) {
           .glass-card {
             height: 280px !important;
@@ -716,6 +797,10 @@ export default function Page() {
 
           .glass-card:hover {
             transform: none !important;
+          }
+
+          .glass-card .mantine-Badge-root {
+            transition: none !important;
           }
         }
       `}</style>
