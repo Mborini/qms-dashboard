@@ -1,6 +1,6 @@
+import { pool } from "@/app/lib/db";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import { pool } from "@/app/src/lib/db";
 
 // ✅ KML Generator
 function generateKML(rows: any[]) {
