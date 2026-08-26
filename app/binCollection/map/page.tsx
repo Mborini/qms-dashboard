@@ -108,73 +108,64 @@ export default function MapPage() {
   // CREATE BIN ICON
   // =========================================================
 
-  const createBinIcon = (bin?: any, L?: any) => {
-    if (!L) return null;
+const createBinIcon = (bin?: any, L?: any) => {
+  if (!L) return null;
 
-    const html = bin
-      ? `
+  const html = bin
+    ? `
+      <div
+        style="
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          pointer-events:none;
+        "
+      >
         <div
           style="
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            pointer-events:none;
+            font-size:24px;
+            line-height:28px;
           "
         >
-          <img
-            src="/recycling-bin.png"
-            style="
-              width:35px;
-              height:35px;
-              object-fit:contain;
-            "
-          />
+          📍
+        </div>
 
-          <span
-            style="
-              font-size:12px;
-              color:#000;
-              white-space:nowrap;
-              background:rgba(255,255,255,0.90);
-              padding:1px 4px;
-              border-radius:3px;
-              line-height:16px;
-            "
-          >
-            ${bin.bin_capacity ?? ""}
-
-            <span style="color:red;">
-              (id:${bin.id ?? ""})
-            </span>
+        <span
+          style="
+            font-size:11px;
+            color:#000;
+            white-space:nowrap;
+            background:rgba(255,255,255,0.9);
+            padding:1px 4px;
+            border-radius:3px;
+            line-height:14px;
+          "
+        >
+          ${bin.bin_capacity ?? ""}
+          <span style="color:red;">
+            #${bin.id ?? ""}
           </span>
-        </div>
-      `
-      : `
-        <div
-          style="
-            display:flex;
-            align-items:center;
-            justify-content:center;
-          "
-        >
-          <img
-            src="/recycling-bin.png"
-            style="
-              width:35px;
-              height:35px;
-              object-fit:contain;
-            "
-          />
-        </div>
-      `;
+        </span>
+      </div>
+    `
+    : `
+      <div
+        style="
+          font-size:28px;
+          line-height:28px;
+        "
+      >
+        📍
+      </div>
+    `;
 
-    return L.divIcon({
-      html,
-      className: "custom-bin-marker",
-      iconSize: [70, 55],
-      iconAnchor: [35, 55],
-    });
-  };
+  return L.divIcon({
+    html,
+    className: "custom-bin-marker",
+    iconSize: [60, 45],
+    iconAnchor: [30, 28],
+  });
+};
 
   // =========================================================
   // SHOW BINS
@@ -358,7 +349,7 @@ export default function MapPage() {
       style={{
         position: "relative",
         width: "100%",
-        height: "calc(100vh - 56px)",
+        height: "calc(100vh )",
         overflow: "hidden",
       }}
     >
