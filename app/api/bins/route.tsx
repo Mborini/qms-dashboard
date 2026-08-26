@@ -1,5 +1,5 @@
-import cloudinary from "@/app/src/cloudinary";
-import { pool } from "@/app/src/lib/db";
+import cloudinary from "@/app/lib/cloudinary";
+import { pool } from "@/app/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";

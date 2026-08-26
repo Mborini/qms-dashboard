@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "app/api/bins/route.tsx", "app/api/collection-areas/[id]/route.js", "app/api/collection-areas/route.js", "app/api/export-bins/route.js"  ],
   "exclude": ["node_modules"]
 }

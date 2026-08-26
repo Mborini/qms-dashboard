@@ -4,8 +4,10 @@ import { useState } from "react";
 
 import {
   Alert,
+  Box,
   Grid,
   Stack,
+  Text,
   Title,
 } from "@mantine/core";
 
@@ -15,6 +17,7 @@ import {
 
 import RouteNotesForm from "./RouteNotesForm";
 import RouteNotesList from "./RouteNotesList";
+import { bungee } from "@/app/layout";
 
 export default function RouteNotesPage() {
   // ========================================
@@ -213,11 +216,72 @@ const handleResetDistrict = () => {
       {/* Page Header */}
       {/* ================================== */}
 
-      <Stack gap={2}>
-        <Title order={2}>
-          Route Notes
-        </Title>
-      </Stack>
+             <Box
+        style={{
+          textAlign: "center",
+          marginBottom: 44,
+        }}
+      >
+        <Box
+          style={{
+            display: "inline-flex",
+            alignItems: "baseline",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          <Text
+            component="span"
+            style={{
+              fontFamily: "Inter, sans-serif",
+              fontSize: "clamp(36px, 5vw, 56px)",
+              fontWeight: 600,
+              letterSpacing: "-2px",
+              color: "#263746",
+              lineHeight: 1,
+            }}
+          >
+            Ops
+          </Text>
+      
+          <Text
+            component="span"
+            className={bungee.className}
+            style={{
+              fontSize: "clamp(32px, 4.5vw, 52px)",
+              lineHeight: 1,
+      
+              background:
+                "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
+      
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+      
+              display: "inline-block",
+      
+              letterSpacing: "0px",
+            }}
+          >
+            Matrix
+          </Text>
+        </Box>
+      
+        <Text
+          mt={16}
+          style={{
+            fontFamily: "Inter, sans-serif",
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "2.4px",
+            textTransform: "uppercase",
+            color: "rgba(30,50,65,0.52)",
+          }}
+        >
+          Operations Intelligence
+        </Text>
+      </Box>
+      
 
       {/* ================================== */}
       {/* Error */}
