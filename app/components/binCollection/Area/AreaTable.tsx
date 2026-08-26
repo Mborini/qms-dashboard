@@ -27,6 +27,7 @@ export function CollectionTable({ data, onEdit }: Props) {
 
   return (
     <Card
+    dir="rtl"
       radius="xl"
       shadow="sm"
       p="md"
