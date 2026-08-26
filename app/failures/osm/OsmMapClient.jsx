@@ -433,7 +433,8 @@ export default function OsmMapClient() {
               gap: 6,
             }}
           >
-            <Text
+           
+         <Text
               component="span"
               style={{
                 fontFamily: "Inter, sans-serif",
@@ -446,12 +447,11 @@ export default function OsmMapClient() {
             >
               Ops
             </Text>
-        
             <Text
               component="span"
               className={bungee.className}
               style={{
-                fontSize: "clamp(32px, 4.5vw, 52px)",
+                fontSize: "clamp(36px, 5vw, 30px)",
                 lineHeight: 1,
         
                 background:
@@ -468,6 +468,7 @@ export default function OsmMapClient() {
             >
               Matrix
             </Text>
+            
           </Box>
         
           <Text

@@ -70,19 +70,7 @@ export default function ManageAreas() {
       gap: 6,
     }}
   >
-    <Text
-      component="span"
-      style={{
-        fontFamily: "Inter, sans-serif",
-        fontSize: "clamp(36px, 5vw, 56px)",
-        fontWeight: 600,
-        letterSpacing: "-2px",
-        color: "#263746",
-        lineHeight: 1,
-      }}
-    >
-      Ops
-    </Text>
+    
 
     <Text
       component="span"
@@ -104,6 +92,18 @@ export default function ManageAreas() {
       }}
     >
       Matrix
+    </Text><Text
+      component="span"
+      style={{
+        fontFamily: "Inter, sans-serif",
+        fontSize: "clamp(36px, 5vw, 30px)",
+        fontWeight: 600,
+        letterSpacing: "-2px",
+        color: "#263746",
+        lineHeight: 1,
+      }}
+    >
+      Ops
     </Text>
   </Box>
 

@@ -88,14 +88,7 @@ export default function Page() {
 
         overflow: "hidden",
 
-        backgroundImage: `
-          linear-gradient(
-            135deg,
-            rgba(255,255,255,0.28),
-            rgba(255,255,255,0.12)
-          ),
-          url("/images/failures-bg.jpg")
-        `,
+        
 
         backgroundSize: "cover",
 
@@ -204,7 +197,8 @@ export default function Page() {
               HEADER
           ================================================= */}
 
-         <Box
+ <Box
+  className="ops-header"
   style={{
     textAlign: "center",
     marginBottom: 44,
@@ -218,11 +212,13 @@ export default function Page() {
       gap: 6,
     }}
   >
+    {/* Ops */}
     <Text
       component="span"
+      className="ops-title"
       style={{
         fontFamily: "Inter, sans-serif",
-        fontSize: "clamp(36px, 5vw, 56px)",
+        fontSize: "clamp(100px, 5vw, 56px)",
         fontWeight: 600,
         letterSpacing: "-2px",
         color: "#263746",
@@ -232,11 +228,12 @@ export default function Page() {
       Ops
     </Text>
 
+    {/* Matrix */}
     <Text
       component="span"
-      className={bungee.className}
+      className={`${bungee.className} matrix-title`}
       style={{
-        fontSize: "clamp(32px, 4.5vw, 52px)",
+        fontSize: "clamp(150px, 4.5vw, 52px)",
         lineHeight: 1,
 
         background:
@@ -269,7 +266,6 @@ export default function Page() {
     Operations Intelligence
   </Text>
 </Box>
-
           {/* =================================================
               CARDS
           ================================================= */}
@@ -779,16 +775,37 @@ export default function Page() {
             0 6px 18px rgba(40,70,90,0.12);
         }
 
-        @media (max-width: 576px) {
-          .glass-card {
-            height: 280px !important;
-            min-height: 280px !important;
+   @media (max-width: 576px) {
+  .ops-title {
+    font-size: 42px !important;
+  }
 
-            padding: 22px !important;
+  .matrix-title {
+    font-size: 40px !important;
+  }
 
-            border-radius: 20px !important;
-          }
-        }
+  .glass-card {
+    height: 280px !important;
+    min-height: 280px !important;
+    padding: 22px !important;
+    border-radius: 20px !important;
+  }
+
+  /* Header spacing on mobile */
+  .ops-header {
+    margin-top: 100px !important;
+  }
+}
+
+  .glass-card {
+    height: 280px !important;
+    min-height: 280px !important;
+
+    padding: 22px !important;
+
+    border-radius: 20px !important;
+  }
+}
 
         @media (prefers-reduced-motion: reduce) {
           .glass-card {

@@ -47,7 +47,7 @@ export default function ExportBinsPage() {
     marginBottom: 44,
   }}
 >
-  <Box
+<Box
     style={{
       display: "inline-flex",
       alignItems: "baseline",
@@ -55,20 +55,7 @@ export default function ExportBinsPage() {
       gap: 6,
     }}
   >
-    <Text
-      component="span"
-      style={{
-        fontFamily: "Inter, sans-serif",
-        fontSize: "clamp(36px, 5vw, 56px)",
-        fontWeight: 600,
-        letterSpacing: "-2px",
-        color: "#263746",
-        lineHeight: 1,
-      }}
-    >
-      Ops
-    </Text>
-
+   
     <Text
       component="span"
       className={bungee.className}
@@ -89,8 +76,23 @@ export default function ExportBinsPage() {
       }}
     >
       Matrix
+    </Text> <Text
+      component="span"
+      style={{
+        fontFamily: "Inter, sans-serif",
+        fontSize: "clamp(36px, 5vw, 30px)",
+        fontWeight: 600,
+        letterSpacing: "-2px",
+        color: "#263746",
+        lineHeight: 1,
+      }}
+    >
+      Ops
     </Text>
+
   </Box>
+
+
 
   <Text
     mt={16}
