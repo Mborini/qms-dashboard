@@ -128,8 +128,7 @@ export default function ManageAreas() {
             fontWeight: 700,
           }}
         >
-          إدارة مناطق جمع النفايات
-        </Title>
+إدارة المناطق الجغرافية         </Title>
 
     
 
