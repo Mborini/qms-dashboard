@@ -946,7 +946,6 @@ export default function StatsPage() {
     width: 145px;
 
     border-radius: 11px;
-
     border: 1px solid #dbe4ee;
 
     padding: 0 10px;
@@ -954,7 +953,6 @@ export default function StatsPage() {
     font-size: 12px;
 
     background: rgba(255, 255, 255, 0.9);
-
     color: #334155;
 
     outline: none;
@@ -971,68 +969,75 @@ export default function StatsPage() {
   }
 
   /* ===================================================
+     FILTERS - DESKTOP
+  =================================================== */
+
+  .filters {
+    width: 100%;
+
+    display: flex;
+
+    align-items: flex-end;
+
+    justify-content: center;
+
+    gap: 16px;
+
+    flex-wrap: nowrap;
+  }
+
+  .filter-item {
+    flex: 0 0 auto;
+
+    min-width: 0;
+  }
+
+  .search-button {
+    height: 36px;
+
+    padding: 0 20px;
+
+    flex-shrink: 0;
+
+    box-shadow:
+      0 6px 18px
+      rgba(34, 139, 230, 0.20);
+  }
+
+  .switch-box {
+    height: 36px;
+
+    padding: 0 12px;
+
+    display: flex;
+
+    align-items: center;
+
+    border-radius: 12px;
+
+    background:
+      rgba(248, 250, 252, 0.85);
+
+    border:
+      1px solid #e5eaf0;
+
+    flex-shrink: 0;
+  }
+
+  /* ===================================================
      RESULTS
   =================================================== */
 
   .results-wrapper {
     width: 100%;
+
     max-width: 100%;
+
     min-width: 0;
-  }
-
-  /* ===================================================
-     FILTER CARD
-  =================================================== */
-
-  .filter-card {
-    width: 100%;
-  }
-
-  /* ===================================================
-     FILTERS
-  =================================================== */
-
-  .filters {
-    width: 100%;
-  }
-
-  /* ===================================================
-     FILTER ITEMS
-  =================================================== */
-
-  .filter-item {
-    min-width: 0;
-  }
-
-  /* ===================================================
-     SEARCH BUTTON
-  =================================================== */
-
-  .search-button {
-    flex-shrink: 0;
-  }
-
-  /* ===================================================
-     SWITCH
-  =================================================== */
-
-  .switch-box {
-    flex-shrink: 0;
-  }
-
-  /* ===================================================
-     ERROR
-  =================================================== */
-
-  .error-message {
-    overflow-wrap: anywhere;
-    word-break: break-word;
-    line-height: 1.7;
   }
 
   /* ===================================================
      MOBILE
-     max-width: 576px
   =================================================== */
 
   @media screen and (max-width: 576px) {
@@ -1043,13 +1048,13 @@ export default function StatsPage() {
 
     .stats-container {
       width: 100% !important;
+
       max-width: 100% !important;
 
-      padding-top: 16px !important;
-      padding-left: 10px !important;
-      padding-right: 10px !important;
-      padding-bottom: 25px !important;
+      padding:
+        16px 10px 25px !important;
     }
+
 
     /* ===============================================
        FILTER CARD
@@ -1063,42 +1068,34 @@ export default function StatsPage() {
       margin-bottom: 16px !important;
 
       border-radius: 18px !important;
+
+      overflow: hidden;
     }
+
 
     /* ===============================================
        FILTERS
-
-       السطر الأول:
-       من تاريخ | إلى تاريخ
-
-       السطر الثاني:
-       استعلام | العرض المختصر
     =============================================== */
 
     .filters {
       width: 100% !important;
 
-      display: grid !important;
+      display: flex !important;
 
-      grid-template-columns:
-        minmax(0, 1fr)
-        minmax(0, 1fr) !important;
+      flex-direction: column !important;
 
-      grid-template-rows:
-        auto
-        auto !important;
+      align-items: stretch !important;
+
+      justify-content: flex-start !important;
 
       gap: 12px !important;
 
-      align-items: end !important;
-
-      justify-content: stretch !important;
-
-      flex-wrap: unset !important;
+      flex-wrap: nowrap !important;
     }
 
+
     /* ===============================================
-       DATE ITEMS
+       FILTER ITEM
     =============================================== */
 
     .filter-item {
@@ -1108,20 +1105,9 @@ export default function StatsPage() {
 
       max-width: 100% !important;
 
-      display: block !important;
-
       flex: none !important;
     }
 
-    /* ===============================================
-       DATE LABEL
-    =============================================== */
-
-    .filter-item > div {
-      width: 100% !important;
-
-      min-width: 0 !important;
-    }
 
     /* ===============================================
        DATE INPUT
@@ -1140,18 +1126,16 @@ export default function StatsPage() {
 
       border-radius: 12px !important;
 
-      padding: 0 8px !important;
+      padding: 0 12px !important;
 
-      font-size: 13px !important;
+      font-size: 14px !important;
 
       box-sizing: border-box !important;
     }
 
+
     /* ===============================================
        SEARCH BUTTON
-
-       يوضع في السطر الثاني
-       العمود الأول
     =============================================== */
 
     .search-button {
@@ -1165,22 +1149,15 @@ export default function StatsPage() {
 
       margin: 0 !important;
 
-      padding-left: 10px !important;
-
-      padding-right: 10px !important;
+      padding:
+        0 15px !important;
 
       box-sizing: border-box !important;
-
-      grid-column: 1 !important;
-
-      grid-row: 2 !important;
     }
+
 
     /* ===============================================
        SWITCH
-
-       يوضع في السطر الثاني
-       العمود الثاني
     =============================================== */
 
     .switch-box {
@@ -1192,9 +1169,9 @@ export default function StatsPage() {
 
       min-height: 42px !important;
 
-      padding: 0 8px !important;
-
       margin: 0 !important;
+
+      padding: 0 12px !important;
 
       display: flex !important;
 
@@ -1205,24 +1182,11 @@ export default function StatsPage() {
       border-radius: 12px !important;
 
       box-sizing: border-box !important;
-
-      grid-column: 2 !important;
-
-      grid-row: 2 !important;
     }
 
-    /* ===============================================
-       SWITCH LABEL
-    =============================================== */
-
-    .switch-box :global(.mantine-Switch-label) {
-      font-size: 12px !important;
-
-      white-space: nowrap !important;
-    }
 
     /* ===============================================
-       ERROR CARD
+       ERROR
     =============================================== */
 
     .error-card {
@@ -1231,21 +1195,11 @@ export default function StatsPage() {
       border-radius: 16px !important;
     }
 
-    /* ===============================================
-       ERROR CONTENT
-    =============================================== */
-
     .error-content {
       flex-direction: column !important;
 
       align-items: stretch !important;
-
-      width: 100% !important;
     }
-
-    /* ===============================================
-       RETRY BUTTON
-    =============================================== */
 
     .retry-button {
       width: 100% !important;
@@ -1253,8 +1207,17 @@ export default function StatsPage() {
       height: 40px !important;
     }
 
+    .error-message {
+      overflow-wrap: anywhere;
+
+      word-break: break-word;
+
+      line-height: 1.7;
+    }
+
+
     /* ===============================================
-       STATE CARD
+       STATES
     =============================================== */
 
     .state-card {
@@ -1262,6 +1225,7 @@ export default function StatsPage() {
 
       border-radius: 20px !important;
     }
+
 
     /* ===============================================
        RESULTS
@@ -1276,23 +1240,14 @@ export default function StatsPage() {
 
       overflow-x: auto !important;
 
-      -webkit-overflow-scrolling: touch;
-    }
-
-    /* ===============================================
-       HEADER
-
-       تصغير بسيط للموبايل
-    =============================================== */
-
-    .stats-page :global(.mantine-Text-root) {
-      max-width: 100%;
+      -webkit-overflow-scrolling:
+        touch;
     }
   }
 
+
   /* ===================================================
      VERY SMALL PHONES
-     max-width: 380px
   =================================================== */
 
   @media screen and (max-width: 380px) {
@@ -1305,6 +1260,12 @@ export default function StatsPage() {
 
     .filter-card {
       padding: 10px !important;
+
+      border-radius: 16px !important;
+    }
+
+    .filters {
+      gap: 10px !important;
     }
 
     .date-input {
@@ -1312,33 +1273,19 @@ export default function StatsPage() {
 
       min-height: 40px !important;
 
-      font-size: 12px !important;
-
-      padding-left: 6px !important;
-
-      padding-right: 6px !important;
+      font-size: 13px !important;
     }
 
     .search-button {
       height: 40px !important;
 
       min-height: 40px !important;
-
-      font-size: 12px !important;
     }
 
     .switch-box {
       height: 40px !important;
 
       min-height: 40px !important;
-
-      padding-left: 5px !important;
-
-      padding-right: 5px !important;
-    }
-
-    .switch-box :global(.mantine-Switch-label) {
-      font-size: 11px !important;
     }
   }
 `}</style>
