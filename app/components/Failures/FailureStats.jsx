@@ -16,7 +16,7 @@ import {
 
 import DistrictCard from "./DistrictCard";
 
-import { statusConfig, summaryOnlyStatuses } from "./statusConfig";
+import { DistrictConfig, statusConfig, summaryOnlyStatuses } from "./statusConfig";
 
 import * as XLSX from "xlsx";
 import { IconFileSpreadsheet } from "@tabler/icons-react";
@@ -143,7 +143,18 @@ const district = item.districtName?.trim()
   const achievement = (
     Number(kpis.fieldPercentage) + Number(kpis.resolvedPercentage)
   ).toFixed(1);
+const focusDistrict = (district) => {
+  const element = document.getElementById(
+    `district-${encodeURIComponent(district)}`
+  );
 
+  if (element) {
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
+};
   const exportExcel = () => {
     const rows = Object.entries(stats).map(([district, data]) => {
       const statuses = {};
@@ -289,8 +300,8 @@ const district = item.districtName?.trim()
               }}
               spacing="md"
             >
-              <MiniStat title="الاجمالي الكلي " value={kpis.total} />
 
+              <MiniStat title="الاجمالي الكلي " value={kpis.total} />
               <MiniStat
                 title="نسبة التحقق الميداني"
                 value={`${kpis.fieldPercentage}%`}
@@ -320,8 +331,7 @@ const district = item.districtName?.trim()
               }}
             >
               <Text fw={900} pb={10} size="sm">
-                توزيع الأعداد حسب الحالة
-              </Text>
+توزيع أعداد المخالفات حسب الحالة              </Text>
 
               <Group gap="sm" justify="center" wrap="wrap">
                 {Object.entries(totalStatuses).map(([status, count]) => (
@@ -347,6 +357,53 @@ const district = item.districtName?.trim()
                 ))}
               </Group>
             </Card>
+            <Card
+              radius="24"
+              p="lg"
+              style={{
+                background: "#f8f9fa",
+
+                display: "flex",
+
+                flexDirection: "column",
+
+                alignItems: "center",
+
+                gap: "md",
+              }}
+            >
+              <Text fw={900} pb={10} size="sm">
+توزيع المخالفات حسب المناطق            </Text>
+
+              <Group gap="sm" justify="center" wrap="wrap">
+                {Object.entries(stats)
+                  .sort(([, a], [, b]) => b.total - a.total)
+                  .map(([district, data]) => (
+                    <Badge
+  key={district}
+  radius="xl"
+  px="md"
+  py={10}
+  size="lg"
+  variant="light"
+  color={DistrictConfig[district]?.main || "gray"}
+  style={{
+    cursor: "pointer",
+  }}
+  onClick={() => focusDistrict(district)}
+>
+                      <Group gap={8} wrap="nowrap">
+                        <Text size="xs" fw={700}>
+                          {district}
+                        </Text>
+                        <Text size="sm" fw={900}>
+                          {Number(data.total || 0)}
+                        </Text>
+                      </Group>
+                    </Badge>
+                  ))}
+              </Group>
+            </Card>
           </Stack>
         </Card>
 
@@ -354,13 +411,21 @@ const district = item.districtName?.trim()
       DISTRICTS
 ============================ */}
 
-        <Stack gap="md">
-          {Object.entries(stats)
-
-            .map(([district, data]) => (
-              <DistrictCard key={district} district={district} data={data} />
-            ))}
-        </Stack>
+      <Stack gap="md">
+  {Object.entries(stats)
+    .sort(([, a], [, b]) => b.total - a.total)
+    .map(([district, data]) => (
+      <Box
+        key={district}
+        id={`district-${encodeURIComponent(district)}`}
+      >
+        <DistrictCard
+          district={district}
+          data={data}
+        />
+      </Box>
+    ))}
+</Stack>
       </Stack>
     </Box>
   );

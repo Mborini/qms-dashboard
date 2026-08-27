@@ -9,7 +9,54 @@ export const summaryOnlyStatuses = [
   "PendingSpValidation",
 ];
 
+export const DistrictConfig ={
+ 
+  "منطقة طارق": {
+    main: "#E8590C", // برتقالي
+    light: "#FFF4E6",
+  },
 
+  "منطقة الجبيهة": {
+    main: "#2F9E44", // أخضر
+    light: "#EBF7EE",
+  },
+
+  "منطقة ابو نصير": {
+    main: "#C92A2A", // أحمر
+    light: "#FFF0F0",
+  },
+
+  "منطقة شفا بدران": {
+    main: "#FCC419", // أصفر
+    light: "#FFF9DB",
+  },
+
+  "منطقة احد": {
+    main: "#7950F2", // بنفسجي
+    light: "#F3F0FF",
+  },
+
+  "منطقة ماركا": {
+    main: "#F06595", // وردي
+    light: "#FFF0F6",
+  },
+
+  "منطقة النصر": {
+    main: "#20C997", // تركوازي
+    light: "#E6FCF5",
+  },
+
+  "منطقة تلاع العلي وام السماق وخلدا": {
+    main: "#795548", // بني
+    light: "#EFEBE9",
+  },
+
+  "مخالفات حسب مؤشرات الأداء": {
+    main: "#15AABF", // سماوي
+    light: "#E3FAFC",
+  },
+
+}
 export const statusConfig = {
  PendingSpValidation:{
     label:"بانتظار القبول",
