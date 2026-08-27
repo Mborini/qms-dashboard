@@ -189,7 +189,7 @@ useEffect(() => {
   value={area || ""}
   onChange={setArea}
   data={areas}
-  disabled
+  
 />
         <Input.Wrapper label="عدد الحاويات" size="xs">
           <Group grow align="center" gap="xs">

@@ -402,199 +402,160 @@ export default function StatsPage() {
             FILTER CARD
         ================================================= */}
 
-        <Box
-          className="filter-card"
+        {/* =================================================
+    FILTER CARD
+================================================= */}
+
+<Box
+  className="filter-card"
+  style={{
+    width: "100%",
+    borderRadius: 22,
+    padding: "14px 18px",
+    marginBottom: 22,
+    background: "rgba(255,255,255,0.72)",
+    border: "1px solid rgba(255,255,255,0.9)",
+    backdropFilter: "blur(18px)",
+    WebkitBackdropFilter: "blur(18px)",
+    boxShadow:
+      "0 12px 40px rgba(31,41,55,0.07)",
+  }}
+>
+<div className="filters">
+    {/* =================================================
+        DATE FROM
+    ================================================= */}
+
+    <Box className="filter-item">
+      <Group
+        gap={5}
+        mb={4}
+        wrap="nowrap"
+      >
+        <IconCalendar
+          size={14}
+          color="#228be6"
+        />
+
+        <Text
+          size="xs"
+          fw={800}
+          c="#475569"
           style={{
-            width: "100%",
-
-            borderRadius: 22,
-
-            padding: "14px 18px",
-
-            marginBottom: 22,
-
-            background:
-              "rgba(255,255,255,0.72)",
-
-            border:
-              "1px solid rgba(255,255,255,0.9)",
-
-            backdropFilter:
-              "blur(18px)",
-
-            WebkitBackdropFilter:
-              "blur(18px)",
-
-            boxShadow:
-              "0 12px 40px rgba(31,41,55,0.07)",
+            whiteSpace: "nowrap",
           }}
         >
-          <Group
-            className="filters"
-            justify="center"
-            align="flex-end"
-            gap="md"
-            wrap="nowrap"
-          >
-            {/* =================================================
-                DATE FROM
-            ================================================= */}
+          من تاريخ
+        </Text>
+      </Group>
 
-            <Box className="filter-item">
-              <Group
-                gap={5}
-                mb={4}
-                wrap="nowrap"
-              >
-                <IconCalendar
-                  size={14}
-                  color="#228be6"
-                />
+      <input
+        className="date-input"
+        type="date"
+        value={dateFrom}
+        onChange={(e) =>
+          setDateFrom(e.target.value)
+        }
+      />
+    </Box>
 
-                <Text
-                  size="xs"
-                  fw={800}
-                  c="#475569"
-                  style={{
-                    whiteSpace:
-                      "nowrap",
-                  }}
-                >
-                  من تاريخ
-                </Text>
-              </Group>
+    {/* =================================================
+        DATE TO
+    ================================================= */}
 
-              <input
-                className="date-input"
-                type="date"
-                value={dateFrom}
-                onChange={(e) =>
-                  setDateFrom(
-                    e.target.value
-                  )
-                }
-              />
-            </Box>
+    <Box className="filter-item">
+      <Group
+        gap={5}
+        mb={4}
+        wrap="nowrap"
+      >
+        <IconCalendar
+          size={14}
+          color="#228be6"
+        />
 
-            {/* =================================================
-                DATE TO
-            ================================================= */}
+        <Text
+          size="xs"
+          fw={800}
+          c="#475569"
+          style={{
+            whiteSpace: "nowrap",
+          }}
+        >
+          إلى تاريخ
+        </Text>
+      </Group>
 
-            <Box className="filter-item">
-              <Group
-                gap={5}
-                mb={4}
-                wrap="nowrap"
-              >
-                <IconCalendar
-                  size={14}
-                  color="#228be6"
-                />
+      <input
+        className="date-input"
+        type="date"
+        value={dateTo}
+        onChange={(e) =>
+          setDateTo(e.target.value)
+        }
+      />
+    </Box>
 
-                <Text
-                  size="xs"
-                  fw={800}
-                  c="#475569"
-                  style={{
-                    whiteSpace:
-                      "nowrap",
-                  }}
-                >
-                  إلى تاريخ
-                </Text>
-              </Group>
+    {/* =================================================
+        SEARCH
+    ================================================= */}
 
-              <input
-                className="date-input"
-                type="date"
-                value={dateTo}
-                onChange={(e) =>
-                  setDateTo(
-                    e.target.value
-                  )
-                }
-              />
-            </Box>
+    <Button
+      className="search-button"
+      size="sm"
+      radius="xl"
+      loading={loading}
+      leftSection={
+        <IconSearch size={15} />
+      }
+      onClick={getData}
+      style={{
+        height: 36,
+        padding: "0 20px",
+        flexShrink: 0,
+        boxShadow:
+          "0 6px 18px rgba(34,139,230,0.20)",
+      }}
+    >
+      استعلام
+    </Button>
 
-            {/* =================================================
-                SEARCH
-            ================================================= */}
+    {/* =================================================
+        VIEW SWITCH
+    ================================================= */}
 
-            <Button
-              className="search-button"
-              size="sm"
-              radius="xl"
-              loading={loading}
-              leftSection={
-                <IconSearch
-                  size={15}
-                />
-              }
-              onClick={getData}
-              style={{
-                height: 36,
-
-                padding:
-                  "0 20px",
-
-                flexShrink: 0,
-
-                boxShadow:
-                  "0 6px 18px rgba(34,139,230,0.20)",
-              }}
-            >
-              استعلام
-            </Button>
-
-            {/* =================================================
-                VIEW SWITCH
-            ================================================= */}
-
-            <Box
-              className="switch-box"
-              style={{
-                height: 36,
-
-                padding:
-                  "0 12px",
-
-                display: "flex",
-
-                alignItems:
-                  "center",
-
-                borderRadius: 12,
-
-                background:
-                  "rgba(248,250,252,0.85)",
-
-                border:
-                  "1px solid #e5eaf0",
-
-                flexShrink: 0,
-              }}
-            >
-              <Switch
-                size="sm"
-                label={
-                  showCollapsible
-                    ? "العرض التفصيلي"
-                    : "العرض المختصر"
-                }
-                checked={
-                  showCollapsible
-                }
-                onChange={(event) =>
-                  setShowCollapsible(
-                    event
-                      .currentTarget
-                      .checked
-                  )
-                }
-              />
-            </Box>
-          </Group>
-        </Box>
+    <Box
+      className="switch-box"
+      style={{
+        height: 36,
+        padding: "0 12px",
+        display: "flex",
+        alignItems: "center",
+        borderRadius: 12,
+        background:
+          "rgba(248,250,252,0.85)",
+        border:
+          "1px solid #e5eaf0",
+        flexShrink: 0,
+      }}
+    >
+      <Switch
+        size="sm"
+        label={
+          showCollapsible
+            ? "العرض التفصيلي"
+            : "العرض المختصر"
+        }
+        checked={showCollapsible}
+        onChange={(event) =>
+          setShowCollapsible(
+            event.currentTarget.checked
+          )
+        }
+      />
+    </Box>
+  </div>
+</Box>
 
         {/* =================================================
             ERROR CARD
@@ -961,327 +922,426 @@ export default function StatsPage() {
           DESKTOP لا يتأثر
       ===================================================== */}
 
-      <style jsx>{`
-        * {
-          box-sizing: border-box;
-        }
+    <style jsx>{`
+  * {
+    box-sizing: border-box;
+  }
 
-        .stats-page {
-          width: 100%;
-          max-width: 100vw;
-          overflow-x: hidden;
-        }
+  /* ===================================================
+     PAGE
+  =================================================== */
 
-        /* ===================================================
-           DATE INPUT
-        =================================================== */
+  .stats-page {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
 
-        .date-input {
-          height: 36px;
+  /* ===================================================
+     DATE INPUT
+  =================================================== */
 
-          width: 145px;
+  .date-input {
+    height: 36px;
+    width: 145px;
 
-          border-radius: 11px;
+    border-radius: 11px;
 
-          border:
-            1px solid #dbe4ee;
+    border: 1px solid #dbe4ee;
 
-          padding:
-            0 10px;
+    padding: 0 10px;
 
-          font-size: 12px;
+    font-size: 12px;
 
-          background:
-            rgba(255,255,255,0.9);
+    background: rgba(255, 255, 255, 0.9);
 
-          color: #334155;
+    color: #334155;
 
-          outline: none;
-        }
+    outline: none;
 
-        .date-input:focus {
-          border-color:
-            #74c0fc;
+    box-sizing: border-box;
+  }
 
-          box-shadow:
-            0 0 0 3px
-            rgba(34,139,230,0.08);
-        }
+  .date-input:focus {
+    border-color: #74c0fc;
 
-        /* ===================================================
-           RESULTS
-        =================================================== */
+    box-shadow:
+      0 0 0 3px
+      rgba(34, 139, 230, 0.08);
+  }
 
-        .results-wrapper {
-          width: 100%;
+  /* ===================================================
+     RESULTS
+  =================================================== */
 
-          max-width: 100%;
+  .results-wrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
 
-          min-width: 0;
-        }
+  /* ===================================================
+     FILTER CARD
+  =================================================== */
 
-        /* ===================================================
-           MOBILE ONLY
-        =================================================== */
+  .filter-card {
+    width: 100%;
+  }
 
-        @media (max-width: 576px) {
-          .stats-container {
-            width: 100% !important;
+  /* ===================================================
+     FILTERS
+  =================================================== */
 
-            max-width: 100% !important;
+  .filters {
+    width: 100%;
+  }
 
-            padding:
-              16px 10px 25px !important;
-          }
+  /* ===================================================
+     FILTER ITEMS
+  =================================================== */
 
-          /* ===============================================
-             HEADER
-          =============================================== */
+  .filter-item {
+    min-width: 0;
+  }
 
-          .stats-header {
-            margin-bottom:
-              16px !important;
-          }
+  /* ===================================================
+     SEARCH BUTTON
+  =================================================== */
 
-          .stats-title {
-            font-size:
-              25px !important;
-          }
+  .search-button {
+    flex-shrink: 0;
+  }
 
-          .stats-subtitle {
-            font-size:
-              11px !important;
+  /* ===================================================
+     SWITCH
+  =================================================== */
 
-            line-height:
-              1.7;
+  .switch-box {
+    flex-shrink: 0;
+  }
 
-            max-width:
-              300px;
+  /* ===================================================
+     ERROR
+  =================================================== */
 
-            margin-left:
-              auto;
+  .error-message {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.7;
+  }
 
-            margin-right:
-              auto;
-          }
+  /* ===================================================
+     MOBILE
+     max-width: 576px
+  =================================================== */
 
-          /* ===============================================
-             FILTER CARD
-          =============================================== */
+  @media screen and (max-width: 576px) {
 
-          .filter-card {
-            padding:
-              12px !important;
+    /* ===============================================
+       CONTAINER
+    =============================================== */
 
-            margin-bottom:
-              16px !important;
+    .stats-container {
+      width: 100% !important;
+      max-width: 100% !important;
 
-            border-radius:
-              18px !important;
-          }
+      padding-top: 16px !important;
+      padding-left: 10px !important;
+      padding-right: 10px !important;
+      padding-bottom: 25px !important;
+    }
 
-          /* ===============================================
-             FILTERS
-          =============================================== */
+    /* ===============================================
+       FILTER CARD
+    =============================================== */
 
-          .filters {
-            width:
-              100% !important;
+    .filter-card {
+      width: 100% !important;
 
-            display:
-              flex !important;
+      padding: 12px !important;
 
-            flex-direction:
-              column !important;
+      margin-bottom: 16px !important;
 
-            align-items:
-              stretch !important;
+      border-radius: 18px !important;
+    }
 
-            justify-content:
-              stretch !important;
+    /* ===============================================
+       FILTERS
 
-            gap:
-              10px !important;
+       السطر الأول:
+       من تاريخ | إلى تاريخ
 
-            flex-wrap:
-              nowrap !important;
-          }
+       السطر الثاني:
+       استعلام | العرض المختصر
+    =============================================== */
 
-          /* ===============================================
-             DATE
-          =============================================== */
+    .filters {
+      width: 100% !important;
 
-          .filter-item {
-            width:
-              100% !important;
+      display: grid !important;
 
-            min-width:
-              0 !important;
+      grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr) !important;
 
-            flex:
-              none !important;
-          }
+      grid-template-rows:
+        auto
+        auto !important;
 
-          .date-input {
-            width:
-              100% !important;
+      gap: 12px !important;
 
-            height:
-              42px !important;
+      align-items: end !important;
 
-            border-radius:
-              12px !important;
+      justify-content: stretch !important;
 
-            font-size:
-              14px !important;
-          }
+      flex-wrap: unset !important;
+    }
 
-          /* ===============================================
-             SEARCH
-          =============================================== */
+    /* ===============================================
+       DATE ITEMS
+    =============================================== */
 
-          .search-button {
-            width:
-              100% !important;
+    .filter-item {
+      width: 100% !important;
 
-            min-width:
-              0 !important;
+      min-width: 0 !important;
 
-            height:
-              42px !important;
+      max-width: 100% !important;
 
-            margin-top:
-              2px;
-          }
+      display: block !important;
 
-          /* ===============================================
-             SWITCH
-          =============================================== */
+      flex: none !important;
+    }
 
-          .switch-box {
-            width:
-              100% !important;
+    /* ===============================================
+       DATE LABEL
+    =============================================== */
 
-            height:
-              42px !important;
+    .filter-item > div {
+      width: 100% !important;
 
-            justify-content:
-              center !important;
+      min-width: 0 !important;
+    }
 
-            border-radius:
-              12px !important;
-          }
+    /* ===============================================
+       DATE INPUT
+    =============================================== */
 
-          /* ===============================================
-             ERROR
-          =============================================== */
+    .date-input {
+      display: block !important;
 
-          .error-card {
-            padding:
-              12px !important;
+      width: 100% !important;
 
-            border-radius:
-              16px !important;
-          }
+      max-width: 100% !important;
 
-          .error-content {
-            flex-direction:
-              column !important;
+      height: 42px !important;
 
-            align-items:
-              stretch !important;
-          }
+      min-height: 42px !important;
 
-          .retry-button {
-            width:
-              100% !important;
+      border-radius: 12px !important;
 
-            height:
-              40px !important;
-          }
+      padding: 0 8px !important;
 
-          .error-message {
-            overflow-wrap:
-              anywhere;
+      font-size: 13px !important;
 
-            word-break:
-              break-word;
+      box-sizing: border-box !important;
+    }
 
-            line-height:
-              1.7;
-          }
+    /* ===============================================
+       SEARCH BUTTON
 
-          /* ===============================================
-             STATES
-          =============================================== */
+       يوضع في السطر الثاني
+       العمود الأول
+    =============================================== */
 
-          .state-card {
-            min-height:
-              250px !important;
+    .search-button {
+      width: 100% !important;
 
-            border-radius:
-              20px !important;
-          }
+      max-width: 100% !important;
 
-          /* ===============================================
-             RESULTS
-          =============================================== */
+      height: 42px !important;
 
-          .results-wrapper {
-            width:
-              100% !important;
+      min-height: 42px !important;
 
-            max-width:
-              100% !important;
+      margin: 0 !important;
 
-            min-width:
-              0 !important;
+      padding-left: 10px !important;
 
-            overflow-x:
-              auto;
+      padding-right: 10px !important;
 
-            -webkit-overflow-scrolling:
-              touch;
-          }
-        }
+      box-sizing: border-box !important;
 
-        /* ===================================================
-           VERY SMALL PHONES
-        =================================================== */
+      grid-column: 1 !important;
 
-        @media (max-width: 380px) {
-          .stats-container {
-            padding-left:
-              8px !important;
+      grid-row: 2 !important;
+    }
 
-            padding-right:
-              8px !important;
-          }
+    /* ===============================================
+       SWITCH
 
-          .stats-title {
-            font-size:
-              22px !important;
-          }
+       يوضع في السطر الثاني
+       العمود الثاني
+    =============================================== */
 
-          .stats-subtitle {
-            font-size:
-              10px !important;
-          }
+    .switch-box {
+      width: 100% !important;
 
-          .filter-card {
-            padding:
-              10px !important;
-          }
+      max-width: 100% !important;
 
-          .date-input {
-            height:
-              40px !important;
+      height: 42px !important;
 
-            font-size:
-              13px !important;
-          }
-        }
-      `}</style>
+      min-height: 42px !important;
+
+      padding: 0 8px !important;
+
+      margin: 0 !important;
+
+      display: flex !important;
+
+      align-items: center !important;
+
+      justify-content: center !important;
+
+      border-radius: 12px !important;
+
+      box-sizing: border-box !important;
+
+      grid-column: 2 !important;
+
+      grid-row: 2 !important;
+    }
+
+    /* ===============================================
+       SWITCH LABEL
+    =============================================== */
+
+    .switch-box :global(.mantine-Switch-label) {
+      font-size: 12px !important;
+
+      white-space: nowrap !important;
+    }
+
+    /* ===============================================
+       ERROR CARD
+    =============================================== */
+
+    .error-card {
+      padding: 12px !important;
+
+      border-radius: 16px !important;
+    }
+
+    /* ===============================================
+       ERROR CONTENT
+    =============================================== */
+
+    .error-content {
+      flex-direction: column !important;
+
+      align-items: stretch !important;
+
+      width: 100% !important;
+    }
+
+    /* ===============================================
+       RETRY BUTTON
+    =============================================== */
+
+    .retry-button {
+      width: 100% !important;
+
+      height: 40px !important;
+    }
+
+    /* ===============================================
+       STATE CARD
+    =============================================== */
+
+    .state-card {
+      min-height: 250px !important;
+
+      border-radius: 20px !important;
+    }
+
+    /* ===============================================
+       RESULTS
+    =============================================== */
+
+    .results-wrapper {
+      width: 100% !important;
+
+      max-width: 100% !important;
+
+      min-width: 0 !important;
+
+      overflow-x: auto !important;
+
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ===============================================
+       HEADER
+
+       تصغير بسيط للموبايل
+    =============================================== */
+
+    .stats-page :global(.mantine-Text-root) {
+      max-width: 100%;
+    }
+  }
+
+  /* ===================================================
+     VERY SMALL PHONES
+     max-width: 380px
+  =================================================== */
+
+  @media screen and (max-width: 380px) {
+
+    .stats-container {
+      padding-left: 8px !important;
+
+      padding-right: 8px !important;
+    }
+
+    .filter-card {
+      padding: 10px !important;
+    }
+
+    .date-input {
+      height: 40px !important;
+
+      min-height: 40px !important;
+
+      font-size: 12px !important;
+
+      padding-left: 6px !important;
+
+      padding-right: 6px !important;
+    }
+
+    .search-button {
+      height: 40px !important;
+
+      min-height: 40px !important;
+
+      font-size: 12px !important;
+    }
+
+    .switch-box {
+      height: 40px !important;
+
+      min-height: 40px !important;
+
+      padding-left: 5px !important;
+
+      padding-right: 5px !important;
+    }
+
+    .switch-box :global(.mantine-Switch-label) {
+      font-size: 11px !important;
+    }
+  }
+`}</style>
     </Box>
   );
 }

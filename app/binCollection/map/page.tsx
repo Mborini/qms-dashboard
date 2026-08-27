@@ -6,7 +6,7 @@ import {
   Button,
   Tooltip,
 } from "@mantine/core";
-
+import { useMediaQuery } from "@mantine/hooks";
 import {
   IconTrash,
   IconTrashOff,
@@ -22,7 +22,7 @@ export default function MapPage() {
   // =========================================================
   // MAP REFS
   // =========================================================
-
+const isMobile = useMediaQuery("(max-width: 768px)");
   const mapRef = useRef<Map | null>(null);
 
   const binsMarkersRef = useRef<Marker[]>([]);
@@ -369,25 +369,25 @@ const createBinIcon = (bin?: any, L?: any) => {
           SELECT LOCATION BUTTON
       ================================================= */}
 
-      {!manualPicking && (
-        <Button
-          size="lg"
-          radius="xl"
-          color="blue"
-          onClick={handleManualSelect}
-          style={{
-            position: "absolute",
-            bottom: 45,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 1000,
-            boxShadow:
-              "0 4px 15px rgba(0,0,0,0.25)",
-          }}
-        >
-          📍 حدد موقع
-        </Button>
-      )}
+    {!manualPicking && (
+  <Button
+    size="lg"
+    radius="xl"
+    color="blue"
+    onClick={handleManualSelect}
+    style={{
+      position: "absolute",
+      bottom: isMobile ? 75 : 40,
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 1000,
+      boxShadow:
+        "0 4px 15px rgba(0,0,0,0.25)",
+    }}
+  >
+    📍 حدد موقع
+  </Button>
+)}
 
       {/* =================================================
           BIN FORM

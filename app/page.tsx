@@ -1,3 +1,4 @@
+"use client"
 import Link from "next/link";
 
 import {
@@ -8,6 +9,9 @@ import {
   Group,
   ThemeIcon,
   Badge,
+  Button,
+  PasswordInput,
+  Modal,
 } from "@mantine/core";
 
 import {
@@ -21,6 +25,7 @@ import {
   IconMap2,
 } from "@tabler/icons-react";
 import { bungee } from "./layout";
+import { useState } from "react";
 
 const cardStyle = {
   position: "relative" as const,
@@ -78,6 +83,27 @@ function CardArrow() {
 }
 
 export default function Page() {
+  const [passwordModalOpened, setPasswordModalOpened] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [pendingLink, setPendingLink] = useState("");
+
+  const openProtectedLink = (link: string) => {
+    setPendingLink(link);
+    setPassword("");
+    setPasswordError("");
+    setPasswordModalOpened(true);
+  };
+
+  const handlePasswordSubmit = () => {
+    if (password === "271998") {
+      window.location.href = pendingLink;
+      return;
+    }
+
+    setPasswordError("كلمة المرور غير صحيحة");
+  };
+
   return (
     <Box
       dir="rtl"
@@ -654,68 +680,52 @@ export default function Page() {
     >
       {/* Map */}
 
-      <Link
-        href="/binCollection/map"
-        style={{
-          textDecoration: "none",
-        }}
-      >
-        <Badge
-          size="md"
-          radius="md"
-          variant="light"
-          color="teal"
-          leftSection={<IconMapPin size={14} />}
-          style={{
-            cursor: "pointer",
-            textTransform: "none",
-          }}
-        >
-          Open Map
-        </Badge>
-      </Link>
-<Link
-        href="/binCollection/collection-areas/manage"
-        style={{
-          textDecoration: "none",
-        }}
-      >
-        <Badge
-          size="md"
-          radius="md"
-          variant="light"
-          color="cyan"
-          leftSection={<IconMap2 size={14} />}
-          style={{
-            cursor: "pointer",
-            textTransform: "none",
-          }}
-        >
-           Areas
-        </Badge>
-      </Link>
+      <Badge
+  size="md"
+  radius="md"
+  variant="light"
+  color="teal"
+  leftSection={<IconMapPin size={14} />}
+  onClick={() => openProtectedLink("/binCollection/map")}
+  style={{
+    cursor: "pointer",
+    textTransform: "none",
+  }}
+>
+  Open Map
+</Badge>
+<Badge
+  size="md"
+  radius="md"
+  variant="light"
+  color="cyan"
+  leftSection={<IconMap2 size={14} />}
+  onClick={() =>
+    openProtectedLink("/binCollection/collection-areas/manage")
+  }
+  style={{
+    cursor: "pointer",
+    textTransform: "none",
+  }}
+>
+  Areas
+</Badge>
       {/* Export */}
 
-      <Link
-        href="/binCollection/export-bins"
-        style={{
-          textDecoration: "none",
-        }}
-      >
-        <Badge
-          size="md"
-          radius="md"
-          variant="light"
-          color="green"
-          leftSection={<IconFileTypeXls size={14} />}
-          style={{
-            cursor: "pointer",
-            textTransform: "none",
-          }}
-        >
-         Saved Collection
-        </Badge>
-      </Link>
+    <Badge
+  size="md"
+  radius="md"
+  variant="light"
+  color="green"
+  leftSection={<IconFileTypeXls size={14} />}
+  onClick={() => openProtectedLink("/binCollection/export-bins")}
+  style={{
+    cursor: "pointer",
+    textTransform: "none",
+  }}
+>
+  Saved Collection
+</Badge>
 
       {/* Collection Areas */}
 
@@ -724,7 +734,58 @@ export default function Page() {
   </Box>
 </SimpleGrid>
         </Box>
-      </Container>
+            </Container>
+
+      <Modal
+        opened={passwordModalOpened}
+        onClose={() => setPasswordModalOpened(false)}
+        title="Protected Area"
+        centered
+        radius="lg"
+      >
+        <Text size="sm" c="dimmed" mb="md">
+          Please enter the password to continue.
+        </Text>
+
+        <PasswordInput
+          label="Password"
+          placeholder="Enter password"
+          value={password}
+          onChange={(event) => {
+            setPassword(event.currentTarget.value);
+            setPasswordError("");
+          }}
+          error={passwordError}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              handlePasswordSubmit();
+            }
+          }}
+          autoFocus
+        />
+
+        <Group justify="flex-end" mt="xl">
+          <Button
+            variant="default"
+            onClick={() => setPasswordModalOpened(false)}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            color="teal"
+            onClick={handlePasswordSubmit}
+          >
+            Continue
+          </Button>
+        </Group>
+      </Modal>
+
+      {/* =====================================================
+          HOVER
+      ===================================================== */}
+
+      
 
       {/* =====================================================
           HOVER
@@ -820,7 +881,7 @@ export default function Page() {
             transition: none !important;
           }
         }
-      `}</style>
+           `}</style>
     </Box>
   );
 }
