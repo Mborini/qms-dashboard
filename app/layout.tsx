@@ -1,7 +1,9 @@
+
 import "@mantine/core/styles.css";
 
 import { MantineProvider } from "@mantine/core";
 import { Inter, Bungee } from "next/font/google";
+import type { Viewport } from "next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -13,6 +15,12 @@ const bungee = Bungee({
   subsets: ["latin"],
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export default function RootLayout({
   children,
@@ -31,3 +39,4 @@ export default function RootLayout({
 }
 
 export { inter, bungee };
+
