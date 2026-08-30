@@ -1,8 +1,13 @@
 "use client";
 
-import { MapContainer, TileLayer, CircleMarker, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  useMap,
+} from "react-leaflet";
 
-import { IconTrash } from "@tabler/icons-react";
+import { IconMap2, IconMenu2, IconTrash } from "@tabler/icons-react";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -22,7 +27,14 @@ import {
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
 
-import { Text } from "@mantine/core";
+import {
+  Button,
+  Checkbox,
+  Group,
+  Modal,
+  Stack,
+  Text,
+} from "@mantine/core";
 
 // =====================================================
 // STATUS CONFIG
@@ -83,64 +95,130 @@ const DEFAULT_STATUS = {
 };
 
 // =====================================================
-// GEOJSON LAYERS
+// CONTAINER LAYERS
 // =====================================================
 
-const GEOJSON_LAYERS = [
+const CONTAINER_LAYERS = [
   {
-    id: "abu-nuseir",
+    id: "container-abu-nuseir",
     name: "أبو نصير",
     file: "/bins/aboNsair.geojson",
     color: "#e03131",
   },
 
   {
-    id: "al-nasr",
+    id: "container-al-nasr",
     name: "النصر",
     file: "/bins/Al-Nasir.geojson",
     color: "#1971c2",
   },
 
   {
-    id: "jubeiha",
+    id: "container-jubeiha",
     name: "الجبيهة",
     file: "/bins/Jubiha.geojson",
     color: "#2f9e44",
   },
 
   {
-    id: "marka",
+    id: "container-marka",
     name: "ماركا",
     file: "/bins/Marka.geojson",
     color: "#f08c00",
   },
 
   {
-    id: "shafa-badran",
+    id: "container-shafa-badran",
     name: "شفا بدران",
     file: "/bins/ShafaBadran.geojson",
     color: "#7048e8",
   },
 
   {
-    id: "tareq",
+    id: "container-tareq",
     name: "طارق",
     file: "/bins/Tareq.geojson",
     color: "#d6336c",
   },
 
   {
-    id: "tlaa-ali",
+    id: "container-tlaa-ali",
     name: "تلاع العلي وخلدا",
     file: "/bins/tlaaAli_Khalda.geojson",
     color: "#0ca678",
   },
 
   {
-    id: "uhod",
+    id: "container-uhod",
     name: "أحد",
     file: "/bins/Uhod.geojson",
     color: "#495057",
+  },
+];
+
+// =====================================================
+// GEOGRAPHICAL LAYERS
+// =====================================================
+//
+// هنا تحط ملفات التقسيمات الجغرافية الجديدة.
+// هذه الملفات مستقلة بالكامل عن ملفات الحاويات.
+//
+// مثال:
+// /geography/districts.geojson
+// /geography/blocks.geojson
+// /geography/neighborhoods.geojson
+//
+// غيّر file حسب أسماء ملفاتك الفعلية.
+// =====================================================
+
+const GEOGRAPHICAL_LAYERS = [
+  {
+    id: "geo-Tariq",
+    name: "احياء طارق",
+    file: "/geography/Tariq.geojson",
+    color: "#E03131",
+  },
+  {
+    id: "geo-Aljubaiha",
+    name: "احياء الجبيهة",
+    file: "/geography/Aljubaiha.geojson",
+    color: "#2F9E44",
+  },
+  {
+    id: "geo-AbuNuseir",
+    name: "احياء ابو نصير",
+    file: "/geography/AbuNuseir.geojson",
+    color: "#1971C2",
+  },
+  {
+    id: "geo-ShafaBadran",
+    name: "احياء شفا بدران",
+    file: "/geography/ShafaBadran.geojson",
+    color: "#7048E8",
+  },
+  {
+    id: "geo-Uhod",
+    name: "احياء احد",
+    file: "/geography/Uhod.geojson",
+    color: "#F08C00",
+  },
+  {
+    id: "geo-Nasr",
+    name: "احياء النصر",
+    file: "/geography/Nasr.geojson",
+    color: "#0CA678",
+  },
+  {
+    id: "geo-Marka",
+    name: "احياء ماركا",
+    file: "/geography/Marka.geojson",
+    color: "#D6336C",
+  },
+  {
+    id: "geo-TlaaAli",
+    name: "احياء تلاع العلي وخلدا",
+    file: "/geography/TlaaAli_Khalda.geojson",
+    color: "#15AABF",
   },
 ];
 
@@ -172,7 +250,10 @@ function escapeHtml(value) {
 // =====================================================
 
 function encodePopupValue(value) {
-  return encodeURIComponent(String(value ?? "")).replace(/'/g, "%27");
+  return encodeURIComponent(String(value ?? "")).replace(
+    /'/g,
+    "%27",
+  );
 }
 
 // =====================================================
@@ -196,7 +277,11 @@ function formatDate(value) {
 // =====================================================
 
 function copyText(text, button) {
-  if (text === null || text === undefined || text === "") {
+  if (
+    text === null ||
+    text === undefined ||
+    text === ""
+  ) {
     return;
   }
 
@@ -251,13 +336,9 @@ function fallbackCopy(text, callback) {
   textarea.value = String(text);
 
   textarea.style.position = "fixed";
-
   textarea.style.left = "-9999px";
-
   textarea.style.top = "0";
-
   textarea.style.opacity = "0";
-
   textarea.style.pointerEvents = "none";
 
   document.body.appendChild(textarea);
@@ -294,7 +375,11 @@ function createCopyButton({
   style = "",
   title = "اضغط للنسخ",
 }) {
-  if (value === null || value === undefined || value === "") {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
     return "";
   }
 
@@ -303,16 +388,13 @@ function createCopyButton({
   return `
     <button
       type="button"
-
       onclick="
         window.copyFailureText(
           decodeURIComponent('${encodedValue}'),
           this
         )
       "
-
       title="${escapeHtml(title)}"
-
       style="
         border: 0;
         background: transparent;
@@ -349,11 +431,18 @@ function createCopyButton({
 // =====================================================
 
 function createInfoRow(label, value, options = {}) {
-  if (value === null || value === undefined || value === "") {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
     return "";
   }
 
-  const { valueStyle = "", border = true } = options;
+  const {
+    valueStyle = "",
+    border = true,
+  } = options;
 
   return `
     <div
@@ -420,14 +509,17 @@ function createInfoRow(label, value, options = {}) {
 // =====================================================
 
 function createFailurePopup(item) {
-  const config = STATUS_CONFIG[item?.status] || DEFAULT_STATUS;
+  const config =
+    STATUS_CONFIG[item?.status] ||
+    DEFAULT_STATUS;
 
   const latitude = Number(item?.latitude);
 
   const longitude = Number(item?.longitude);
 
   const hasCoordinates =
-    Number.isFinite(latitude) && Number.isFinite(longitude);
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude);
 
   const coordinates = hasCoordinates
     ? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
@@ -445,35 +537,48 @@ function createFailurePopup(item) {
       )
     : "";
 
-  // ===================================================
-  // ALL DETAILS
-  // ===================================================
-
   const allDetails = [
-    item?.id != null ? `رقم المخالفة: ${item.id}` : null,
+    item?.id != null
+      ? `رقم المخالفة: ${item.id}`
+      : null,
 
-    item?.kpiNameAr ? `KPI: ${item.kpiNameAr}` : null,
+    item?.kpiNameAr
+      ? `KPI: ${item.kpiNameAr}`
+      : null,
 
-    item?.districtName ? `المنطقة: ${item.districtName}` : null,
+    item?.districtName
+      ? `المنطقة: ${item.districtName}`
+      : null,
 
-    item?.blockName ? `الحي: ${item.blockName}` : null,
+    item?.blockName
+      ? `الحي: ${item.blockName}`
+      : null,
 
     `الحالة: ${config.label}`,
 
-    item?.createdAt ? `التاريخ: ${formatDate(item.createdAt)}` : null,
+    item?.createdAt
+      ? `التاريخ: ${formatDate(item.createdAt)}`
+      : null,
 
-    item?.username ? `المستخدم: ${item.username}` : null,
+    item?.username
+      ? `المستخدم: ${item.username}`
+      : null,
 
-    hasCoordinates ? `الإحداثيات: ${coordinates}` : null,
+    hasCoordinates
+      ? `الإحداثيات: ${coordinates}`
+      : null,
 
-    item?.description ? `الوصف: ${item.description}` : null,
+    item?.description
+      ? `الوصف: ${item.description}`
+      : null,
   ]
     .filter(Boolean)
     .join("\n");
 
-  const encodedAllDetails = encodePopupValue(allDetails);
+  const encodedAllDetails =
+    encodePopupValue(allDetails);
 
- return `
+  return `
 <div
   dir="rtl"
   style="
@@ -592,7 +697,6 @@ function createFailurePopup(item) {
 
   </div>
 
-
   <!-- ================= CONTENT ================= -->
 
   <div
@@ -630,9 +734,7 @@ function createFailurePopup(item) {
 
             ${createCopyButton({
               value: item.kpiNameAr,
-
               displayValue: item.kpiNameAr,
-
               style: `
                 width: 100%;
                 padding: 0;
@@ -647,7 +749,6 @@ function createFailurePopup(item) {
         `
         : ""
     }
-
 
     <!-- ================= BASIC INFO ================= -->
 
@@ -745,7 +846,6 @@ function createFailurePopup(item) {
 
     </div>
 
-
     <!-- ================= COORDINATES ================= -->
 
     ${
@@ -803,9 +903,7 @@ function createFailurePopup(item) {
 
             ${createCopyButton({
               value: coordinates,
-
               displayValue: coordinates,
-
               style: `
                 width: 100%;
                 display: block;
@@ -821,7 +919,6 @@ function createFailurePopup(item) {
                 direction: ltr;
                 box-sizing: border-box;
               `,
-
               title: "اضغط لنسخ الإحداثيات",
             })}
 
@@ -844,13 +941,13 @@ function createFailurePopup(item) {
                 font-weight: 800;
               "
             >
-Google Map            </a>
+              Google Map
+            </a>
 
           </div>
         `
         : ""
     }
-
 
     <!-- ================= DESCRIPTION ================= -->
 
@@ -880,9 +977,7 @@ Google Map            </a>
 
             ${createCopyButton({
               value: item.description,
-
               displayValue: item.description,
-
               style: `
                 width: 100%;
                 padding: 0;
@@ -894,7 +989,6 @@ Google Map            </a>
                 word-break: break-word;
                 text-align: right;
               `,
-
               title: "اضغط لنسخ الوصف",
             })}
 
@@ -902,7 +996,6 @@ Google Map            </a>
         `
         : ""
     }
-
 
     <!-- ================= COPY ALL ================= -->
 
@@ -933,38 +1026,40 @@ Google Map            </a>
     >
       📋 نسخ التفاصيل
     </button>
-${
-  item?.id != null
-    ? `
-      <a
-        href="https://provider.avtr.jo/failures/${encodeURIComponent(
-          item.id
-        )}"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          width: 100%;
-          margin-top: 10px;
-          padding: 8px 10px;
-          border-radius: 8px;
-          background: #40C057;
-          color: #ffffff;
-          text-decoration: none;
-          font-size: 10px;
-          font-weight: 800;
-          font-family: Arial, Tahoma, sans-serif;
-          box-sizing: border-box;
-        "
-      >
-عرض المخالفة في QMS
-      </a>
-    `
-    : ""
-}
+
+    ${
+      item?.id != null
+        ? `
+          <a
+            href="https://provider.avtr.jo/failures/${encodeURIComponent(
+              item.id,
+            )}"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              width: 100%;
+              margin-top: 10px;
+              padding: 8px 10px;
+              border-radius: 8px;
+              background: #40C057;
+              color: #ffffff;
+              text-decoration: none;
+              font-size: 10px;
+              font-weight: 800;
+              font-family: Arial, Tahoma, sans-serif;
+              box-sizing: border-box;
+            "
+          >
+            عرض المخالفة في QMS
+          </a>
+        `
+        : ""
+    }
+
   </div>
 
 </div>
@@ -982,9 +1077,14 @@ function FailureMarker({ item }) {
 
   const longitude = Number(item?.longitude);
 
-  const config = STATUS_CONFIG[item?.status] || DEFAULT_STATUS;
+  const config =
+    STATUS_CONFIG[item?.status] ||
+    DEFAULT_STATUS;
 
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
+  ) {
     return null;
   }
 
@@ -994,46 +1094,54 @@ function FailureMarker({ item }) {
       radius={7}
       pathOptions={{
         color: "#ffffff",
-
         weight: 2,
-
         fillColor: config.color,
-
         fillOpacity: 0.95,
       }}
-   eventHandlers={{
-  click: () => {
-    const POPUP_OFFSET_Y = -250; // + يرفع | - ينزل
+      eventHandlers={{
+        click: () => {
+          const POPUP_OFFSET_Y = -250;
 
-    const popup = L.popup({
-      maxWidth: 430,
-      minWidth: 330,
-      closeButton: true,
-      autoPan: false,
-      className: "failure-details-popup",
-    })
-      .setLatLng([latitude, longitude])
-      .setContent(createFailurePopup(item));
+          const popup = L.popup({
+            maxWidth: 430,
+            minWidth: 330,
+            closeButton: true,
+            autoPan: false,
+            className: "failure-details-popup",
+          })
+            .setLatLng([
+              latitude,
+              longitude,
+            ])
+            .setContent(
+              createFailurePopup(item),
+            );
 
-    popup.openOn(map);
+          popup.openOn(map);
 
-    setTimeout(() => {
-      map.panTo([latitude, longitude], {
-        animate: true,
-        duration: 1.2,
-        easeLinearity: 0.08,
-      });
+          setTimeout(() => {
+            map.panTo(
+              [latitude, longitude],
+              {
+                animate: true,
+                duration: 1.2,
+                easeLinearity: 0.08,
+              },
+            );
 
-      setTimeout(() => {
-        map.panBy([0, POPUP_OFFSET_Y], {
-          animate: true,
-          duration: 1,
-          easeLinearity: 0.08,
-        });
-      }, 300);
-    }, 100);
-  },
-}}
+            setTimeout(() => {
+              map.panBy(
+                [0, POPUP_OFFSET_Y],
+                {
+                  animate: true,
+                  duration: 1,
+                  easeLinearity: 0.08,
+                },
+              );
+            }, 300);
+          }, 100);
+        },
+      }}
     />
   );
 }
@@ -1048,7 +1156,8 @@ function FailureLayers({ locations }) {
       {locations.map((item, index) => (
         <FailureMarker
           key={`failure-${
-            item?.id ?? `${item?.latitude}-${item?.longitude}-${index}`
+            item?.id ??
+            `${item?.latitude}-${item?.longitude}-${index}`
           }`}
           item={item}
         />
@@ -1069,19 +1178,33 @@ function HeatmapLayer({ locations }) {
       return;
     }
 
-    if (!Array.isArray(locations) || locations.length === 0) {
+    if (
+      !Array.isArray(locations) ||
+      locations.length === 0
+    ) {
       return;
     }
 
     const points = [];
 
     for (const item of locations) {
-      const latitude = Number(item.latitude);
+      const latitude = Number(
+        item.latitude,
+      );
 
-      const longitude = Number(item.longitude);
+      const longitude = Number(
+        item.longitude,
+      );
 
-      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-        points.push([latitude, longitude, 1]);
+      if (
+        Number.isFinite(latitude) &&
+        Number.isFinite(longitude)
+      ) {
+        points.push([
+          latitude,
+          longitude,
+          1,
+        ]);
       }
     }
 
@@ -1089,17 +1212,16 @@ function HeatmapLayer({ locations }) {
       return;
     }
 
-    const heatLayer = L.heatLayer(points, {
-      radius: 28,
-
-      blur: 22,
-
-      maxZoom: 17,
-
-      minOpacity: 0.35,
-
-      max: 1,
-    });
+    const heatLayer = L.heatLayer(
+      points,
+      {
+        radius: 28,
+        blur: 22,
+        maxZoom: 17,
+        minOpacity: 0.35,
+        max: 1,
+      },
+    );
 
     heatLayer.addTo(map);
 
@@ -1116,16 +1238,28 @@ function HeatmapLayer({ locations }) {
 // =====================================================
 // GEOJSON LAYERS
 // =====================================================
-
-function GeoJsonLayers({ activeLayers, setLoadedLayers }) {
+//
+// مهم:
+// هذا المكون الآن لا يعرف إذا كانت البيانات
+// حاويات أو تقسيمات جغرافية.
+//
+// فقط يأخذ layers.
+// =====================================================
+function GeoJsonLayers({
+  layers,
+  activeLayers,
+  setLoadedLayers,
+  setFailedLayers,
+}) {
   const map = useMap();
 
   const activeKey = useMemo(
     () =>
-      GEOJSON_LAYERS.filter((layer) => activeLayers[layer.id])
+      layers
+        .filter((layer) => activeLayers[layer.id])
         .map((layer) => layer.id)
         .join("|"),
-    [activeLayers],
+    [layers, activeLayers],
   );
 
   useEffect(() => {
@@ -1137,10 +1271,83 @@ function GeoJsonLayers({ activeLayers, setLoadedLayers }) {
 
     const leafletLayers = [];
 
+    // =====================================================
+    // COOL COLORS
+    // =====================================================
+
+    const COOL_COLORS = [
+      "#4dabf7",
+      "#339af0",
+      "#228be6",
+      "#15aabf",
+      "#1098ad",
+      "#0ca678",
+      "#12b886",
+      "#20c997",
+      "#5c7cfa",
+      "#748ffc",
+      "#7950f2",
+      "#9775fa",
+      "#66d9e8",
+      "#3bc9db",
+      "#74c0fc",
+      "#91a7ff",
+      "#a5d8ff",
+      "#99e9f2",
+      "#96f2d7",
+      "#b2f2bb",
+    ];
+
+    // =====================================================
+    // GET FEATURE NAME
+    // =====================================================
+
+    function getFeatureName(feature) {
+      const properties =
+        feature?.properties || {};
+
+      // عدّل ترتيب الأولوية حسب بياناتك
+      const possibleNames = [
+        "name",
+        "Name",
+        "NAME",
+        "name_ar",
+        "Name_Ar",
+        "NAME_AR",
+        "اسم",
+        "اسم الحي",
+        "الحي",
+        "neighborhood",
+        "Neighborhood",
+        "district",
+        "District",
+      ];
+
+      for (const key of possibleNames) {
+        const value = properties[key];
+
+        if (
+          value !== null &&
+          value !== undefined &&
+          String(value).trim() !== ""
+        ) {
+          return String(value).trim();
+        }
+      }
+
+      return "غير محدد";
+    }
+
+    // =====================================================
+    // LOAD LAYERS
+    // =====================================================
+
     async function loadLayers() {
-      const activeConfigs = GEOJSON_LAYERS.filter(
-        (layer) => activeLayers[layer.id],
-      );
+      const activeConfigs =
+        layers.filter(
+          (layer) =>
+            activeLayers[layer.id],
+        );
 
       for (const layerConfig of activeConfigs) {
         if (cancelled) {
@@ -1148,126 +1355,311 @@ function GeoJsonLayers({ activeLayers, setLoadedLayers }) {
         }
 
         try {
-          // =====================================
+          // =================================================
           // CACHE
-          // =====================================
+          // =================================================
 
-          let data = geoJsonCache.get(layerConfig.file);
+          let data = geoJsonCache.get(
+            layerConfig.file,
+          );
 
-          // =====================================
+          // =================================================
           // FETCH
-          // =====================================
+          // =================================================
 
           if (!data) {
-            const response = await fetch(layerConfig.file);
+            const response =
+              await fetch(
+                layerConfig.file,
+              );
 
             if (!response.ok) {
-              throw new Error(`Failed to load ${layerConfig.file}`);
-            }
+  setFailedLayers((prev) => ({
+    ...prev,
+    [layerConfig.id]: true,
+  }));
 
-            data = await response.json();
+  continue;
+}
 
-            geoJsonCache.set(layerConfig.file, data);
+            data =
+              await response.json();
+
+            geoJsonCache.set(
+              layerConfig.file,
+              data,
+            );
           }
 
           if (cancelled) {
             return;
           }
 
-          // =====================================
-          // CANVAS RENDERER
-          // =====================================
+          // =================================================
+          // CANVAS
+          // =================================================
 
           const renderer = L.canvas({
             padding: 0.5,
           });
 
-          // =====================================
+          // =================================================
           // GEOJSON
-          // =====================================
+          // =================================================
 
-          const geoJsonLayer = L.geoJSON(data, {
-            // =================================
-            // POINT
-            // =================================
+          const geoJsonLayer =
+            L.geoJSON(data, {
+              // =============================================
+              // POINT
+              // =============================================
 
-            pointToLayer: (feature, latlng) => {
-              return L.circleMarker(latlng, {
-                renderer,
+              pointToLayer: (
+                feature,
+                latlng,
+              ) => {
+                return L.circleMarker(
+                  latlng,
+                  {
+                    renderer,
 
-                radius: 4,
+                    radius: 4,
 
-                color: layerConfig.color,
+                    color:
+                      layerConfig.color,
 
-                weight: 1,
+                    weight: 1,
 
-                opacity: 0.9,
+                    opacity: 0.9,
 
-                fillColor: layerConfig.color,
+                    fillColor:
+                      layerConfig.color,
 
-                fillOpacity: 0.85,
+                    fillOpacity: 0.85,
 
-                interactive: false,
-              });
-            },
+                    interactive: false,
+                  },
+                );
+              },
 
-            // =================================
-            // POLYGON
-            // =================================
+              // =============================================
+              // POLYGON
+              // =============================================
 
-            style: () => ({
-              renderer,
+             style: () => {
+  const color = layerConfig.color;
 
-              color: layerConfig.color,
+  return {
+    renderer,
 
-              weight: 2,
+    color,
 
-              opacity: 0.9,
+    weight: 2,
 
-              fillColor: layerConfig.color,
+    opacity: 0.9,
 
-              fillOpacity: 0.04,
+    fillColor: color,
 
-              smoothFactor: 1.5,
-            }),
+    fillOpacity: 0.14,
 
-            // =================================
-            // LINE
-            // =================================
+    smoothFactor: 1.5,
 
-            onEachFeature: (feature, layer) => {
-              layer.options.renderer = renderer;
-            },
-          });
+    interactive: true,
+  };
+},
 
-          // =====================================
+              // =============================================
+              // FEATURE EVENTS
+              // =============================================
+
+              onEachFeature: (
+                feature,
+                layer,
+              ) => {
+                layer.options.renderer =
+                  renderer;
+
+                const name =
+                  getFeatureName(
+                    feature,
+                  );
+
+                // ===========================================
+                // PER FEATURE COLOR
+                // ===========================================
+
+                const colorIndex =
+                  Math.abs(
+                    JSON.stringify(
+                      feature?.properties ||
+                        {},
+                    ).length,
+                  ) %
+                  COOL_COLORS.length;
+
+                const color =
+                  COOL_COLORS[
+                    colorIndex
+                  ];
+
+                layer.setStyle({
+                  color,
+
+                  fillColor: color,
+
+                  fillOpacity: 0.14,
+
+                  weight: 2,
+
+                  opacity: 0.9,
+                });
+
+                // ===========================================
+                // PERMANENT LABEL
+                // ===========================================
+
+              layer.bindTooltip(
+  `
+    <div
+      dir="rtl"
+      style="
+        font-family:
+          Arial,
+          Tahoma,
+          sans-serif;
+
+        font-size: 10px;
+
+        font-weight: 700;
+
+        color: #343a40;
+
+        background: rgba(
+          255,
+          255,
+          255,
+          0.72
+        );
+
+       
+        white-space: nowrap;
+
+        backdrop-filter: blur(3px);
+
+        -webkit-backdrop-filter:
+          blur(3px);
+      "
+    >
+      ${escapeHtml(name)}
+    </div>
+  `,
+  {
+    permanent: true,
+
+    direction: "center",
+
+    sticky: false,
+
+    opacity: 1,
+
+    className:
+      "geo-feature-label",
+
+    offset: [0, 0],
+  },
+);
+
+                // ===========================================
+                // HOVER
+                // ===========================================
+
+                layer.on({
+                  mouseover: (
+                    event,
+                  ) => {
+                    const target =
+                      event.target;
+
+                    target.setStyle({
+                      weight: 3,
+
+                      color: "#1864ab",
+
+                      fillColor:
+                        color,
+
+                      fillOpacity: 0.28,
+                    });
+
+                    target.bringToFront();
+                  },
+
+                  mouseout: (
+                    event,
+                  ) => {
+                    const target =
+                      event.target;
+
+                    target.setStyle({
+                      weight: 2,
+
+                      color,
+
+                      fillColor: color,
+
+                      fillOpacity: 0.14,
+                    });
+                  },
+
+                  click: () => {
+                    console.log(
+                      "GeoJSON Feature:",
+                      feature,
+                    );
+
+                    console.log(
+                      "Feature Name:",
+                      name,
+                    );
+                  },
+                });
+              },
+            });
+
+          // =================================================
           // ADD
-          // =====================================
+          // =================================================
 
           geoJsonLayer.addTo(map);
 
-          leafletLayers.push(geoJsonLayer);
+          leafletLayers.push(
+            geoJsonLayer,
+          );
 
-          // =====================================
+          // =================================================
           // LOADED
-          // =====================================
+          // =================================================
 
-          setLoadedLayers((prev) => ({
-            ...prev,
+          setLoadedLayers(
+            (prev) => ({
+              ...prev,
 
-            [layerConfig.id]: true,
-          }));
-        } catch (error) {
-          console.error(`Error loading ${layerConfig.file}:`, error);
-        }
+              [layerConfig.id]: true,
+            }),
+          );
+        } catch {
+  setFailedLayers((prev) => ({
+    ...prev,
+    [layerConfig.id]: true,
+  }));
+}
       }
     }
 
     loadLayers();
 
-    // ===========================================
+    // =====================================================
     // CLEANUP
-    // ===========================================
+    // =====================================================
 
     return () => {
       cancelled = true;
@@ -1278,7 +1670,13 @@ function GeoJsonLayers({ activeLayers, setLoadedLayers }) {
         }
       }
     };
-  }, [map, activeKey]);
+  }, [
+    map,
+    layers,
+    activeKey,
+    activeLayers,
+    setLoadedLayers,
+  ]);
 
   return null;
 }
@@ -1287,135 +1685,603 @@ function GeoJsonLayers({ activeLayers, setLoadedLayers }) {
 // LAYER CONTROLS
 // =====================================================
 
-function LayerControls({ activeLayers, setActiveLayers, loadedLayers }) {
-  return (
-    <div
-      dir="rtl"
+function LayerControls({
+  activeLayers,
+  setActiveLayers,
+  loadedLayers,
+  failedLayers,
+}) {
+  const [opened, setOpened] =
+    useState(false);
+
+  const [view, setView] =
+    useState("main");
+
+  // ===================================================
+  // ACTIVE COUNT
+  // ===================================================
+
+  const activeCount = Object.values(
+    activeLayers,
+  ).filter(Boolean).length;
+
+  // ===================================================
+  // CLOSE MODAL
+  // ===================================================
+
+  const closeModal = () => {
+    setOpened(false);
+
+    setTimeout(() => {
+      setView("main");
+    }, 200);
+  };
+
+  // ===================================================
+  // LAYER LIST
+  // ===================================================
+
+  const renderLayerList = (
+    layers,
+  ) => {
+    return (
+      <Stack gap={6} mt={5}>
+        {layers.map((layer) => {
+          const active =
+            !!activeLayers[layer.id];
+
+          const loaded =
+            !!loadedLayers[layer.id];
+
+          return (
+            <div
+              key={layer.id}
+              style={{
+                border: `1px solid ${
+                  active
+                    ? layer.color
+                    : "#e9ecef"
+                }`,
+
+                background: active
+                  ? `${layer.color}0d`
+                  : "#ffffff",
+
+                borderRadius: 10,
+
+                padding:
+                  "9px 10px",
+
+                transition:
+                  "all 0.15s ease",
+              }}
+            >
+              <Checkbox
+                checked={active}
+                onChange={() => {
+                  setActiveLayers(
+                    (prev) => ({
+                      ...prev,
+
+                      [layer.id]:
+                        !prev[
+                          layer.id
+                        ],
+                    }),
+                  );
+                }}
+                label={
+                  <Group
+                    gap={7}
+                    wrap="nowrap"
+                  >
+                    {layers === GEOGRAPHICAL_LAYERS ? (
+  <IconMap2
+    size={16}
+    stroke={2}
+    color={layer.color}
+  />
+) : (
+  <IconTrash
+    size={16}
+    stroke={2}
+    color={layer.color}
+  />
+)}
+
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {layer.name}
+                    </span>
+
+                    {active && failedLayers[layer.id] ? (
+  <span
+    style={{
+      color: "#f08c00",
+      fontSize: 10,
+      fontWeight: 800,
+      whiteSpace: "nowrap",
+    }}
+  >
+    ⚠ غير متوفر
+  </span>
+) : (
+  active &&
+  loaded && (
+    <span
       style={{
-        position: "absolute",
-
-        top: 15,
-
-        right: 20,
-
-        zIndex: 99999,
-
-        display: "flex",
-
-        flexDirection: "column",
-
-        gap: 5,
-
-        width: 145,
-
-        padding: 7,
-
-        background: "rgba(255,255,255,0.97)",
-
-        borderRadius: 10,
-
-        boxShadow: "0 3px 12px rgba(0,0,0,0.20)",
-
-        pointerEvents: "auto",
-
-        maxHeight: "calc(100% - 40px)",
-
-        overflowY: "auto",
+        color: layer.color,
+        fontSize: 13,
+        fontWeight: 900,
       }}
     >
-      <Text
-        size="xs"
-        fw={700}
-        ta="right"
-        c="dimmed"
-        style={{
-          padding: "2px 4px 4px",
-        }}
-      >
-        مواقع الحاويات
-      </Text>
+      ✓
+    </span>
+  )
+)}
+                  </Group>
+                }
+                styles={{
+                  body: {
+                    alignItems:
+                      "center",
+                  },
 
-      {GEOJSON_LAYERS.map((layer) => {
-        const active = !!activeLayers[layer.id];
+                  label: {
+                    width: "100%",
+                    cursor:
+                      "pointer",
+                  },
 
-        const loaded = !!loadedLayers[layer.id];
+                  input: {
+                    cursor:
+                      "pointer",
+                  },
+                }}
+              />
+            </div>
+          );
+        })}
+      </Stack>
+    );
+  };
 
-        return (
-          <button
-            key={layer.id}
-            type="button"
-            onClick={() => {
-              setActiveLayers((prev) => ({
-                ...prev,
+  // ===================================================
+  // MAIN VIEW
+  // ===================================================
 
-                [layer.id]: !prev[layer.id],
-              }));
-            }}
+  const renderMainView = () => {
+    return (
+      <Stack gap="sm">
+        <Text
+          size="xs"
+          c="dimmed"
+          fw={600}
+        >
+          اختر نوع الطبقات التي تريد
+          التحكم بها
+        </Text>
+
+        {/* =================================================
+            CONTAINERS
+        ================================================= */}
+
+        <button
+          type="button"
+          onClick={() =>
+            setView("containers")
+          }
+          style={{
+            width: "100%",
+            border:
+              "1px solid #e9ecef",
+            borderRadius: 14,
+            background: "#ffffff",
+            padding: "16px",
+            cursor: "pointer",
+            textAlign: "right",
+            boxShadow:
+              "0 2px 8px rgba(0,0,0,0.04)",
+          }}
+        >
+          <div
+            dir="rtl"
             style={{
-              appearance: "none",
-
-              border: `1.5px solid ${layer.color}`,
-
-              background: active ? layer.color : "#ffffff",
-
-              color: active ? "#ffffff" : layer.color,
-
-              borderRadius: 7,
-
-              padding: "6px 7px",
-
-              width: "100%",
-
-              minWidth: 0,
-
-              cursor: "pointer",
-
-              fontSize: 11,
-
-              fontWeight: 700,
-
               display: "flex",
-
               alignItems: "center",
-
-              justifyContent: "center",
-
-              gap: 5,
-
-              boxShadow: active
-                ? `0 2px 5px ${layer.color}45`
-                : "0 1px 2px rgba(0,0,0,.10)",
-
-              transition: "all 0.15s ease",
-
-              whiteSpace: "nowrap",
-
-              margin: 0,
+              gap: 12,
             }}
           >
-            <IconTrash
-              size={14}
-              stroke={2}
-              color={active ? "#ffffff" : layer.color}
-            />
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 11,
+                background:
+                  "#e7f5ff",
+                color: "#228be6",
+                display: "flex",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "center",
+                fontSize: 21,
+                flexShrink: 0,
+              }}
+            >
+              <IconTrash size={21} stroke={2} />
+            </div>
 
-            <span>{layer.name}</span>
-
-            {active && loaded && (
-              <span
+            <div
+              style={{
+                flex: 1,
+              }}
+            >
+              <div
                 style={{
-                  fontSize: 12,
-
-                  fontWeight: 900,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#212529",
                 }}
               >
-                ✓
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
+                مواقع الحاويات
+              </div>
+
+              <div
+                style={{
+                  marginTop: 3,
+                  fontSize: 10,
+                  color: "#868e96",
+                }}
+              >استعراض مواقع الحاويات على الخريطة
+              </div>
+            </div>
+
+            <span
+              style={{
+                fontSize: 20,
+                color: "#adb5bd",
+              }}
+            >
+              ‹
+            </span>
+          </div>
+        </button>
+
+        {/* =================================================
+            GEOGRAPHY
+        ================================================= */}
+
+        <button
+          type="button"
+          onClick={() =>
+            setView("geography")
+          }
+          style={{
+            width: "100%",
+            border:
+              "1px solid #e9ecef",
+            borderRadius: 14,
+            background: "#ffffff",
+            padding: "16px",
+            cursor: "pointer",
+            textAlign: "right",
+            boxShadow:
+              "0 2px 8px rgba(0,0,0,0.04)",
+          }}
+        >
+          <div
+            dir="rtl"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 11,
+                background:
+                  "#f3f0ff",
+                color: "#7048e8",
+                display: "flex",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "center",
+                fontSize: 21,
+                flexShrink: 0,
+              }}
+            >
+              <IconMap2 size={21} stroke={2} />
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#212529",
+                }}
+              >
+                التقسيمات الجغرافية
+              </div>
+
+              <div
+                style={{
+                  marginTop: 3,
+                  fontSize: 10,
+                  color: "#868e96",
+                }}
+              >
+استعراض الحدود الجغرافية لأحياء المناطق              </div>
+            </div>
+
+            <span
+              style={{
+                fontSize: 20,
+                color: "#adb5bd",
+              }}
+            >
+              ‹
+            </span>
+          </div>
+        </button>
+      </Stack>
+    );
+  };
+
+  // ===================================================
+  // CONTAINER VIEW
+  // ===================================================
+
+  const renderContainersView =
+    () => {
+      return (
+        <Stack gap="xs">
+          
+
+         
+
+          <Text
+            size="xs"
+            c="dimmed"
+          >
+            اختر المناطق التي تريد
+            إظهار مواقع الحاويات
+            فيها
+          </Text>
+
+          {renderLayerList(
+            CONTAINER_LAYERS,
+          )}
+        </Stack>
+      );
+    };
+
+  // ===================================================
+  // GEOGRAPHY VIEW
+  // ===================================================
+
+  const renderGeographyView =
+    () => {
+      return (
+        <Stack gap="xs">
+          
+
+          
+
+          <Text
+            size="xs"
+            c="dimmed"
+          >
+            اختر التقسيمات الجغرافية
+            التي تريد إظهارها على
+            الخريطة
+          </Text>
+
+          {renderLayerList(
+            GEOGRAPHICAL_LAYERS,
+          )}
+        </Stack>
+      );
+    };
+
+  // ===================================================
+  // RENDER
+  // ===================================================
+
+  return (
+    <>
+      {/* =================================================
+          BURGER BUTTON
+      ================================================= */}
+
+      <button
+        type="button"
+        onClick={() => {
+          setOpened(true);
+          setView("main");
+        }}
+        title={
+          view === "main"
+            ? "خيارات الخريطة"
+            : view === "containers"
+              ? "مواقع الحاويات"
+              : "التقسيمات الجغرافية"
+        }
+        aria-label="خيارات الخريطة"
+        style={{
+          position: "absolute",
+
+          top: 15,
+          right: 20,
+
+          zIndex: 99999,
+
+          width: 42,
+          height: 42,
+
+          border:
+            "1px solid rgba(0,0,0,0.12)",
+
+          borderRadius: 10,
+
+          background:
+            "rgba(255,255,255,0.96)",
+
+          color: "#343a40",
+
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+
+          cursor: "pointer",
+
+          boxShadow:
+            "0 3px 12px rgba(0,0,0,0.20)",
+
+          transition:
+            "all 0.15s ease",
+
+          padding: 0,
+        }}
+      >
+        <IconMenu2
+          size={22}
+          stroke={2}
+        />
+
+        {activeCount > 0 && (
+          <span
+            style={{
+              position: "absolute",
+
+              top: -5,
+              right: -5,
+
+              minWidth: 18,
+              height: 18,
+
+              padding: "0 4px",
+
+              borderRadius: 20,
+
+              background: "#228be6",
+
+              color: "#ffffff",
+
+              fontSize: 10,
+              fontWeight: 800,
+
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+
+              border:
+                "2px solid #ffffff",
+            }}
+          >
+            {activeCount}
+          </span>
+        )}
+      </button>
+
+      {/* =================================================
+          MODAL
+      ================================================= */}
+
+      <Modal
+        opened={opened}
+        onClose={closeModal}
+        title={
+          view === "main"
+            ? "خيارات الخريطة"
+            : view === "containers"
+              ? "مواقع الحاويات"
+              : "التقسيمات الجغرافية"
+        }
+        centered
+        dir="rtl"
+        size="sm"
+        overlayProps={{
+          backgroundOpacity: 0.45,
+          blur: 2,
+        }}
+      >
+        {view === "main" &&
+          renderMainView()}
+
+        {view === "containers" &&
+          renderContainersView()}
+
+        {view === "geography" &&
+          renderGeographyView()}
+
+       {view !== "main" && (
+ <Group
+  justify="space-between"
+  mt="md"
+  dir="rtl"
+>
+  {/* إلغاء الكل + رجوع */}
+  <Group gap="xs">
+    <Button
+      variant="light"
+      color="red"
+      size="xs"
+      onClick={() => {
+        setActiveLayers((prev) => {
+          const next = {
+            ...prev,
+          };
+
+          const currentLayers =
+            view === "containers"
+              ? CONTAINER_LAYERS
+              : GEOGRAPHICAL_LAYERS;
+
+          for (const layer of currentLayers) {
+            delete next[layer.id];
+          }
+
+          return next;
+        });
+      }}
+    >
+      إلغاء الكل
+    </Button>
+
+    <Button
+      variant="light"
+      size="xs"
+      onClick={() => setView("main")}
+    >
+      ← رجوع
+    </Button>
+  </Group>
+
+  {/* تم لحاله */}
+  <Button
+    size="xs"
+    onClick={closeModal}
+  >
+    تم
+  </Button>
+</Group>
+        )}
+      </Modal>
+    </>
   );
 }
 
@@ -1423,10 +2289,18 @@ function LayerControls({ activeLayers, setActiveLayers, loadedLayers }) {
 // MAIN MAP
 // =====================================================
 
-export default function OsmMap({ locations = [], heatmap = false }) {
-  const [activeLayers, setActiveLayers] = useState({});
+export default function OsmMap({
+  locations = [],
+  heatmap = false,
+}) {
+  const [activeLayers, setActiveLayers] =
+    useState({});
 
-  const [loadedLayers, setLoadedLayers] = useState({});
+const [loadedLayers, setLoadedLayers] =
+  useState({});
+
+const [failedLayers, setFailedLayers] =
+  useState({});
 
   // ===================================================
   // VALID LOCATIONS
@@ -1437,22 +2311,73 @@ export default function OsmMap({ locations = [], heatmap = false }) {
       return [];
     }
 
-    return locations.filter((item) => {
-      const lat = Number(item?.latitude);
+    return locations.filter(
+      (item) => {
+        const lat = Number(
+          item?.latitude,
+        );
 
-      const lng = Number(item?.longitude);
+        const lng = Number(
+          item?.longitude,
+        );
 
-      return Number.isFinite(lat) && Number.isFinite(lng);
-    });
+        return (
+          Number.isFinite(lat) &&
+          Number.isFinite(lng)
+        );
+      },
+    );
   }, [locations]);
+
+  // ===================================================
+  // ACTIVE CONTAINER LAYERS
+  // ===================================================
+
+  const activeContainerLayers =
+    useMemo(
+      () =>
+        CONTAINER_LAYERS.filter(
+          (layer) =>
+            activeLayers[layer.id],
+        ),
+      [activeLayers],
+    );
+
+  // ===================================================
+  // ACTIVE GEOGRAPHICAL LAYERS
+  // ===================================================
+
+  const activeGeographicalLayers =
+    useMemo(
+      () =>
+        GEOGRAPHICAL_LAYERS.filter(
+          (layer) =>
+            activeLayers[layer.id],
+        ),
+      [activeLayers],
+    );
+
+  // ===================================================
+  // ALL ACTIVE GEOJSON LAYERS
+  // ===================================================
+
+  const activeGeoJsonLayers =
+    useMemo(
+      () => [
+        ...activeContainerLayers,
+        ...activeGeographicalLayers,
+      ],
+      [
+        activeContainerLayers,
+        activeGeographicalLayers,
+      ],
+    );
 
   return (
     <div
       style={{
         position: "relative",
-
         width: "100%",
-
         height: "100%",
       }}
     >
@@ -1461,21 +2386,21 @@ export default function OsmMap({ locations = [], heatmap = false }) {
       ================================================= */}
 
       <MapContainer
-        center={[31.9539, 35.9106]}
+        center={[
+          31.9539,
+          35.9106,
+        ]}
         zoom={12}
+        zoomControl={false}
         preferCanvas={true}
         zoomAnimation={true}
         fadeAnimation={true}
         markerZoomAnimation={false}
         style={{
           position: "absolute",
-
           inset: 0,
-
           width: "100%",
-
           height: "100%",
-
           zIndex: 1,
         }}
       >
@@ -1497,33 +2422,54 @@ export default function OsmMap({ locations = [], heatmap = false }) {
             GEOJSON
         ================================================= */}
 
-        <GeoJsonLayers
-          activeLayers={activeLayers}
-          setLoadedLayers={setLoadedLayers}
-        />
+       <GeoJsonLayers
+  layers={activeGeoJsonLayers}
+  activeLayers={activeLayers}
+  setLoadedLayers={
+    setLoadedLayers
+  }
+  setFailedLayers={
+    setFailedLayers
+  }
+/>
 
         {/* =================================================
             HEATMAP
         ================================================= */}
 
-        {heatmap && <HeatmapLayer locations={validLocations} />}
+        {heatmap && (
+          <HeatmapLayer
+            locations={
+              validLocations
+            }
+          />
+        )}
 
         {/* =================================================
             FAILURES
         ================================================= */}
 
-        {!heatmap && <FailureLayers locations={validLocations} />}
+        {!heatmap && (
+          <FailureLayers
+            locations={
+              validLocations
+            }
+          />
+        )}
       </MapContainer>
 
       {/* =================================================
-          LAYER BUTTONS
+          LAYER CONTROLS
       ================================================= */}
 
       <LayerControls
-        activeLayers={activeLayers}
-        setActiveLayers={setActiveLayers}
-        loadedLayers={loadedLayers}
-      />
+  activeLayers={activeLayers}
+  setActiveLayers={
+    setActiveLayers
+  }
+  loadedLayers={loadedLayers}
+  failedLayers={failedLayers}
+/>
     </div>
   );
 }

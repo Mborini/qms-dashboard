@@ -1,19 +1,39 @@
+
 "use client";
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { bungee } from "../../layout";
 
 import {
   Box,
-  Paper,
-  SimpleGrid,
+  Drawer,
   Select,
   Button,
   Text,
   Group,
   Badge,
+  Stack,
+  Divider,
+  ActionIcon,
+  Paper,
+  SimpleGrid,
 } from "@mantine/core";
+
+import {
+  IconSearch,
+  IconX,
+  IconMap,
+  IconFlame,
+  IconFilter,
+  IconCalendar,
+  IconMapPin,
+  IconClipboardList,
+  IconAdjustmentsHorizontal,
+  IconRefresh,
+  IconChevronLeft,
+} from "@tabler/icons-react";
+
+import { bungee } from "../../layout";
 
 // =====================================================
 // Dynamic OpenStreetMap
@@ -21,7 +41,6 @@ import {
 
 const OsmMap = dynamic(() => import("./OsmMap"), {
   ssr: false,
-
   loading: () => (
     <Box
       style={{
@@ -30,7 +49,9 @@ const OsmMap = dynamic(() => import("./OsmMap"), {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#f5f5f5",
+        background: "#f5f7fa",
+        color: "#64748b",
+        fontSize: 14,
       }}
     >
       جاري تحميل الخريطة...
@@ -51,7 +72,7 @@ const getLocalDateString = (date) => {
 };
 
 // =====================================================
-// Get Default Dates
+// Default Dates
 // =====================================================
 
 const today = new Date();
@@ -172,6 +193,12 @@ export default function OsmMapClient() {
   const [status, setStatus] = useState(null);
 
   // ===================================================
+  // Drawer
+  // ===================================================
+
+  const [searchOpened, setSearchOpened] = useState(false);
+
+  // ===================================================
   // Heatmap
   // ===================================================
 
@@ -233,12 +260,30 @@ export default function OsmMapClient() {
   }));
 
   // ===================================================
+  // Selected Status
+  // ===================================================
+
+  const selectedStatus = STATUSES.find(
+    (item) => item.value === status
+  );
+
+  const selectedStatusLabel = selectedStatus?.label;
+
+  // ===================================================
+  // Active Filters Count
+  // ===================================================
+
+  const activeFiltersCount =
+    Number(Boolean(district)) +
+    Number(Boolean(kpiNameAr)) +
+    Number(Boolean(status));
+
+  // ===================================================
   // Status Counts
   // ===================================================
 
   const statusCounts = STATUSES.map((item) => ({
     ...item,
-
     count: locations.filter(
       (location) => location?.status === item.value
     ).length,
@@ -249,7 +294,7 @@ export default function OsmMapClient() {
   );
 
   // ===================================================
-  // Execute
+  // Execute Search
   // ===================================================
 
   const handleExecute = async () => {
@@ -260,26 +305,41 @@ export default function OsmMapClient() {
 
       const params = new URLSearchParams();
 
+      // =================================================
+      // District
+      // =================================================
+
       if (district) {
         params.set("districtNames", district);
       }
 
-     if (kpiNameAr) {
-  const kpiNameWithoutNumber =
-    kpiNameAr.replace(
-      /^\s*\d+(?:\.\d+)?\s*-\s*/,
-      ""
-    );
+      // =================================================
+      // KPI
+      // =================================================
 
-  params.set(
-    "kpiNameAr",
-    kpiNameWithoutNumber
-  );
-}
+      if (kpiNameAr) {
+        const kpiNameWithoutNumber = kpiNameAr.replace(
+          /^\d+(?:\.\d+)?\s*-\s*/,
+          ""
+        );
+
+        params.set(
+          "kpiNameAr",
+          kpiNameWithoutNumber
+        );
+      }
+
+      // =================================================
+      // Status
+      // =================================================
 
       if (status) {
         params.set("status", status);
       }
+
+      // =================================================
+      // Date From
+      // =================================================
 
       if (dateFrom) {
         params.set(
@@ -288,12 +348,20 @@ export default function OsmMapClient() {
         );
       }
 
+      // =================================================
+      // Date To
+      // =================================================
+
       if (dateTo) {
         params.set(
           "dateTo",
           `${dateTo}T20:59:59.999Z`
         );
       }
+
+      // =================================================
+      // API URL
+      // =================================================
 
       const url =
         `/api/service-provider/map?${params.toString()}`;
@@ -322,6 +390,11 @@ export default function OsmMapClient() {
 
       setLocations(items);
       setHeatmap(false);
+
+      // =================================================
+      // IMPORTANT:
+      // Drawer stays OPEN after search
+      // =================================================
     } catch (error) {
       console.error("MAP ERROR:", error);
 
@@ -338,7 +411,7 @@ export default function OsmMapClient() {
   };
 
   // ===================================================
-  // Clear
+  // Clear Filters
   // ===================================================
 
   const handleClear = () => {
@@ -361,34 +434,11 @@ export default function OsmMapClient() {
   };
 
   // ===================================================
-  // Selected Status Label
+  // Shared Panel Style
   // ===================================================
 
-  const selectedStatusLabel =
-    STATUSES.find(
-      (item) => item.value === status
-    )?.label;
-
-  // ===================================================
-  // Shared Glass Style
-  // ===================================================
-
-  const glassStyle = {
-    background:
-      "rgba(255,255,255,0.88)",
-
-    backdropFilter:
-      "blur(18px)",
-
-    WebkitBackdropFilter:
-      "blur(18px)",
-
-    border:
-      "1px solid rgba(255,255,255,0.65)",
-
-    boxShadow:
-      "0 12px 35px rgba(15,23,42,0.16)",
-  };
+  const panelShadow =
+    "0 8px 30px rgba(15, 23, 42, 0.16)";
 
   // ===================================================
   // Render
@@ -401,6 +451,7 @@ export default function OsmMapClient() {
         width: "100%",
         height: "100vh",
         overflow: "hidden",
+        background: "#eef2f6",
       }}
     >
       {/* =================================================
@@ -419,1204 +470,1626 @@ export default function OsmMapClient() {
           heatmap={heatmap}
         />
       </Box>
-   <Box
-          style={{
-            textAlign: "center",
-            marginBottom: 44,
+
+      {/* =================================================
+          SEARCH BUTTON
+      ================================================= */}
+<Paper
+  radius="xl"
+  shadow="md"
+  style={{
+    position: "absolute",
+    top: 18,
+    left: 18,
+    zIndex: searchOpened ? 100 : 2000,
+    overflow: "hidden",
+  }}
+>
+        <Button
+          variant="white"
+          color="dark"
+          radius="xl"
+          size="md"
+          leftSection={
+            <IconSearch
+              size={18}
+              stroke={2.2}
+            />
+          }
+          
+          onClick={() => setSearchOpened(true)}
+          loading={loadingMap}
+          styles={{
+            root: {
+              height: 44,
+              paddingLeft: 16,
+              paddingRight: 16,
+              border:
+                "1px solid rgba(0,0,0,0.08)",
+              boxShadow: panelShadow,
+              fontWeight: 700,
+            },
+
+            label: {
+              fontSize: 13,
+            },
           }}
         >
-          <Box
-            style={{
-              display: "inline-flex",
-              alignItems: "baseline",
-              justifyContent: "center",
-              gap: 6,
-            }}
+          بحث
+        </Button>
+      </Paper>
+
+      {/* =================================================
+          BRAND - CENTER
+      ================================================= */}
+
+      <Box
+        style={{
+          position: "absolute",
+          top: 18,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 1900,
+          direction: "ltr",
+          pointerEvents: "none",
+        }}
+      >
+        <Paper
+          radius="xl"
+          shadow="sm"
+          px={18}
+          py={10}
+          style={{
+            background:
+              "rgba(255, 255, 255, 0.30)",
+            backdropFilter: "blur(1px)",
+            WebkitBackdropFilter:
+              "blur(1px)",
+            border:
+              "1px solid rgba(255, 255, 255, 0.55)",
+            boxShadow:
+              "0 6px 24px rgba(0, 0, 0, 0.10), inset 0 1px 0 rgba(255,255,255,0.45)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <Group
+            gap={5}
+            align="baseline"
+            justify="center"
           >
-           
-         <Text
+            <Text
+              component="span"
+              className={bungee.className}
+              style={{
+                fontSize: 28,
+                lineHeight: 1,
+                background:
+                  "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
+                WebkitBackgroundClip:
+                  "text",
+                WebkitTextFillColor:
+                  "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Matrix
+            </Text>
+
+            <Text
               component="span"
               style={{
-                fontFamily: "Inter, sans-serif",
-                fontSize: "clamp(36px, 5vw, 56px)",
-                fontWeight: 600,
-                letterSpacing: "-2px",
+                fontFamily:
+                  "Inter, sans-serif",
+                fontSize: 21,
+                fontWeight: 650,
                 color: "#263746",
                 lineHeight: 1,
               }}
             >
               Ops
             </Text>
-            <Text
-              component="span"
-              className={bungee.className}
-              style={{
-                fontSize: "clamp(36px, 5vw, 30px)",
-                lineHeight: 1,
-        
-                background:
-                  "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
-        
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-        
-                display: "inline-block",
-        
-                letterSpacing: "0px",
-              }}
-            >
-              Matrix
-            </Text>
-            
-          </Box>
-        
-          <Text
-            mt={16}
-            style={{
-              fontFamily: "Inter, sans-serif",
-              fontSize: 12,
-              fontWeight: 600,
-              letterSpacing: "2.4px",
-              textTransform: "uppercase",
-              color: "rgba(30,50,65,0.52)",
-            }}
-          >
-            Operations Intelligence
-          </Text>
-        </Box>
-      {/* =================================================
-          TOP FILTER GLASS CARD
-      ================================================= */}
-
-      <Paper
-        radius={18}
-        p="sm"
-        className="map-filter-card"
-        style={{
-          ...glassStyle,
-
-          position: "absolute",
-
-          top: 14,
-          left: "50%",
-
-          width:
-            "min(1050px, calc(100vw - 28px))",
-
-          transform: "translateX(-50%)",
-
-          zIndex: 2000,
-
-          direction: "rtl",
-
-          overflow: "visible",
-
-          boxSizing: "border-box",
-
-          transition:
-            "box-shadow 200ms ease, width 200ms ease",
-        }}
-      >
-        {/* =================================================
-            HEADER
-        ================================================= */}
-
-        <Group
-          justify="space-between"
-          align="center"
-          mb={8}
-          px={3}
-        >    
-        
-          <Box>
-            <Text
-              size="xs"
-              fw={900}
-              c="dark"
-            >
-              خريطة المخالفات
-            </Text>
-
-            <Text
-              size="9px"
-              c="dimmed"
-              mt={1}
-            >
-              حدد التصفية ثم اضغط تنفيذ
-            </Text>
-          </Box>
-
-          {hasExecuted && !loadingMap && (
-            <Badge
-              size="sm"
-              variant="light"
-              color={
-                locations.length
-                  ? "green"
-                  : "gray"
-              }
-            >
-              {locations.length} مخالفة
-            </Badge>
-          )}
-        </Group>
-
-        {/* =================================================
-            FILTER ROW
-        ================================================= */}
-
-        <Group
-          gap={7}
-          align="end"
-          className="map-filter-row"
-          style={{
-            width: "100%",
-            flexWrap: "nowrap",
-          }}
-        >
-          {/* =================================================
-              DATE FROM
-          ================================================= */}
-
-          <Box
-            className="filter-field"
-            style={{
-              flex: "1 1 0",
-              minWidth: 0,
-            }}
-          >
-            <Text
-              size="9px"
-              fw={800}
-              mb={3}
-              c="dimmed"
-            >
-              التاريخ من
-            </Text>
-
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(event) =>
-                setDateFrom(
-                  event.target.value
-                )
-              }
-              style={{
-                direction: "rtl",
-                width: "100%",
-                height: 32,
-                border:
-                  "1px solid rgba(0,0,0,0.10)",
-                borderRadius: 9,
-                padding: "0 7px",
-                fontSize: 11,
-                background:
-                  "rgba(255,255,255,0.72)",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </Box>
-
-          {/* =================================================
-              DATE TO
-          ================================================= */}
-
-          <Box
-            className="filter-field"
-            style={{
-              flex: "1 1 0",
-              minWidth: 0,
-            }}
-          >
-            <Text
-              size="9px"
-              fw={800}
-              mb={3}
-              c="dimmed"
-            >
-              التاريخ إلى
-            </Text>
-
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(event) =>
-                setDateTo(
-                  event.target.value
-                )
-              }
-              style={{
-                direction: "rtl",
-                width: "100%",
-                height: 32,
-                border:
-                  "1px solid rgba(0,0,0,0.10)",
-                borderRadius: 9,
-                padding: "0 7px",
-                fontSize: 11,
-                background:
-                  "rgba(255,255,255,0.72)",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </Box>
-
-          {/* =================================================
-              DISTRICT
-          ================================================= */}
-
-          <Select
-            className="filter-field"
-            dir="rtl"
-            label="المنطقة"
-            placeholder="المنطقة"
-            searchable
-            clearable
-            size="xs"
-            value={district}
-            onChange={setDistrict}
-            data={districtOptions}
-            nothingFoundMessage="لا توجد مناطق"
-            style={{
-              flex: "1 1 0",
-              minWidth: 0,
-            }}
-            comboboxProps={{
-              withinPortal: true,
-              zIndex: 10000,
-            }}
-            styles={{
-              label: {
-                fontSize: 9,
-                fontWeight: 800,
-                marginBottom: 3,
-                textAlign: "right",
-                color: "#868e96",
-              },
-
-              input: {
-                height: 32,
-                minHeight: 32,
-                fontSize: 11,
-                borderRadius: 9,
-                paddingLeft: 8,
-                paddingRight: 8,
-                textAlign: "right",
-                direction: "rtl",
-                background:
-                  "rgba(255,255,255,0.72)",
-                border:
-                  "1px solid rgba(0,0,0,0.10)",
-              },
-
-              dropdown: {
-                zIndex: 10000,
-                direction: "rtl",
-                textAlign: "right",
-              },
-
-              option: {
-                direction: "rtl",
-                textAlign: "right",
-                justifyContent:
-                  "flex-start",
-              },
-            }}
-          />
-
-          {/* =================================================
-              KPI
-          ================================================= */}
-
-          <Select
-            className="filter-field kpi-field"
-            dir="rtl"
-            label="KPI"
-            placeholder="KPI"
-            searchable
-            clearable
-            size="xs"
-            value={kpiNameAr}
-            onChange={setKpiNameAr}
-            data={kpiOptions}
-            nothingFoundMessage="لا توجد KPIs"
-            maxDropdownHeight={350}
-            style={{
-              flex: "2 1 0",
-              minWidth: 0,
-            }}
-            comboboxProps={{
-              withinPortal: true,
-              zIndex: 10000,
-            }}
-            renderOption={({ option }) => {
-              const parts =
-                option.label.split(" - ");
-
-              const number = parts[0];
-
-              const text = parts
-                .slice(1)
-                .join(" - ");
-
-              return (
-                <div
-                  dir="rtl"
-                  style={{
-                    display: "flex",
-                    alignItems:
-                      "flex-start",
-                    gap: 7,
-                    width: "100%",
-                    textAlign: "right",
-                  }}
-                >
-                  <span
-                    style={{
-                      color: "#2f9e44",
-                      fontWeight: 800,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {number}
-                  </span>
-
-                  <span
-                    style={{
-                      color: "#212529",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {text}
-                  </span>
-                </div>
-              );
-            }}
-            styles={{
-              label: {
-                fontSize: 9,
-                fontWeight: 800,
-                marginBottom: 3,
-                textAlign: "right",
-                color: "#868e96",
-              },
-
-              input: {
-                height: 32,
-                minHeight: 32,
-                fontSize: 11,
-                borderRadius: 9,
-                paddingLeft: 8,
-                paddingRight: 8,
-                textAlign: "right",
-                direction: "rtl",
-                background:
-                  "rgba(255,255,255,0.72)",
-                border:
-                  "1px solid rgba(0,0,0,0.10)",
-              },
-
-              dropdown: {
-                zIndex: 10000,
-                direction: "rtl",
-                textAlign: "right",
-              },
-
-              option: {
-                direction: "rtl",
-                textAlign: "right",
-                justifyContent:
-                  "flex-start",
-              },
-            }}
-          />
-
-          {/* =================================================
-              STATUS
-          ================================================= */}
-
-          <Select
-            className="filter-field"
-            dir="rtl"
-            label="الحالة"
-            placeholder="الحالة"
-            searchable
-            clearable
-            size="xs"
-            value={status}
-            onChange={setStatus}
-            data={statusOptions}
-            nothingFoundMessage="لا توجد حالات"
-            style={{
-              flex: "1 1 0",
-              minWidth: 0,
-            }}
-            comboboxProps={{
-              withinPortal: true,
-              zIndex: 10000,
-            }}
-            styles={{
-              label: {
-                fontSize: 9,
-                fontWeight: 800,
-                marginBottom: 3,
-                textAlign: "right",
-                color: "#868e96",
-              },
-
-              input: {
-                height: 32,
-                minHeight: 32,
-                fontSize: 11,
-                borderRadius: 9,
-                paddingLeft: 8,
-                paddingRight: 8,
-                textAlign: "right",
-                direction: "rtl",
-                background:
-                  "rgba(255,255,255,0.72)",
-                border:
-                  "1px solid rgba(0,0,0,0.10)",
-              },
-
-              dropdown: {
-                zIndex: 10000,
-                direction: "rtl",
-                textAlign: "right",
-              },
-
-              option: {
-                direction: "rtl",
-                textAlign: "right",
-                justifyContent:
-                  "flex-start",
-              },
-            }}
-          />
-
-          {/* =================================================
-              BUTTONS
-          ================================================= */}
-
-          <Group
-            gap={5}
-            className="map-action-buttons"
-            style={{
-              flex: "1.35 1 0",
-              minWidth: 175,
-              flexShrink: 0,
-            }}
-          >
-            {/* EXECUTE */}
-
-            <Button
-              size="xs"
-              fullWidth
-              onClick={handleExecute}
-              loading={loadingMap}
-              radius="md"
-              style={{
-                height: 32,
-                minWidth: 0,
-                fontSize: 11,
-                padding: "0 10px",
-                whiteSpace: "nowrap",
-                flex: 1,
-                boxShadow:
-                  "0 4px 12px rgba(34,139,230,0.22)",
-              }}
-            >
-              تنفيذ
-            </Button>
-
-            {/* HEATMAP */}
-
-            <Button
-              size="xs"
-              variant="light"
-              color="red"
-              onClick={() =>
-                setHeatmap((prev) => !prev)
-              }
-              fullWidth
-              disabled={
-                locations.length === 0
-              }
-              radius="md"
-              style={{
-                height: 32,
-                minWidth: 0,
-                fontSize: 11,
-                padding: "0 10px",
-                whiteSpace: "nowrap",
-                flex: 1,
-              }}
-            >
-              {heatmap
-                ? "النقاط"
-                : "حرارية"}
-            </Button>
-
-            {/* CLEAR */}
-
-            <Button
-              size="xs"
-              variant="light"
-              color="gray"
-              fullWidth
-              onClick={handleClear}
-              disabled={loadingMap}
-              radius="md"
-              style={{
-                height: 32,
-                minWidth: 0,
-                fontSize: 11,
-                padding: "0 10px",
-                whiteSpace: "nowrap",
-                flex: 1,
-              }}
-            >
-              مسح
-            </Button>
           </Group>
-        </Group>
-      </Paper>
+
+          <Text
+            ta="center"
+            mt={4}
+            style={{
+              fontFamily:
+                "Inter, sans-serif",
+              fontSize: 7,
+              fontWeight: 700,
+              letterSpacing: "1.5px",
+              color:
+                "rgba(30,50,65,0.48)",
+            }}
+          >
+            OPERATIONS INTELLIGENCE
+          </Text>
+        </Paper>
+      </Box>
 
       {/* =================================================
-          RESULT SUMMARY
+          ACTIVE FILTER INDICATOR
       ================================================= */}
 
-      {hasExecuted && !loadingMap && (
-        <Box
+      {activeFiltersCount > 0 && (
+        <Paper
+          radius="xl"
+          shadow="sm"
           style={{
             position: "absolute",
-            bottom: 10,
-            left: 14,
-            width: 310,
-            maxWidth:
-              "calc(100vw - 28px)",
-            zIndex: 2000,
-            direction: "rtl",
+            top: 75,
+            left: 18,
+            zIndex: 1900,
+            padding: "5px 10px",
+            background:
+              "rgba(255,255,255,0.94)",
+            border:
+              "1px solid rgba(34,139,230,0.18)",
           }}
         >
-          {/* =================================================
-              ERROR
-          ================================================= */}
+          <Group gap={6}>
+            <IconFilter
+              size={13}
+              color="#228be6"
+            />
 
-          {error ? (
-            <Box
-              style={{
-                ...glassStyle,
-
-                border:
-                  "1px solid rgba(250,82,82,0.35)",
-
-                borderRadius: 18,
-
-                padding: "12px 14px",
-              }}
+            <Text
+              size="xs"
+              fw={700}
+              c="blue"
             >
-              <Group
-                justify="space-between"
-                align="center"
-                gap={8}
-                wrap="nowrap"
-              >
-                <Box>
-                  <Text
-                    size="xs"
-                    fw={900}
-                    c="red"
-                  >
-                    تعذر تحميل البيانات
-                  </Text>
-
-                  <Text
-                    size="10px"
-                    c="dimmed"
-                    mt={3}
-                  >
-                    {error}
-                  </Text>
-                </Box>
-
-                <Badge
-                  color="red"
-                  variant="light"
-                  size="sm"
-                >
-                  خطأ
-                </Badge>
-              </Group>
-            </Box>
-          ) : locations.length === 0 ? (
-            /* =================================================
-               NO DATA
-            ================================================= */
-
-            <Box
-              style={{
-                ...glassStyle,
-
-                border:
-                  "1px solid rgba(134,142,150,0.25)",
-
-                borderRadius: 18,
-
-                padding: "13px 14px",
-              }}
-            >
-              <Group
-                align="center"
-                gap={10}
-                wrap="nowrap"
-              >
-                <Box
-                  style={{
-                    width: 38,
-                    height: 38,
-                    minWidth: 38,
-                    borderRadius: 13,
-                    background:
-                      "rgba(134,142,150,0.12)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 17,
-                    color: "#868e96",
-                  }}
-                >
-                  ✓
-                </Box>
-
-                <Box
-                  style={{
-                    flex: 1,
-                  }}
-                >
-                  <Text
-                    size="sm"
-                    fw={900}
-                  >
-                    لا توجد مخالفات
-                  </Text>
-
-                  <Text
-                    size="10px"
-                    c="dimmed"
-                    mt={2}
-                  >
-                    لا توجد مخالفات حسب
-                    التصفية المحددة
-                  </Text>
-                </Box>
-
-                <Badge
-                  color="gray"
-                  variant="light"
-                  size="sm"
-                >
-                  0
-                </Badge>
-              </Group>
-
-              <Group
-                gap={4}
-                mt={9}
-                wrap="wrap"
-              >
-                <Badge
-                  size="xs"
-                  variant="outline"
-                  color="gray"
-                >
-                  {dateFrom} ← {dateTo}
-                </Badge>
-
-                {district && (
-                  <Badge
-                    size="xs"
-                    variant="light"
-                  >
-                    {district}
-                  </Badge>
-                )}
-
-                {kpiNameAr && (
-                  <Badge
-                    size="xs"
-                    variant="light"
-                    color="green"
-                  >
-                    KPI محدد
-                  </Badge>
-                )}
-
-                {status && (
-                  <Badge
-                    size="xs"
-                    variant="light"
-                    color="blue"
-                  >
-                    {selectedStatusLabel}
-                  </Badge>
-                )}
-              </Group>
-            </Box>
-          ) : (
-            /* =================================================
-               HAS DATA
-            ================================================= */
-
-            <Box
-              style={{
-                ...glassStyle,
-
-                border:
-                  "1px solid rgba(64,192,87,0.28)",
-
-                borderRadius: 18,
-
-                padding: "13px 14px",
-              }}
-            >
-              {/* HEADER */}
-
-              <Group
-                justify="space-between"
-                align="center"
-                mb={9}
-                wrap="nowrap"
-              >
-                <Group
-                  gap={9}
-                  wrap="nowrap"
-                >
-                  <Box
-                    style={{
-                      width: 38,
-                      height: 38,
-                      minWidth: 38,
-                      borderRadius: 13,
-                      background:
-                        "rgba(64,192,87,0.12)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 17,
-                      color: "#40c057",
-                    }}
-                  >
-                    ✓
-                  </Box>
-
-                  <Box>
-                    <Text
-                      size="sm"
-                      fw={900}
-                    >
-                      تم العثور على مخالفات
-                    </Text>
-
-                    <Text
-                      size="10px"
-                      c="dimmed"
-                      mt={2}
-                    >
-                      النتائج المطابقة للتصفية
-                    </Text>
-                  </Box>
-                </Group>
-
-                <Badge
-                  color="green"
-                  variant="filled"
-                  size="lg"
-                  radius="md"
-                >
-                  {locations.length}
-                </Badge>
-              </Group>
-
-              {/* BASIC STATISTICS */}
-
-              <SimpleGrid
-                cols={3}
-                spacing={5}
-              >
-                <Box
-                  style={{
-                    background:
-                      "rgba(255,255,255,0.62)",
-
-                    border:
-                      "1px solid rgba(0,0,0,0.06)",
-
-                    borderRadius: 10,
-
-                    padding: "7px 5px",
-
-                    textAlign: "center",
-                  }}
-                >
-                  <Text
-                    size="9px"
-                    c="dimmed"
-                    fw={700}
-                  >
-                    المواقع
-                  </Text>
-
-                  <Text
-                    size="sm"
-                    fw={900}
-                    c="green"
-                  >
-                    {locations.length}
-                  </Text>
-                </Box>
-
-                <Box
-                  style={{
-                    background:
-                      "rgba(255,255,255,0.62)",
-
-                    border:
-                      "1px solid rgba(0,0,0,0.06)",
-
-                    borderRadius: 10,
-
-                    padding: "7px 5px",
-
-                    textAlign: "center",
-                  }}
-                >
-                  <Text
-                    size="9px"
-                    c="dimmed"
-                    fw={700}
-                  >
-                    المنطقة
-                  </Text>
-
-                  <Text
-                    size="xs"
-                    fw={900}
-                    truncate
-                  >
-                    {district || "الكل"}
-                  </Text>
-                </Box>
-
-                <Box
-                  style={{
-                    background:
-                      "rgba(255,255,255,0.62)",
-
-                    border:
-                      "1px solid rgba(0,0,0,0.06)",
-
-                    borderRadius: 10,
-
-                    padding: "7px 5px",
-
-                    textAlign: "center",
-                  }}
-                >
-                  <Text
-                    size="9px"
-                    c="dimmed"
-                    fw={700}
-                  >
-                    الحالة
-                  </Text>
-
-                  <Text
-                    size="xs"
-                    fw={900}
-                    truncate
-                  >
-                    {selectedStatusLabel ||
-                      "الكل"}
-                  </Text>
-                </Box>
-              </SimpleGrid>
-
-              {/* STATUS COUNTS */}
-
-              <Box mt={9}>
-                <Group
-                  justify="space-between"
-                  align="center"
-                  mb={5}
-                >
-                  <Text
-                    size="9px"
-                    c="dimmed"
-                    fw={800}
-                  >
-                    توزيع الحالات
-                  </Text>
-
-                  <Text
-                    size="9px"
-                    c="dimmed"
-                  >
-                    {activeStatusCounts.length} حالات
-                  </Text>
-                </Group>
-
-                <Box
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 3,
-                  }}
-                >
-                  {activeStatusCounts.map(
-                    (item) => (
-                      <Group
-                        key={item.value}
-                        justify="space-between"
-                        gap={6}
-                        wrap="nowrap"
-                        style={{
-                          minHeight: 26,
-
-                          padding: "4px 7px",
-
-                          borderRadius: 9,
-
-                          background: item.bg,
-
-                          border:
-                            `1px solid ${item.bg}`,
-
-                          transition:
-                            "transform 150ms ease",
-                        }}
-                      >
-                        <Group
-                          gap={7}
-                          wrap="nowrap"
-                          style={{
-                            minWidth: 0,
-                          }}
-                        >
-                          <Box
-                            style={{
-                              width: 8,
-                              height: 8,
-                              minWidth: 8,
-                              borderRadius: "50%",
-                              background:
-                                STATUS_DOT_COLORS[
-                                  item.color
-                                ],
-                              boxShadow:
-                                `0 0 0 3px ${item.bg}`,
-                            }}
-                          />
-
-                          <Text
-                            size="10px"
-                            fw={650}
-                            truncate
-                          >
-                            {item.label}
-                          </Text>
-                        </Group>
-
-                        <Badge
-                          size="xs"
-                          variant="light"
-                          color={item.color}
-                          radius="md"
-                          style={{
-                            minWidth: 30,
-                            justifyContent:
-                              "center",
-                            fontWeight: 900,
-                          }}
-                        >
-                          {item.count}
-                        </Badge>
-                      </Group>
-                    )
-                  )}
-                </Box>
-              </Box>
-
-              {/* FILTER SUMMARY */}
-
-              <Group
-                gap={4}
-                mt={9}
-                wrap="wrap"
-              >
-                <Badge
-                  size="xs"
-                  variant="outline"
-                  color="gray"
-                >
-                  {dateFrom} ← {dateTo}
-                </Badge>
-
-                {kpiNameAr && (
-                  <Badge
-                    size="xs"
-                    variant="light"
-                    color="green"
-                  >
-                    KPI محدد
-                  </Badge>
-                )}
-
-                {heatmap && (
-                  <Badge
-                    size="xs"
-                    variant="light"
-                    color="red"
-                  >
-                    عرض حراري
-                  </Badge>
-                )}
-              </Group>
-            </Box>
-          )}
-        </Box>
+              {activeFiltersCount} فلاتر نشطة
+            </Text>
+          </Group>
+        </Paper>
       )}
 
       {/* =================================================
-          RESPONSIVE CSS
+          SEARCH DRAWER
+      ================================================= */}
+
+     <Drawer
+  opened={searchOpened}
+  onClose={() => setSearchOpened(false)}
+  position="left"
+  size={390}
+  withCloseButton={false}
+  closeOnClickOutside={false}
+  closeOnEscape={false}
+  withOverlay={false}
+  styles={{
+    root: {
+      zIndex: 5000,
+    },
+
+    content: {
+      direction: "rtl",
+      zIndex: 5000,
+      boxShadow: "8px 0 40px rgba(15,23,42,0.14)",
+    },
+
+    body: {
+      padding: 0,
+      height: "100%",
+    },
+
+    header: {
+      padding: 0,
+    },
+  }}
+>
+        <Box
+          style={{
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            background: "#ffffff",
+          }}
+        >
+          {/* =================================================
+              DRAWER HEADER
+          ================================================= */}
+
+          <Box
+            style={{
+              padding:
+                "18px 18px 15px",
+              borderBottom:
+                "1px solid #edf0f3",
+              background:
+                "linear-gradient(180deg, #ffffff 0%, #fafbfd 100%)",
+            }}
+          >
+            <Group
+              justify="space-between"
+              align="center"
+            >
+              <Group gap={11}>
+                <Box
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    background:
+                      "linear-gradient(135deg, #e7f5ff, #d0ebff)",
+                    display: "flex",
+                    alignItems:
+                      "center",
+                    justifyContent:
+                      "center",
+                    color: "#1971c2",
+                  }}
+                >
+                  <IconSearch
+                    size={20}
+                    stroke={2}
+                  />
+                </Box>
+
+                <Box>
+                  <Text
+                    fw={800}
+                    size="md"
+                    style={{
+                      color: "#1f2937",
+                    }}
+                  >
+                    بحث وتصفية
+                  </Text>
+
+                  <Text
+                    size="xs"
+                    c="dimmed"
+                    mt={2}
+                  >
+                    حدد المعايير لعرض المخالفات
+                  </Text>
+                </Box>
+              </Group>
+
+           <ActionIcon
+  variant="subtle"
+  color="gray"
+  size={38}
+  radius="xl"
+  onClick={() => setSearchOpened(false)}
+  aria-label="إغلاق البحث"
+  title="إغلاق"
+  styles={{
+    root: {
+      transition: "all 0.2s ease",
+      "&:hover": {
+        background: "#f1f3f5",
+        color: "#228be6",
+      },
+    },
+  }}
+>
+  <IconChevronLeft size={22} stroke={2.2} />
+</ActionIcon>
+            </Group>
+
+            {/* Active filters */}
+
+            {activeFiltersCount > 0 && (
+              <Box
+                mt={13}
+                style={{
+                  background:
+                    "#f0f7ff",
+                  border:
+                    "1px solid #dbeafe",
+                  borderRadius: 11,
+                  padding:
+                    "8px 10px",
+                }}
+              >
+                <Group
+                  gap={7}
+                  wrap="nowrap"
+                >
+                  <IconAdjustmentsHorizontal
+                    size={15}
+                    color="#228be6"
+                  />
+
+                  <Text
+                    size="xs"
+                    fw={700}
+                    c="blue"
+                  >
+                    {activeFiltersCount} معايير محددة
+                  </Text>
+                </Group>
+              </Box>
+            )}
+          </Box>
+
+          {/* =================================================
+              DRAWER BODY
+          ================================================= */}
+
+          <Box
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: 18,
+            }}
+          >
+            <Stack gap={17}>
+              {/* =================================================
+                  DATE SECTION
+              ================================================= */}
+
+              <Box>
+                <Group
+                  gap={7}
+                  mb={10}
+                >
+                  <IconCalendar
+                    size={16}
+                    color="#228be6"
+                  />
+
+                  <Text
+                    size="sm"
+                    fw={800}
+                    c="#343a40"
+                  >
+                    الفترة الزمنية
+                  </Text>
+                </Group>
+
+                <SimpleGrid
+                  cols={2}
+                  spacing={9}
+                >
+                  {/* FROM */}
+
+                  <Box>
+                    <Text
+                      size="xs"
+                      fw={700}
+                      c="dimmed"
+                      mb={5}
+                    >
+                      من
+                    </Text>
+
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(event) =>
+                        setDateFrom(
+                          event.target.value
+                        )
+                      }
+                      style={{
+                        width: "100%",
+                        height: 38,
+                        border:
+                          "1px solid #dfe3e8",
+                        borderRadius: 9,
+                        padding:
+                          "0 9px",
+                        fontSize: 12,
+                        background:
+                          "#ffffff",
+                        color:
+                          "#343a40",
+                        outline: "none",
+                        boxSizing:
+                          "border-box",
+                        direction: "ltr",
+                      }}
+                    />
+                  </Box>
+
+                  {/* TO */}
+
+                  <Box>
+                    <Text
+                      size="xs"
+                      fw={700}
+                      c="dimmed"
+                      mb={5}
+                    >
+                      إلى
+                    </Text>
+
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(event) =>
+                        setDateTo(
+                          event.target.value
+                        )
+                      }
+                      style={{
+                        width: "100%",
+                        height: 38,
+                        border:
+                          "1px solid #dfe3e8",
+                        borderRadius: 9,
+                        padding:
+                          "0 9px",
+                        fontSize: 12,
+                        background:
+                          "#ffffff",
+                        color:
+                          "#343a40",
+                        outline: "none",
+                        boxSizing:
+                          "border-box",
+                        direction: "ltr",
+                      }}
+                    />
+                  </Box>
+                </SimpleGrid>
+              </Box>
+
+              <Divider />
+
+              {/* =================================================
+                  DISTRICT
+              ================================================= */}
+
+              <Box>
+                <Group
+                  gap={7}
+                  mb={8}
+                >
+                  <IconMapPin
+                    size={16}
+                    color="#228be6"
+                  />
+
+                  <Text
+                    size="sm"
+                    fw={800}
+                    c="#343a40"
+                  >
+                    المنطقة
+                  </Text>
+                </Group>
+
+                <Select
+                  dir="rtl"
+                  placeholder="جميع المناطق"
+                  searchable
+                  clearable
+                  value={district}
+                  onChange={setDistrict}
+                  data={districtOptions}
+                  nothingFoundMessage="لا توجد مناطق"
+                  size="sm"
+                  comboboxProps={{
+                    withinPortal: true,
+                    zIndex: 10000,
+                  }}
+                  styles={{
+                    input: {
+                      height: 40,
+                      minHeight: 40,
+                      borderRadius: 10,
+                      fontSize: 12,
+                      textAlign: "right",
+                      background: "#fff",
+                    },
+
+                    dropdown: {
+                      direction: "rtl",
+                    },
+
+                    option: {
+                      direction: "rtl",
+                      textAlign: "right",
+                    },
+                  }}
+                />
+              </Box>
+
+              {/* =================================================
+                  KPI
+              ================================================= */}
+
+              <Box>
+                <Group
+                  gap={7}
+                  mb={8}
+                >
+                  <IconClipboardList
+                    size={16}
+                    color="#40c057"
+                  />
+
+                  <Text
+                    size="sm"
+                    fw={800}
+                    c="#343a40"
+                  >
+                    نوع المخالفة KPI
+                  </Text>
+                </Group>
+
+                <Select
+                  dir="rtl"
+                  placeholder="جميع المخالفات"
+                  searchable
+                  clearable
+                  value={kpiNameAr}
+                  onChange={setKpiNameAr}
+                  data={kpiOptions}
+                  nothingFoundMessage="لا توجد KPIs"
+                  maxDropdownHeight={350}
+                  size="sm"
+                  comboboxProps={{
+                    withinPortal: true,
+                    zIndex: 10000,
+                  }}
+                  renderOption={({ option }) => {
+                    const parts =
+                      option.label.split(" - ");
+
+                    const number =
+                      parts[0];
+
+                    const text =
+                      parts
+                        .slice(1)
+                        .join(" - ");
+
+                    return (
+                      <Box
+                        dir="rtl"
+                        style={{
+                          display: "flex",
+                          alignItems:
+                            "flex-start",
+                          gap: 8,
+                          width: "100%",
+                          textAlign:
+                            "right",
+                        }}
+                      >
+                        <Text
+                          component="span"
+                          size="xs"
+                          fw={800}
+                          c="green"
+                          style={{
+                            whiteSpace:
+                              "nowrap",
+                          }}
+                        >
+                          {number}
+                        </Text>
+
+                        <Text
+                          component="span"
+                          size="xs"
+                          fw={500}
+                          c="dark"
+                        >
+                          {text}
+                        </Text>
+                      </Box>
+                    );
+                  }}
+                  styles={{
+                    input: {
+                      height: 40,
+                      minHeight: 40,
+                      borderRadius: 10,
+                      fontSize: 12,
+                      textAlign: "right",
+                      direction: "rtl",
+                      background: "#fff",
+                    },
+
+                    dropdown: {
+                      direction: "rtl",
+                    },
+
+                    option: {
+                      direction: "rtl",
+                      textAlign: "right",
+                    },
+                  }}
+                />
+              </Box>
+
+              {/* =================================================
+                  STATUS
+              ================================================= */}
+
+              <Box>
+                <Group
+                  gap={7}
+                  mb={8}
+                >
+                  <Box
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: "50%",
+                      background:
+                        "linear-gradient(135deg,#228be6,#15aabf)",
+                    }}
+                  />
+
+                  <Text
+                    size="sm"
+                    fw={800}
+                    c="#343a40"
+                  >
+                    الحالة
+                  </Text>
+                </Group>
+
+                <Select
+                  dir="rtl"
+                  placeholder="جميع الحالات"
+                  searchable
+                  clearable
+                  value={status}
+                  onChange={setStatus}
+                  data={statusOptions}
+                  nothingFoundMessage="لا توجد حالات"
+                  size="sm"
+                  comboboxProps={{
+                    withinPortal: true,
+                    zIndex: 10000,
+                  }}
+                  renderOption={({ option }) => {
+                    const item =
+                      STATUSES.find(
+                        (x) =>
+                          x.value ===
+                          option.value
+                      );
+
+                    return (
+                      <Group
+                        gap={8}
+                        wrap="nowrap"
+                      >
+                        <Box
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius:
+                              "50%",
+                            background:
+                              STATUS_DOT_COLORS[
+                                item?.color
+                              ] ||
+                              "#868e96",
+                            flexShrink: 0,
+                          }}
+                        />
+
+                        <Text
+                          size="xs"
+                          fw={600}
+                        >
+                          {option.label}
+                        </Text>
+                      </Group>
+                    );
+                  }}
+                  styles={{
+                    input: {
+                      height: 40,
+                      minHeight: 40,
+                      borderRadius: 10,
+                      fontSize: 12,
+                      textAlign: "right",
+                      direction: "rtl",
+                      background: "#fff",
+                    },
+
+                    dropdown: {
+                      direction: "rtl",
+                    },
+
+                    option: {
+                      direction: "rtl",
+                      textAlign: "right",
+                    },
+                  }}
+                />
+              </Box>
+
+              {/* =================================================
+                  CURRENT FILTER SUMMARY
+              ================================================= */}
+
+              {(district ||
+                kpiNameAr ||
+                status) && (
+                <>
+                  <Divider />
+
+                  <Box>
+                    <Group
+                      gap={7}
+                      mb={9}
+                    >
+                      <IconFilter
+                        size={16}
+                        color="#868e96"
+                      />
+
+                      <Text
+                        size="sm"
+                        fw={800}
+                        c="#343a40"
+                      >
+                        الفلاتر الحالية
+                      </Text>
+                    </Group>
+
+                    <Stack gap={6}>
+                      {/* District */}
+
+                      {district && (
+                        <Box
+                          style={{
+                            padding:
+                              "7px 9px",
+                            borderRadius: 9,
+                            background:
+                              "#f8f9fa",
+                            border:
+                              "1px solid #edf0f2",
+                          }}
+                        >
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                          >
+                            المنطقة
+                          </Text>
+
+                          <Text
+                            size="xs"
+                            fw={700}
+                            mt={2}
+                          >
+                            {district}
+                          </Text>
+                        </Box>
+                      )}
+
+                      {/* KPI */}
+
+                      {kpiNameAr && (
+                        <Box
+                          style={{
+                            padding:
+                              "7px 9px",
+                            borderRadius: 9,
+                            background:
+                              "#f6fff8",
+                            border:
+                              "1px solid #d3f9d8",
+                          }}
+                        >
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                          >
+                            KPI
+                          </Text>
+
+                          <Text
+                            size="xs"
+                            fw={700}
+                            mt={2}
+                            lineClamp={2}
+                          >
+                            {kpiNameAr}
+                          </Text>
+                        </Box>
+                      )}
+
+                      {/* Status */}
+
+                      {status && (
+                        <Box
+                          style={{
+                            padding:
+                              "7px 9px",
+                            borderRadius: 9,
+                            background:
+                              selectedStatus?.bg ||
+                              "#f8f9fa",
+                            border:
+                              `1px solid ${
+                                selectedStatus?.bg ||
+                                "#edf0f2"
+                              }`,
+                          }}
+                        >
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                          >
+                            الحالة
+                          </Text>
+
+                          <Group
+                            gap={6}
+                            mt={2}
+                          >
+                            <Box
+                              style={{
+                                width: 7,
+                                height: 7,
+                                borderRadius:
+                                  "50%",
+                                background:
+                                  STATUS_DOT_COLORS[
+                                    selectedStatus?.color
+                                  ],
+                              }}
+                            />
+
+                            <Text
+                              size="xs"
+                              fw={700}
+                            >
+                              {
+                                selectedStatusLabel
+                              }
+                            </Text>
+                          </Group>
+                        </Box>
+                      )}
+                    </Stack>
+                  </Box>
+                </>
+              )}
+            </Stack>
+
+            {/* =================================================
+                SEARCH RESULTS
+            ================================================= */}
+
+            {hasExecuted &&
+              !loadingMap && (
+                <Box mt={18}>
+                  <Divider mb={16} />
+
+                  {/* =================================================
+                      ERROR
+                  ================================================= */}
+
+                  {error ? (
+                    <Paper
+                      radius="lg"
+                      p="sm"
+                      style={{
+                        border:
+                          "1px solid rgba(250,82,82,0.25)",
+                        background:
+                          "#fff5f5",
+                      }}
+                    >
+                      <Group
+                        justify="space-between"
+                        align="center"
+                        wrap="nowrap"
+                      >
+                        <Group
+                          gap={9}
+                          wrap="nowrap"
+                        >
+                          <Box
+                            style={{
+                              width: 36,
+                              height: 36,
+                              minWidth: 36,
+                              borderRadius: 10,
+                              background:
+                                "#ffe3e3",
+                              display: "flex",
+                              alignItems:
+                                "center",
+                              justifyContent:
+                                "center",
+                              color:
+                                "#fa5252",
+                            }}
+                          >
+                            <IconX
+                              size={17}
+                            />
+                          </Box>
+
+                          <Box>
+                            <Text
+                              size="sm"
+                              fw={900}
+                              c="red"
+                            >
+                              تعذر تحميل البيانات
+                            </Text>
+
+                            <Text
+                              size="10px"
+                              c="dimmed"
+                              mt={2}
+                            >
+                              {error}
+                            </Text>
+                          </Box>
+                        </Group>
+
+                        <Badge
+                          color="red"
+                          variant="light"
+                          size="sm"
+                        >
+                          خطأ
+                        </Badge>
+                      </Group>
+                    </Paper>
+                  ) : locations.length ===
+                    0 ? (
+                    /* =================================================
+                       NO DATA
+                    ================================================= */
+
+                    <Paper
+                      radius="lg"
+                      p="sm"
+                      style={{
+                        border:
+                          "1px solid rgba(134,142,150,0.18)",
+                        background:
+                          "#f8f9fa",
+                      }}
+                    >
+                      <Group
+                        align="center"
+                        gap={10}
+                        wrap="nowrap"
+                      >
+                        <Box
+                          style={{
+                            width: 38,
+                            height: 38,
+                            minWidth: 38,
+                            borderRadius: 11,
+                            background:
+                              "#e9ecef",
+                            display: "flex",
+                            alignItems:
+                              "center",
+                            justifyContent:
+                              "center",
+                            color:
+                              "#868e96",
+                          }}
+                        >
+                          <IconSearch
+                            size={17}
+                          />
+                        </Box>
+
+                        <Box
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          <Text
+                            size="sm"
+                            fw={900}
+                          >
+                            لا توجد مخالفات
+                          </Text>
+
+                          <Text
+                            size="10px"
+                            c="dimmed"
+                            mt={2}
+                          >
+                            لا توجد نتائج حسب التصفية
+                          </Text>
+                        </Box>
+
+                        <Badge
+                          color="gray"
+                          variant="light"
+                          size="lg"
+                        >
+                          0
+                        </Badge>
+                      </Group>
+
+                      <Group
+                        gap={4}
+                        mt={9}
+                        wrap="wrap"
+                      >
+                        <Badge
+                          size="xs"
+                          variant="outline"
+                          color="gray"
+                        >
+                          {dateFrom} ←{" "}
+                          {dateTo}
+                        </Badge>
+
+                        {district && (
+                          <Badge
+                            size="xs"
+                            variant="light"
+                          >
+                            {district}
+                          </Badge>
+                        )}
+
+                        {kpiNameAr && (
+                          <Badge
+                            size="xs"
+                            variant="light"
+                            color="green"
+                          >
+                            KPI محدد
+                          </Badge>
+                        )}
+
+                        {status && (
+                          <Badge
+                            size="xs"
+                            variant="light"
+                            color="blue"
+                          >
+                            {
+                              selectedStatusLabel
+                            }
+                          </Badge>
+                        )}
+                      </Group>
+                    </Paper>
+                  ) : (
+                    /* =================================================
+                       HAS DATA
+                    ================================================= */
+
+                    <Paper
+                      radius="lg"
+                      p="sm"
+                      style={{
+                        border:
+                          "1px solid rgba(64,192,87,0.22)",
+                        background:
+                          "#f8fff9",
+                      }}
+                    >
+                      {/* RESULTS HEADER */}
+
+                      <Group
+                        justify="space-between"
+                        align="center"
+                        mb={10}
+                        wrap="nowrap"
+                      >
+                        <Group
+                          gap={9}
+                          wrap="nowrap"
+                        >
+                          <Box
+                            style={{
+                              width: 38,
+                              height: 38,
+                              minWidth: 38,
+                              borderRadius: 11,
+                              background:
+                                "#e9f8ee",
+                              display: "flex",
+                              alignItems:
+                                "center",
+                              justifyContent:
+                                "center",
+                              color:
+                                "#40c057",
+                            }}
+                          >
+                            <IconMap
+                              size={18}
+                            />
+                          </Box>
+
+                          <Box>
+                            <Text
+                              size="sm"
+                              fw={900}
+                            >
+                              نتائج البحث
+                            </Text>
+
+                            <Text
+                              size="10px"
+                              c="dimmed"
+                              mt={2}
+                            >
+                              المواقع المطابقة للفلاتر
+                            </Text>
+                          </Box>
+                        </Group>
+
+                        <Badge
+                          color="green"
+                          variant="filled"
+                          size="lg"
+                          radius="md"
+                        >
+                          {locations.length}
+                        </Badge>
+                      </Group>
+
+                      {/* BASIC STATISTICS */}
+
+                      <SimpleGrid
+                        cols={3}
+                        spacing={5}
+                      >
+                        {/* Locations */}
+
+                        <Box
+                          style={{
+                            background:
+                              "#ffffff",
+                            border:
+                              "1px solid #edf0f2",
+                            borderRadius: 9,
+                            padding:
+                              "8px 4px",
+                            textAlign:
+                              "center",
+                          }}
+                        >
+                          <Text
+                            size="9px"
+                            c="dimmed"
+                            fw={700}
+                          >
+                            المواقع
+                          </Text>
+
+                          <Text
+                            size="sm"
+                            fw={900}
+                            c="green"
+                          >
+                            {locations.length}
+                          </Text>
+                        </Box>
+
+                        {/* District */}
+
+                        <Box
+                          style={{
+                            background:
+                              "#ffffff",
+                            border:
+                              "1px solid #edf0f2",
+                            borderRadius: 9,
+                            padding:
+                              "8px 4px",
+                            textAlign:
+                              "center",
+                          }}
+                        >
+                          <Text
+                            size="9px"
+                            c="dimmed"
+                            fw={700}
+                          >
+                            المنطقة
+                          </Text>
+
+                          <Text
+                            size="xs"
+                            fw={900}
+                            truncate
+                          >
+                            {district || "الكل"}
+                          </Text>
+                        </Box>
+
+                        {/* Status */}
+
+                        <Box
+                          style={{
+                            background:
+                              "#ffffff",
+                            border:
+                              "1px solid #edf0f2",
+                            borderRadius: 9,
+                            padding:
+                              "8px 4px",
+                            textAlign:
+                              "center",
+                          }}
+                        >
+                          <Text
+                            size="9px"
+                            c="dimmed"
+                            fw={700}
+                          >
+                            الحالة
+                          </Text>
+
+                          <Text
+                            size="xs"
+                            fw={900}
+                            truncate
+                          >
+                            {selectedStatusLabel ||
+                              "الكل"}
+                          </Text>
+                        </Box>
+                      </SimpleGrid>
+
+                      {/* STATUS COUNTS */}
+
+                      {activeStatusCounts.length >
+                        0 && (
+                        <Box mt={10}>
+                          <Group
+                            justify="space-between"
+                            mb={6}
+                          >
+                            <Text
+                              size="9px"
+                              c="dimmed"
+                              fw={800}
+                            >
+                              توزيع الحالات
+                            </Text>
+
+                            <Text
+                              size="9px"
+                              c="dimmed"
+                            >
+                              {
+                                activeStatusCounts.length
+                              }{" "}
+                              حالات
+                            </Text>
+                          </Group>
+
+                          <Stack gap={4}>
+                            {activeStatusCounts.map(
+                              (item) => (
+                                <Group
+                                  key={
+                                    item.value
+                                  }
+                                  justify="space-between"
+                                  gap={6}
+                                  wrap="nowrap"
+                                  style={{
+                                    minHeight: 28,
+                                    padding:
+                                      "4px 7px",
+                                    borderRadius: 8,
+                                    background:
+                                      item.bg,
+                                  }}
+                                >
+                                  <Group
+                                    gap={7}
+                                    wrap="nowrap"
+                                    style={{
+                                      minWidth: 0,
+                                    }}
+                                  >
+                                    <Box
+                                      style={{
+                                        width: 7,
+                                        height: 7,
+                                        minWidth: 7,
+                                        borderRadius:
+                                          "50%",
+                                        background:
+                                          STATUS_DOT_COLORS[
+                                            item.color
+                                          ],
+                                      }}
+                                    />
+
+                                    <Text
+                                      size="10px"
+                                      fw={650}
+                                      truncate
+                                    >
+                                      {item.label}
+                                    </Text>
+                                  </Group>
+
+                                  <Badge
+                                    size="xs"
+                                    variant="light"
+                                    color={
+                                      item.color
+                                    }
+                                    radius="md"
+                                    style={{
+                                      minWidth: 30,
+                                      justifyContent:
+                                        "center",
+                                      fontWeight: 900,
+                                    }}
+                                  >
+                                    {item.count}
+                                  </Badge>
+                                </Group>
+                              )
+                            )}
+                          </Stack>
+                        </Box>
+                      )}
+
+                      {/* FILTER SUMMARY */}
+
+                      <Group
+                        gap={4}
+                        mt={10}
+                        wrap="wrap"
+                      >
+                        <Badge
+                          size="xs"
+                          variant="outline"
+                          color="gray"
+                        >
+                          {dateFrom} ←{" "}
+                          {dateTo}
+                        </Badge>
+
+                        {district && (
+                          <Badge
+                            size="xs"
+                            variant="light"
+                          >
+                            {district}
+                          </Badge>
+                        )}
+
+                        {kpiNameAr && (
+                          <Badge
+                            size="xs"
+                            variant="light"
+                            color="green"
+                          >
+                            KPI محدد
+                          </Badge>
+                        )}
+
+                        {status && (
+                          <Badge
+                            size="xs"
+                            variant="light"
+                            color="blue"
+                          >
+                            {
+                              selectedStatusLabel
+                            }
+                          </Badge>
+                        )}
+
+                        {heatmap && (
+                          <Badge
+                            size="xs"
+                            variant="light"
+                            color="red"
+                          >
+                            عرض حراري
+                          </Badge>
+                        )}
+                      </Group>
+                    </Paper>
+                  )}
+                </Box>
+              )}
+          </Box>
+
+          {/* =================================================
+              DRAWER FOOTER
+          ================================================= */}
+
+          <Box
+            style={{
+              padding: 14,
+              borderTop:
+                "1px solid #edf0f3",
+              background: "#ffffff",
+            }}
+          >
+            <Group
+              grow
+              gap={8}
+              wrap="nowrap"
+            >
+              {/* Clear */}
+
+              <Button
+                variant="light"
+                color="gray"
+                size="sm"
+                radius="md"
+                leftSection={
+                  <IconRefresh
+                    size={16}
+                  />
+                }
+                onClick={handleClear}
+                disabled={loadingMap}
+                styles={{
+                  root: {
+                    height: 40,
+                  },
+                }}
+              >
+                مسح
+              </Button>
+
+              {/* Search */}
+
+              <Button
+                size="sm"
+                radius="md"
+                color="blue"
+                leftSection={
+                  <IconSearch
+                    size={17}
+                  />
+                }
+                onClick={handleExecute}
+                loading={loadingMap}
+                styles={{
+                  root: {
+                    height: 40,
+                    boxShadow:
+                      "0 5px 15px rgba(34,139,230,0.20)",
+                  },
+                }}
+              >
+                بحث في الخريطة
+              </Button>
+            </Group>
+          </Box>
+        </Box>
+      </Drawer>
+
+      {/* =================================================
+          MAP CONTROLS
+      ================================================= */}
+
+      <Box
+        style={{
+          position: "absolute",
+          right: 18,
+          bottom: 20,
+          zIndex: 1900,
+        }}
+      >
+        <Paper
+          radius="xl"
+          shadow="md"
+          p={5}
+          style={{
+            background:
+              "rgba(255,255,255,0.96)",
+            border:
+              "1px solid rgba(0,0,0,0.08)",
+          }}
+        >
+          <Group
+            gap={3}
+            style={{
+              padding: 4,
+              borderRadius: 999,
+              background:
+                "rgba(10, 15, 20, 0.72)",
+              backdropFilter:
+                "blur(8px)",
+              WebkitBackdropFilter:
+                "blur(8px)",
+              border:
+                "1px solid rgba(34, 139, 230, 0.25)",
+              boxShadow:
+                "0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06)",
+            }}
+          >
+            {/* Map */}
+
+            <ActionIcon
+              variant="subtle"
+              size={40}
+              radius="xl"
+              disabled={
+                locations.length === 0
+              }
+              onClick={() =>
+                setHeatmap(false)
+              }
+              title="عرض النقاط"
+              styles={{
+                root: {
+                  background: !heatmap
+                    ? "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)"
+                    : "transparent",
+
+                  color: !heatmap
+                    ? "#fff"
+                    : "#8ed8e8",
+
+                  border: "none",
+                },
+              }}
+            >
+              <IconMap
+                size={19}
+                stroke={2.2}
+              />
+            </ActionIcon>
+
+            {/* Heatmap */}
+
+            <ActionIcon
+              variant="subtle"
+              size={40}
+              radius="xl"
+              disabled={
+                locations.length === 0
+              }
+              onClick={() =>
+                setHeatmap(true)
+              }
+              title="الخريطة الحرارية"
+              styles={{
+                root: {
+                  background: heatmap
+                    ? "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)"
+                    : "transparent",
+
+                  color: heatmap
+                    ? "#fff"
+                    : "#8ed8e8",
+
+                  border: "none",
+                },
+              }}
+            >
+              <IconFlame
+                size={19}
+                stroke={2.2}
+              />
+            </ActionIcon>
+          </Group>
+        </Paper>
+      </Box>
+
+      {/* =================================================
+          RESPONSIVE
       ================================================= */}
 
       <style jsx>{`
-        .map-filter-card {
-          transition:
-            box-shadow 200ms ease,
-            width 200ms ease;
-        }
-
-        .map-filter-row {
-          align-items: flex-end;
-        }
-
-        .map-action-buttons {
-          flex-shrink: 0;
-        }
-
-        .map-action-buttons button {
-          white-space: nowrap !important;
-          overflow: visible !important;
-          text-overflow: clip !important;
-        }
-
-        @media (max-width: 1100px) {
-          .map-filter-card {
-            width: calc(100vw - 24px) !important;
-          }
-
-          .map-filter-row {
-            gap: 5px;
-          }
-
-          .map-action-buttons {
-            min-width: 170px !important;
-          }
-        }
-
-        @media (max-width: 850px) {
-          .map-filter-card {
-            width: calc(100vw - 20px) !important;
-          }
-
-          .map-filter-row {
-            flex-wrap: wrap !important;
-          }
-
-          .map-filter-row > .filter-field {
-            flex: 1 1 calc(25% - 5px) !important;
-            min-width: 130px !important;
-          }
-
-          .map-filter-row > .kpi-field {
-            flex: 2 1 calc(50% - 5px) !important;
-            min-width: 220px !important;
-          }
-
-          .map-filter-row
-            .map-action-buttons {
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-          }
-        }
-
         @media (max-width: 600px) {
-          .map-filter-card {
-            top: 8px !important;
-            width: calc(100vw - 16px) !important;
-            border-radius: 15px !important;
-          }
-
-          .map-filter-row {
-            gap: 6px !important;
-          }
-
-          .map-filter-row
-            > .filter-field,
-          .map-filter-row
-            > .kpi-field {
-            flex: 1 1 calc(50% - 6px) !important;
-            min-width: 0 !important;
-          }
-
-          .map-filter-row
-            > .kpi-field {
-            flex-basis: 100% !important;
-          }
-
-          .map-filter-row
-            .map-action-buttons {
-            display: grid !important;
-            grid-template-columns:
-              repeat(3, minmax(0, 1fr));
-            gap: 5px !important;
+          .mantine-Drawer-content {
             width: 100% !important;
-          }
-
-          .map-filter-row
-            .map-action-buttons
-            button {
-            width: 100% !important;
-            min-width: 0 !important;
-            padding-left: 5px !important;
-            padding-right: 5px !important;
-          }
-        }
-
-        @media (max-width: 380px) {
-          .map-filter-row
-            > .filter-field {
-            flex: 1 1 100% !important;
-          }
-
-          .map-filter-row
-            > .kpi-field {
-            flex-basis: 100% !important;
-          }
-
-          .map-filter-row
-            .map-action-buttons {
-            grid-template-columns:
-              repeat(3, minmax(0, 1fr));
           }
         }
       `}</style>
     </Box>
   );
 }
+
