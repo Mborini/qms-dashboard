@@ -1487,141 +1487,129 @@ function GeoJsonLayers({
                 // PER FEATURE COLOR
                 // ===========================================
 
-                const colorIndex =
-                  Math.abs(
-                    JSON.stringify(
-                      feature?.properties ||
-                        {},
-                    ).length,
-                  ) %
-                  COOL_COLORS.length;
+              // ===========================================
+// LAYER COLOR
+// ===========================================
+//
+// الحاويات:
+// كل Features داخل المنطقة نفس اللون.
+//
+// التقسيمات الجغرافية:
+// كل Feature يمكن أن يكون له لون مختلف.
+//
 
-                const color =
-                  COOL_COLORS[
-                    colorIndex
-                  ];
+const isContainerLayer =
+  layerConfig.id.startsWith(
+    "container-",
+  );
 
-                layer.setStyle({
-                  color,
+const color = isContainerLayer
+  ? layerConfig.color
+  : COOL_COLORS[
+      Math.abs(
+        JSON.stringify(
+          feature?.properties || {},
+        ).length,
+      ) % COOL_COLORS.length
+    ];
 
-                  fillColor: color,
+const baseStyle = {
+  color,
+  fillColor: color,
+  fillOpacity: 0.14,
+  weight: 2,
+  opacity: 0.9,
+};
 
-                  fillOpacity: 0.14,
-
-                  weight: 2,
-
-                  opacity: 0.9,
-                });
+layer.setStyle(baseStyle);
 
                 // ===========================================
                 // PERMANENT LABEL
                 // ===========================================
+// ===========================================
+// PERMANENT LABEL
+// تظهر فقط للتقسيمات الجغرافية
+// ===========================================
 
-              layer.bindTooltip(
-  `
-    <div
-      dir="rtl"
-      style="
-        font-family:
-          Arial,
-          Tahoma,
-          sans-serif;
+if (
+  layerConfig.id.startsWith("geo-")
+) {
+  layer.bindTooltip(
+    `
+      <div
+        dir="rtl"
+        style="
+          font-family:
+            Arial,
+            Tahoma,
+            sans-serif;
 
-        font-size: 10px;
+          font-size: 10px;
 
-        font-weight: 700;
+          font-weight: 700;
 
-        color: #343a40;
+          color: #343a40;
 
-        background: rgba(
-          255,
-          255,
-          255,
-          0.72
-        );
+          background: rgba(
+            255,
+            255,
+            255,
+            0.72
+          );
 
-       
-        white-space: nowrap;
+          white-space: nowrap;
 
-        backdrop-filter: blur(3px);
+          backdrop-filter: blur(3px);
 
-        -webkit-backdrop-filter:
-          blur(3px);
-      "
-    >
-      ${escapeHtml(name)}
-    </div>
-  `,
-  {
-    permanent: true,
-
-    direction: "center",
-
-    sticky: false,
-
-    opacity: 1,
-
-    className:
-      "geo-feature-label",
-
-    offset: [0, 0],
-  },
-);
+          -webkit-backdrop-filter: blur(3px);
+        "
+      >
+        ${escapeHtml(name)}
+      </div>
+    `,
+    {
+      permanent: true,
+      direction: "center",
+      sticky: false,
+      opacity: 1,
+      className:
+        "geo-feature-label",
+      offset: [0, 0],
+    },
+  );
+}
 
                 // ===========================================
                 // HOVER
                 // ===========================================
+layer.on({
+  mouseover: () => {
+    layer.bringToFront();
 
-                layer.on({
-                  mouseover: (
-                    event,
-                  ) => {
-                    const target =
-                      event.target;
+    layer.setStyle({
+      ...baseStyle,
+      weight: 4,
+      color: "#212529",
+      fillOpacity: 0.30,
+    });
+  },
 
-                    target.setStyle({
-                      weight: 3,
+  mouseout: () => {
+    layer.setStyle(baseStyle);
+  },
 
-                      color: "#1864ab",
+  click: () => {
+    console.log(
+      "GeoJSON Feature:",
+      feature,
+    );
 
-                      fillColor:
-                        color,
-
-                      fillOpacity: 0.28,
-                    });
-
-                    target.bringToFront();
-                  },
-
-                  mouseout: (
-                    event,
-                  ) => {
-                    const target =
-                      event.target;
-
-                    target.setStyle({
-                      weight: 2,
-
-                      color,
-
-                      fillColor: color,
-
-                      fillOpacity: 0.14,
-                    });
-                  },
-
-                  click: () => {
-                    console.log(
-                      "GeoJSON Feature:",
-                      feature,
-                    );
-
-                    console.log(
-                      "Feature Name:",
-                      name,
-                    );
-                  },
-                });
+    console.log(
+      "Feature Name:",
+      name,
+    );
+  },
+});
               },
             });
 
@@ -1629,12 +1617,18 @@ function GeoJsonLayers({
           // ADD
           // =================================================
 
-          geoJsonLayer.addTo(map);
+        geoJsonLayer.addTo(map);
 
-          leafletLayers.push(
-            geoJsonLayer,
-          );
-
+leafletLayers.push(geoJsonLayer);
+// نخلي الـ GeoJSON layers قابلة للترتيب
+geoJsonLayer.eachLayer((featureLayer) => {
+  if (featureLayer.setStyle) {
+    featureLayer.setStyle({
+      ...featureLayer.options,
+      pane: "overlayPane",
+    });
+  }
+});
           // =================================================
           // LOADED
           // =================================================
@@ -2361,17 +2355,17 @@ const [failedLayers, setFailedLayers] =
   // ALL ACTIVE GEOJSON LAYERS
   // ===================================================
 
-  const activeGeoJsonLayers =
-    useMemo(
-      () => [
-        ...activeContainerLayers,
-        ...activeGeographicalLayers,
-      ],
-      [
-        activeContainerLayers,
-        activeGeographicalLayers,
-      ],
-    );
+ const activeGeoJsonLayers =
+  useMemo(
+    () => [
+      ...activeGeographicalLayers,
+      ...activeContainerLayers,
+    ],
+    [
+      activeContainerLayers,
+      activeGeographicalLayers,
+    ],
+  );
 
   return (
     <div
