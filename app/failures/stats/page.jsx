@@ -106,7 +106,7 @@ export default function StatsPage() {
 
       params.append("dateTo", range.to);
 
-      params.append("limit", "1000");
+      params.append("limit", "1000000");
 
       params.append("offset", "0");
 

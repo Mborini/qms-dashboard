@@ -7,7 +7,7 @@ import {
   useMap,
 } from "react-leaflet";
 
-import { IconMap2, IconMenu2, IconTrash } from "@tabler/icons-react";
+import { IconMap2, IconMenu2, IconMicrofrontends, IconTrash } from "@tabler/icons-react";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -2151,7 +2151,7 @@ function LayerControls({
           padding: 0,
         }}
       >
-        <IconMenu2
+        <IconMicrofrontends
           size={22}
           stroke={2}
         />
