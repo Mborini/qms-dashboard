@@ -294,7 +294,7 @@ export default function MaintenancePage() {
           <SimpleGrid
             dir="ltr"
             cols={{
-              base: 1,
+              base: 2,
               sm: 2,
               lg: 4,
             }}
