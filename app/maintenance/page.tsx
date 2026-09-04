@@ -98,6 +98,7 @@ export default function MaintenancePage() {
   const hasAccess = (card: keyof typeof cardAccess) => {
     return cardAccess[card].includes(role as any);
   };
+  
   return (
     <Box
       dir="rtl"

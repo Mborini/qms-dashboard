@@ -12,6 +12,7 @@ import {
   Group,
   Modal,
   Select,
+  SelectProps,
   SimpleGrid,
   Stack,
   Text,
@@ -25,7 +26,9 @@ import {
   IconClock,
   IconLogin,
   IconLogout,
+  IconMapPin,
   IconTool,
+  IconWeight,
 } from "@tabler/icons-react";
 
 import { useSession } from "next-auth/react";
@@ -36,11 +39,16 @@ import { useSession } from "next-auth/react";
 
 type Vehicle = {
   id: number | string;
+
   plate_number?: string | null;
   vehicle_number?: string | null;
   name?: string | null;
   plate?: string | null;
   model?: string | null;
+
+  // الجديد
+  area?: string | null;
+  capacity?: number | string | null;
 };
 
 type KPI = {
@@ -65,6 +73,10 @@ type MaintenanceRecord = {
 
   vehicle_name?: string | null;
   plate_number?: string | null;
+
+  // الجديد
+  area?: string | null;
+  capacity?: number | string | null;
 
   kpi_id: number | string;
   kpi_name?: string | null;
@@ -117,8 +129,6 @@ function getCurrentTime(date = new Date()) {
  * تصبح:
  *
  * 2026-09-04T09:00:00.000Z
- *
- * وهذا يجعل المقارنة مع السيرفر UTC صحيحة.
  */
 function localDateTimeToISOString(
   date: string,
@@ -565,6 +575,18 @@ export default function MaintenancePage() {
               model:
                 item.model ??
                 null,
+
+              // =========================================
+              // الجديد
+              // =========================================
+
+              area:
+                item.area ??
+                null,
+
+              capacity:
+                item.capacity ??
+                null,
             })
           )
           .filter(
@@ -572,6 +594,11 @@ export default function MaintenancePage() {
               item.id !== undefined &&
               item.id !== null
           );
+
+      console.log(
+        "NORMALIZED VEHICLES:",
+        normalizedVehicles
+      );
 
       setVehicles(
         normalizedVehicles
@@ -796,6 +823,15 @@ export default function MaintenancePage() {
               item.plate ??
               null,
 
+            // الجديد
+            area:
+              item.area ??
+              null,
+
+            capacity:
+              item.capacity ??
+              null,
+
             kpi_id:
               item.kpi_id ??
               item.kpiId,
@@ -883,63 +919,79 @@ export default function MaintenancePage() {
       );
     }, [currentMaintenance]);
 
-  const vehicleOptions =
-    useMemo(() => {
-      const map = new Map<
-        string,
-        {
-          value: string;
-          label: string;
-          disabled?: boolean;
-        }
-      >();
+const vehicleOptions = useMemo(() => {
+  const map = new Map<
+    string,
+    {
+      value: string;
+      label: string;
+      disabled?: boolean;
+      vehicleNumber: string;
+      capacity: string;
+      area: string;
+      isInMaintenance: boolean;
+    }
+  >();
 
-      vehicles.forEach((vehicle) => {
-        if (
-          vehicle.id === undefined ||
-          vehicle.id === null
-        ) {
-          return;
-        }
+  vehicles.forEach((vehicle) => {
+    if (
+      vehicle.id === undefined ||
+      vehicle.id === null
+    ) {
+      return;
+    }
 
-        const value =
-          String(vehicle.id);
+    const value = String(vehicle.id);
 
-        const isInMaintenance =
-          vehiclesInMaintenance.has(
-            value
-          );
+    const isInMaintenance =
+      vehiclesInMaintenance.has(value);
 
-        const vehicleName =
-          vehicle.plate_number ||
-          vehicle.vehicle_number ||
-          vehicle.plate ||
-          vehicle.name ||
-          vehicle.model ||
-          `مركبة ${value}`;
+    // رقم المركبة
+    const vehicleNumber =
+      vehicle.plate_number ||
+      vehicle.vehicle_number ||
+      vehicle.plate ||
+      vehicle.name ||
+      vehicle.model ||
+      `مركبة ${value}`;
 
-        const label =
-          isInMaintenance
-            ? `${vehicleName} (بالصيانة)`
-            : vehicleName;
+    // السعة
+    const capacity =
+      vehicle.capacity !== undefined &&
+      vehicle.capacity !== null &&
+      String(vehicle.capacity).trim() !== ""
+        ? String(vehicle.capacity)
+        : "غير محددة";
 
-        if (!map.has(value)) {
-          map.set(value, {
-            value,
-            label,
-            disabled:
-              isInMaintenance,
-          });
-        }
+    // المنطقة
+    const area =
+      vehicle.area &&
+      String(vehicle.area).trim() !== ""
+        ? String(vehicle.area)
+        : "غير محددة";
+
+    if (!map.has(value)) {
+      map.set(value, {
+        value,
+
+        // مهم للبحث
+        label: `${vehicleNumber} ${capacity} ${area}`,
+
+        disabled: isInMaintenance,
+
+        vehicleNumber: String(vehicleNumber),
+        capacity,
+        area,
+        isInMaintenance,
       });
+    }
+  });
 
-      return Array.from(
-        map.values()
-      );
-    }, [
-      vehicles,
-      vehiclesInMaintenance,
-    ]);
+  return Array.from(map.values());
+}, [
+  vehicles,
+  vehiclesInMaintenance,
+]);
 
   // ===================================================
   // KPI options
@@ -1276,8 +1328,6 @@ export default function MaintenancePage() {
               sub_kpi_id:
                 Number(entrySubKpi),
 
-              // IMPORTANT:
-              // send UTC ISO
               entry_at:
                 entryAt,
 
@@ -1317,7 +1367,6 @@ export default function MaintenancePage() {
 
       await loadData(false);
 
-      // Reset
       setEntryVehicle(null);
       setEntryKpi(null);
       setEntrySubKpi(null);
@@ -1473,11 +1522,11 @@ export default function MaintenancePage() {
         selectedExitRecord.entry_at
       ).getTime();
 
+    // مهم:
+    // نستخدم exitAt بعد تحويله إلى UTC
+    // حتى تكون المقارنة بنفس المنطقة الزمنية
     const exitTimestamp =
-      getDateTimeTimestamp(
-        exitDate,
-        exitTime
-      );
+      new Date(exitAt).getTime();
 
     if (
       !Number.isNaN(
@@ -1513,8 +1562,6 @@ export default function MaintenancePage() {
             },
 
             body: JSON.stringify({
-              // IMPORTANT:
-              // send UTC ISO
               exit_at:
                 exitAt,
 
@@ -1574,7 +1621,132 @@ export default function MaintenancePage() {
   // ===================================================
   // Loading screen
   // ===================================================
+const renderVehicleOption: SelectProps["renderOption"] = ({
+  option,
+  checked,
+}) => {
+  const vehicle = vehicleOptions.find(
+    (item) => item.value === option.value
+  );
 
+  if (!vehicle) {
+    return option.label;
+  }
+
+  return (
+    <Group
+    dir={"rtl"}
+      wrap="nowrap"
+      gap="sm"
+      w="100%"
+      py={4}
+    >
+      {/* Vehicle Icon */}
+
+      <Card
+        withBorder
+        radius="md"
+        p={7}
+        style={{
+          flexShrink: 0,
+          background: vehicle.isInMaintenance
+            ? "var(--mantine-color-red-0)"
+            : "var(--mantine-color-blue-0)",
+        }}
+      >
+        <IconCar
+          size={21}
+          stroke={1.8}
+        />
+      </Card>
+
+      {/* Main Information */}
+
+      <Stack
+        gap={3}
+        style={{
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        {/* Vehicle Number */}
+
+        <Group
+          justify="space-between"
+          gap="xs"
+          wrap="nowrap"
+        >
+          <Text
+            fw={700}
+            size="sm"
+            truncate
+          >
+            {vehicle.vehicleNumber}
+          </Text>
+
+          {vehicle.isInMaintenance && (
+            <Badge
+              color="red"
+              variant="light"
+              size="xs"
+              radius="sm"
+            >
+              قيد الصيانة
+            </Badge>
+          )}
+        </Group>
+
+        {/* Details */}
+
+        <Group
+          gap="md"
+          wrap="wrap"
+        >
+          <Group gap={4}>
+            <IconWeight
+              size={14}
+              stroke={1.7}
+            />
+
+            <Text
+              size="xs"
+              c="dimmed"
+            >
+              {vehicle.capacity}
+            </Text>
+          </Group>
+
+          <Group gap={4}>
+            <IconMapPin
+              size={14}
+              stroke={1.7}
+            />
+
+            <Text
+              size="xs"
+              c="dimmed"
+              truncate
+            >
+              {vehicle.area}
+            </Text>
+          </Group>
+        </Group>
+      </Stack>
+
+      {/* Selected indicator */}
+
+      {checked && (
+        <Badge
+          color="blue"
+          variant="light"
+          size="xs"
+        >
+          محددة
+        </Badge>
+      )}
+    </Group>
+  );
+};
   if (loading) {
     return (
       <Container
@@ -1640,7 +1812,7 @@ export default function MaintenancePage() {
                 c="dimmed"
               >
                 إدارة ومتابعة المركبات
-                الموجودة في الصيانة
+                الموجودة قيد الصيانة
               </Text>
             </div>
           </Group>
@@ -1720,7 +1892,7 @@ export default function MaintenancePage() {
                   size="sm"
                   c="dimmed"
                 >
-                  المركبات في الصيانة
+                  المركبات قيد الصيانة
                 </Text>
 
                 <Text
@@ -1856,10 +2028,19 @@ export default function MaintenancePage() {
                 record,
                 index
               ) => {
-                const vehicleName =
+                const vehicleNumber =
                   record.plate_number ||
                   record.vehicle_name ||
                   `مركبة ${record.vehicle_id}`;
+
+                const vehicleDetails =
+                  `${vehicleNumber} -  ${
+                    record.capacity ??
+                    "الوزن غير محدد"
+                  } - ${
+                    record.area ??
+                    "المنطقة غير محددة"
+                  }`;
 
                 const recordKey =
                   `maintenance-${String(
@@ -1897,19 +2078,11 @@ export default function MaintenancePage() {
                               fw={700}
                             >
                               {
-                                vehicleName
+                                vehicleDetails
                               }
                             </Text>
 
-                            <Text
-                              size="xs"
-                              c="dimmed"
-                            >
-                              ID:{" "}
-                              {
-                                record.vehicle_id
-                              }
-                            </Text>
+                           
                           </div>
                         </Group>
 
@@ -1930,7 +2103,7 @@ export default function MaintenancePage() {
                           size="xs"
                           c="dimmed"
                         >
-                          مؤشر الصيانة
+                          نوع الصيانة
                         </Text>
 
                         <Text
@@ -1950,7 +2123,7 @@ export default function MaintenancePage() {
                           size="xs"
                           c="dimmed"
                         >
-                          المؤشر الفرعي
+                          نوع الصيانة الفرعي
                         </Text>
 
                         <Text
@@ -2074,7 +2247,7 @@ export default function MaintenancePage() {
         ============================================ */}
 
         <Modal
-        dir={"rtl"}
+          dir="rtl"
           opened={
             entryModalOpened
           }
@@ -2100,21 +2273,51 @@ export default function MaintenancePage() {
             {/* Vehicle */}
 
             <Select
-              label="المركبة"
-              placeholder="اختر المركبة"
-              data={
-                vehicleOptions
-              }
-              value={
-                entryVehicle
-              }
-              onChange={
-                setEntryVehicle
-              }
-              searchable
-              clearable
-              nothingFoundMessage="لا توجد مركبات"
-            />
+  label="المركبة"
+  description="اختر المركبة المراد إدخالها إلى الصيانة"
+  placeholder="ابحث عن رقم المركبة أو المنطقة..."
+  data={vehicleOptions}
+  value={entryVehicle}
+  onChange={setEntryVehicle}
+  searchable
+  clearable
+  nothingFoundMessage="لا توجد مركبات مطابقة"
+  renderOption={renderVehicleOption}
+  maxDropdownHeight={420}
+  checkIconPosition="right"
+  radius="md"
+  size="md"
+  filter={({ options, search }) => {
+    const query = search
+      .trim()
+      .toLowerCase();
+
+    if (!query) {
+      return options;
+    }
+
+    return options.filter((option :any) => {
+      const vehicle =
+        vehicleOptions.find(
+          (item) =>
+            item.value === option.value 
+        );
+
+      if (!vehicle) {
+        return false;
+      }
+
+      return [
+        vehicle.vehicleNumber,
+        vehicle.capacity,
+        vehicle.area,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }}
+/>
 
             {/* KPI */}
 
@@ -2359,6 +2562,7 @@ export default function MaintenancePage() {
         ============================================ */}
 
         <Modal
+          dir="rtl"
           opened={
             exitModalOpened
           }
