@@ -96,6 +96,7 @@ const EMPTY_FORM: VehicleForm = {
   weight: "",
   capacity: "",
   manufacture_year: "",
+  model: "",
   type: "",
   area: null,
 };
@@ -411,33 +412,30 @@ export default function MaintenanceVehiclesPage() {
         return;
       }
 
-      const payload = {
-        plate_number:
-          form.plate_number.trim(),
+    const payload = {
+  plate_number: form.plate_number.trim(),
 
-        weight:
-          form.weight === ""
-            ? null
-            : Number(form.weight),
+  weight:
+    form.weight === ""
+      ? null
+      : Number(form.weight),
 
-        capacity:
-          form.capacity === ""
-            ? null
-            : Number(form.capacity),
+  capacity:
+    form.capacity === ""
+      ? null
+      : Number(form.capacity),
 
-        manufacture_year:
-          form.manufacture_year === ""
-            ? null
-            : Number(
-                form.manufacture_year
-              ),
+  manufacture_year:
+    form.manufacture_year === ""
+      ? null
+      : Number(form.manufacture_year),
 
-        model:
-          form.model.trim() || null,
+  model: form.model.trim() || null,
 
-        area:
-          form.area || null,
-      };
+  type: form.type?.trim() || null,
+
+  area: form.area || null,
+};
 
       if (
         payload.weight !== null &&
@@ -950,7 +948,7 @@ export default function MaintenanceVehiclesPage() {
                         الموديل
                       </Table.Th>
                       <Table.Th>
-                        الموديل
+                        النوع
                       </Table.Th>
 
                       <Table.Th>
