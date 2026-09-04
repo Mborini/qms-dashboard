@@ -1,5 +1,8 @@
 "use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { signOut, useSession } from "next-auth/react";
 
 import {
   Box,
@@ -13,7 +16,7 @@ import {
   PasswordInput,
   Modal,
 } from "@mantine/core";
-import { useSession } from "next-auth/react";
+
 import {
   IconChartBar,
   IconMap,
@@ -23,10 +26,38 @@ import {
   IconMapPin,
   IconFileTypeXls,
   IconMap2,
+  IconUsers,
+  IconLogout,
+  IconTool,
 } from "@tabler/icons-react";
+
 import { bungee } from "../layout";
-import { useState } from "react";
-import { signOut } from "next-auth/react";
+
+/* =========================================================
+   CARD ACCESS
+========================================================= */
+
+/*
+  1 => Admin
+  2 => Maintenance Manager
+  3 => User
+  4 => Route Notes
+  5 => Maintenance Staff
+*/
+
+const cardAccess = {
+  statistics: [1, 3],
+  map: [1, 3],
+  routeNotes: [1, 4],
+  binCollection: [1],
+  maintenance_manager: [1, 2],
+  maintenance_staff: [1, 2, 5],
+  users: [1],
+};
+
+/* =========================================================
+   BASE CARD STYLE
+========================================================= */
 
 const cardStyle = {
   position: "relative" as const,
@@ -38,7 +69,7 @@ const cardStyle = {
 
   borderRadius: 24,
 
-  background:
+  backgroundImage:
     "linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,255,255,0.38))",
 
   border: "1px solid rgba(255,255,255,0.78)",
@@ -56,13 +87,16 @@ const cardStyle = {
   flexDirection: "column" as const,
 };
 
+/* =========================================================
+   CARD ARROW
+========================================================= */
+
 function CardArrow() {
   return (
     <Box
       style={{
         width: 38,
         height: 38,
-
         flexShrink: 0,
 
         borderRadius: "50%",
@@ -71,7 +105,7 @@ function CardArrow() {
         alignItems: "center",
         justifyContent: "center",
 
-        background: "rgba(255,255,255,0.48)",
+        backgroundColor: "rgba(255,255,255,0.48)",
 
         border: "1px solid rgba(255,255,255,0.62)",
 
@@ -83,49 +117,102 @@ function CardArrow() {
   );
 }
 
+/* =========================================================
+   MAIN PAGE
+========================================================= */
+
 export default function Page() {
   const { data: session, status } = useSession();
 
-  const role = session?.user?.roleId;
+  const role = Number(session?.user?.roleId);
 
-  const [passwordModalOpened, setPasswordModalOpened] = useState(false);
+  /* =======================================================
+     PASSWORD MODAL
+  ======================================================= */
+
+  const [passwordModalOpened, setPasswordModalOpened] =
+    useState(false);
+
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [pendingLink, setPendingLink] = useState("");
+
+  /* =======================================================
+     ACCESS CHECK
+  ======================================================= */
+
+  const hasAccess = (
+    card: keyof typeof cardAccess
+  ) => {
+    return cardAccess[card].includes(role);
+  };
+
+  /* =======================================================
+     OPEN PROTECTED LINK
+  ======================================================= */
 
   const openProtectedLink = (link: string) => {
     setPendingLink(link);
     setPassword("");
     setPasswordError("");
     setPasswordModalOpened(true);
-  };const cardAccess = {
-    statistics: [1,3],
-    map: [1,3],
-    routeNotes: [1,4],
-    binCollection: [1],
-    maintenance_maneger: [1, 2],
-    maintenance_staff: [1,2,5],
   };
-  const hasAccess = (card: keyof typeof cardAccess) => {
-    return cardAccess[card].includes(role as any);
-  };
-  {
-    /* =====================================================
-       1 =>admin  
-       2=> maintenance
-       3=> user
-    
-      ===================================================== */
-  }
-  
+
+  /* =======================================================
+     PASSWORD SUBMIT
+  ======================================================= */
+
   const handlePasswordSubmit = () => {
     if (password === "271998") {
+      setPasswordModalOpened(false);
+
       window.location.href = pendingLink;
+
       return;
     }
 
     setPasswordError("كلمة المرور غير صحيحة");
   };
+
+  /* =======================================================
+     LOGOUT
+  ======================================================= */
+
+  const handleLogout = async () => {
+    await signOut({
+      redirect: true,
+      callbackUrl: "/",
+    });
+  };
+
+  /* =======================================================
+     LOADING
+  ======================================================= */
+
+  if (status === "loading") {
+    return (
+      <Box
+        dir="rtl"
+        style={{
+          minHeight: "100vh",
+
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+
+          backgroundImage:
+            "linear-gradient(135deg, #f8fafc 0%, #eef5f9 50%, #f5f7fb 100%)",
+
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        <Text fw={700} c="dimmed">
+          جاري التحميل...
+        </Text>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -137,6 +224,14 @@ export default function Page() {
 
         overflow: "hidden",
 
+        /*
+          مهم:
+          استخدمنا backgroundImage بدل background
+          حتى لا يحدث تعارض مع backgroundSize
+        */
+        backgroundImage:
+          "linear-gradient(135deg, #f8fafc 0%, #eef5f9 50%, #f5f7fb 100%)",
+
         backgroundSize: "cover",
 
         backgroundPosition: "center",
@@ -147,23 +242,14 @@ export default function Page() {
       {/* =====================================================
           BACKGROUND OVERLAY
       ===================================================== */}
-<Button
-      color="red"
-      onClick={() =>
-        signOut({
-          callbackUrl: "/",
-        })
-      }
-    >
-      تسجيل الخروج
-    </Button>
+
       <Box
         style={{
           position: "absolute",
 
           inset: 0,
 
-          background:
+          backgroundImage:
             "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04))",
 
           pointerEvents: "none",
@@ -183,7 +269,7 @@ export default function Page() {
 
           borderRadius: "50%",
 
-          background: "rgba(34,139,230,0.15)",
+          backgroundColor: "rgba(34,139,230,0.15)",
 
           filter: "blur(110px)",
 
@@ -207,7 +293,7 @@ export default function Page() {
 
           borderRadius: "50%",
 
-          background: "rgba(132,94,247,0.12)",
+          backgroundColor: "rgba(132,94,247,0.12)",
 
           filter: "blur(110px)",
 
@@ -231,22 +317,72 @@ export default function Page() {
 
           minHeight: "100vh",
 
-          display: "flex",
+          paddingTop: 30,
 
-          alignItems: "center",
-
-          justifyContent: "center",
-
-          paddingTop: 0,
-
-          paddingBottom: 40,
+          paddingBottom: 50,
         }}
       >
+        {/* ===================================================
+            TOP BAR
+        =================================================== */}
+
+        <Group
+          justify="space-between"
+          align="center"
+          mb={35}
+        >
+          {/* USER INFO */}
+
+          <Box>
+            {session?.user?.name && (
+              <Text
+                fw={800}
+                size="sm"
+                style={{
+                  color: "#263746",
+                }}
+              >
+                مرحباً، {session.user.name}
+              </Text>
+            )}
+
+            <Text
+              size="xs"
+              style={{
+                color: "rgba(30,50,65,0.52)",
+              }}
+            >
+              Operations Intelligence
+            </Text>
+          </Box>
+
+          {/* LOGOUT */}
+
+          <Button
+            variant="light"
+            color="red"
+            radius="xl"
+            leftSection={<IconLogout size={17} />}
+            onClick={handleLogout}
+            styles={{
+              root: {
+                fontWeight: 800,
+                paddingLeft: 18,
+                paddingRight: 18,
+              },
+            }}
+          >
+            تسجيل الخروج
+          </Button>
+        </Group>
+
         <Box
           style={{
             width: "100%",
 
             maxWidth: 1250,
+
+            margin: "0 auto",
           }}
         >
           {/* =================================================
@@ -257,46 +393,60 @@ export default function Page() {
             className="ops-header"
             style={{
               textAlign: "center",
+
               marginBottom: 44,
             }}
           >
             <Box
               style={{
                 display: "inline-flex",
+
                 alignItems: "baseline",
+
                 justifyContent: "center",
+
                 gap: 6,
               }}
             >
-              {/* Ops */}
+              {/* OPS */}
+
               <Text
                 component="span"
                 className="ops-title"
                 style={{
                   fontFamily: "Inter, sans-serif",
-                  fontSize: "clamp(100px, 5vw, 56px)",
+
+                  fontSize: "clamp(42px, 5vw, 56px)",
+
                   fontWeight: 600,
+
                   letterSpacing: "-2px",
+
                   color: "#263746",
+
                   lineHeight: 1,
                 }}
               >
                 Ops
               </Text>
 
-              {/* Matrix */}
+              {/* MATRIX */}
+
               <Text
                 component="span"
                 className={`${bungee.className} matrix-title`}
                 style={{
-                  fontSize: "clamp(150px, 4.5vw, 52px)",
+                  fontSize: "clamp(40px, 4.5vw, 52px)",
+
                   lineHeight: 1,
 
-                  background:
+                  backgroundImage:
                     "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
 
                   WebkitBackgroundClip: "text",
+
                   WebkitTextFillColor: "transparent",
+
                   backgroundClip: "text",
 
                   display: "inline-block",
@@ -312,16 +462,22 @@ export default function Page() {
               mt={16}
               style={{
                 fontFamily: "Inter, sans-serif",
+
                 fontSize: 12,
+
                 fontWeight: 600,
+
                 letterSpacing: "2.4px",
+
                 textTransform: "uppercase",
+
                 color: "rgba(30,50,65,0.52)",
               }}
             >
               Operations Intelligence
             </Text>
           </Box>
+
           {/* =================================================
               CARDS
           ================================================= */}
@@ -336,28 +492,27 @@ export default function Page() {
             spacing="lg"
           >
             {/* =================================================
-      STATISTICS — BLUE
-  ================================================= */}
+                STATISTICS — BLUE
+            ================================================= */}
+
             {hasAccess("statistics") && (
               <Link
                 href="/failures/stats"
                 style={{
                   textDecoration: "none",
+
                   color: "inherit",
                 }}
               >
-                <Box className="glass-card" style={cardStyle}>
+                <Box
+                  className="glass-card"
+                  style={cardStyle}
+                >
                   <Box
+                    className="card-glow"
                     style={{
-                      position: "absolute",
-                      width: 200,
-                      height: 200,
-                      borderRadius: "50%",
-                      background: "rgba(34,139,230,0.18)",
-                      filter: "blur(48px)",
-                      top: -85,
-                      right: -75,
-                      pointerEvents: "none",
+                      backgroundColor:
+                        "rgba(34,139,230,0.18)",
                     }}
                   />
 
@@ -366,6 +521,7 @@ export default function Page() {
                     align="flex-start"
                     style={{
                       position: "relative",
+
                       zIndex: 2,
                     }}
                   >
@@ -374,13 +530,22 @@ export default function Page() {
                       radius={18}
                       variant="light"
                       style={{
-                        background: "rgba(34,139,230,0.10)",
-                        border: "1px solid rgba(34,139,230,0.18)",
+                        backgroundColor:
+                          "rgba(34,139,230,0.10)",
+
+                        border:
+                          "1px solid rgba(34,139,230,0.18)",
+
                         color: "#228be6",
-                        boxShadow: "0 8px 25px rgba(34,139,230,0.12)",
+
+                        boxShadow:
+                          "0 8px 25px rgba(34,139,230,0.12)",
                       }}
                     >
-                      <IconChartBar size={32} stroke={1.7} />
+                      <IconChartBar
+                        size={32}
+                        stroke={1.7}
+                      />
                     </ThemeIcon>
 
                     <CardArrow />
@@ -390,6 +555,7 @@ export default function Page() {
                     mt={42}
                     style={{
                       position: "relative",
+
                       zIndex: 2,
                     }}
                   >
@@ -408,10 +574,12 @@ export default function Page() {
                       mt={8}
                       lh={1.7}
                       style={{
-                        color: "rgba(30,55,70,0.68)",
+                        color:
+                          "rgba(30,55,70,0.68)",
                       }}
                     >
-                      Analyze violations by areas, statuses, and KPIs.
+                      Analyze violations by areas,
+                      statuses, and KPIs.
                     </Text>
                   </Box>
 
@@ -421,7 +589,9 @@ export default function Page() {
                     mt="auto"
                     style={{
                       position: "relative",
+
                       zIndex: 2,
+
                       color: "#1971c2",
                     }}
                   >
@@ -432,28 +602,27 @@ export default function Page() {
             )}
 
             {/* =================================================
-      MAP — ORANGE
-  ================================================= */}
+                MAP — ORANGE
+            ================================================= */}
+
             {hasAccess("map") && (
               <Link
                 href="/failures/osm"
                 style={{
                   textDecoration: "none",
+
                   color: "inherit",
                 }}
               >
-                <Box className="glass-card" style={cardStyle}>
+                <Box
+                  className="glass-card"
+                  style={cardStyle}
+                >
                   <Box
+                    className="card-glow"
                     style={{
-                      position: "absolute",
-                      width: 200,
-                      height: 200,
-                      borderRadius: "50%",
-                      background: "rgba(253,126,20,0.18)",
-                      filter: "blur(48px)",
-                      top: -85,
-                      right: -75,
-                      pointerEvents: "none",
+                      backgroundColor:
+                        "rgba(253,126,20,0.18)",
                     }}
                   />
 
@@ -462,6 +631,7 @@ export default function Page() {
                     align="flex-start"
                     style={{
                       position: "relative",
+
                       zIndex: 2,
                     }}
                   >
@@ -470,13 +640,22 @@ export default function Page() {
                       radius={18}
                       variant="light"
                       style={{
-                        background: "rgba(253,126,20,0.10)",
-                        border: "1px solid rgba(253,126,20,0.18)",
+                        backgroundColor:
+                          "rgba(253,126,20,0.10)",
+
+                        border:
+                          "1px solid rgba(253,126,20,0.18)",
+
                         color: "#f76707",
-                        boxShadow: "0 8px 25px rgba(253,126,20,0.12)",
+
+                        boxShadow:
+                          "0 8px 25px rgba(253,126,20,0.12)",
                       }}
                     >
-                      <IconMap size={32} stroke={1.7} />
+                      <IconMap
+                        size={32}
+                        stroke={1.7}
+                      />
                     </ThemeIcon>
 
                     <CardArrow />
@@ -486,6 +665,7 @@ export default function Page() {
                     mt={42}
                     style={{
                       position: "relative",
+
                       zIndex: 2,
                     }}
                   >
@@ -504,10 +684,12 @@ export default function Page() {
                       mt={8}
                       lh={1.7}
                       style={{
-                        color: "rgba(30,55,70,0.68)",
+                        color:
+                          "rgba(30,55,70,0.68)",
                       }}
                     >
-                      View violations with filters and heatmap.
+                      View violations with filters
+                      and heatmap.
                     </Text>
                   </Box>
 
@@ -517,7 +699,9 @@ export default function Page() {
                     mt="auto"
                     style={{
                       position: "relative",
+
                       zIndex: 2,
+
                       color: "#e8590c",
                     }}
                   >
@@ -526,29 +710,29 @@ export default function Page() {
                 </Box>
               </Link>
             )}
+
             {/* =================================================
-      ROUTE NOTES — PURPLE
-  ================================================= */}
+                ROUTE NOTES — PURPLE
+            ================================================= */}
+
             {hasAccess("routeNotes") && (
               <Link
                 href="/route-notes"
                 style={{
                   textDecoration: "none",
+
                   color: "inherit",
                 }}
               >
-                <Box className="glass-card" style={cardStyle}>
+                <Box
+                  className="glass-card"
+                  style={cardStyle}
+                >
                   <Box
+                    className="card-glow"
                     style={{
-                      position: "absolute",
-                      width: 200,
-                      height: 200,
-                      borderRadius: "50%",
-                      background: "rgba(132,94,247,0.18)",
-                      filter: "blur(48px)",
-                      top: -85,
-                      right: -75,
-                      pointerEvents: "none",
+                      backgroundColor:
+                        "rgba(132,94,247,0.18)",
                     }}
                   />
 
@@ -557,6 +741,7 @@ export default function Page() {
                     align="flex-start"
                     style={{
                       position: "relative",
+
                       zIndex: 2,
                     }}
                   >
@@ -565,13 +750,22 @@ export default function Page() {
                       radius={18}
                       variant="light"
                       style={{
-                        background: "rgba(132,94,247,0.10)",
-                        border: "1px solid rgba(132,94,247,0.18)",
+                        backgroundColor:
+                          "rgba(132,94,247,0.10)",
+
+                        border:
+                          "1px solid rgba(132,94,247,0.18)",
+
                         color: "#7950f2",
-                        boxShadow: "0 8px 25px rgba(132,94,247,0.12)",
+
+                        boxShadow:
+                          "0 8px 25px rgba(132,94,247,0.12)",
                       }}
                     >
-                      <IconRoute size={32} stroke={1.7} />
+                      <IconRoute
+                        size={32}
+                        stroke={1.7}
+                      />
                     </ThemeIcon>
 
                     <CardArrow />
@@ -581,6 +775,7 @@ export default function Page() {
                     mt={42}
                     style={{
                       position: "relative",
+
                       zIndex: 2,
                     }}
                   >
@@ -599,10 +794,12 @@ export default function Page() {
                       mt={8}
                       lh={1.7}
                       style={{
-                        color: "rgba(30,55,70,0.68)",
+                        color:
+                          "rgba(30,55,70,0.68)",
                       }}
                     >
-                      Create and manage route notes easily.
+                      Create and manage route
+                      notes easily.
                     </Text>
                   </Box>
 
@@ -612,7 +809,9 @@ export default function Page() {
                     mt="auto"
                     style={{
                       position: "relative",
+
                       zIndex: 2,
+
                       color: "#7048e8",
                     }}
                   >
@@ -621,26 +820,30 @@ export default function Page() {
                 </Box>
               </Link>
             )}
-            {(hasAccess("maintenance_maneger") || hasAccess("maintenance_staff") ) && (
+
+            {/* =================================================
+                MAINTENANCE — RED
+            ================================================= */}
+
+            {(hasAccess("maintenance_manager") ||
+              hasAccess("maintenance_staff")) && (
               <Link
                 href="/maintenance"
                 style={{
                   textDecoration: "none",
+
                   color: "inherit",
                 }}
               >
-                <Box className="glass-card" style={cardStyle}>
+                <Box
+                  className="glass-card"
+                  style={cardStyle}
+                >
                   <Box
+                    className="card-glow"
                     style={{
-                      position: "absolute",
-                      width: 200,
-                      height: 200,
-                      borderRadius: "50%",
-                      background: "rgba(132,94,247,0.18)",
-                      filter: "blur(48px)",
-                      top: -85,
-                      right: -75,
-                      pointerEvents: "none",
+                      backgroundColor:
+                        "rgba(250,82,82,0.18)",
                     }}
                   />
 
@@ -649,6 +852,7 @@ export default function Page() {
                     align="flex-start"
                     style={{
                       position: "relative",
+
                       zIndex: 2,
                     }}
                   >
@@ -657,13 +861,22 @@ export default function Page() {
                       radius={18}
                       variant="light"
                       style={{
-                        background: "rgba(132,94,247,0.10)",
-                        border: "1px solid rgba(132,94,247,0.18)",
-                        color: "#7950f2",
-                        boxShadow: "0 8px 25px rgba(132,94,247,0.12)",
+                        backgroundColor:
+                          "rgba(250,82,82,0.10)",
+
+                        border:
+                          "1px solid rgba(250,82,82,0.18)",
+
+                        color: "#e03131",
+
+                        boxShadow:
+                          "0 8px 25px rgba(250,82,82,0.12)",
                       }}
                     >
-                      <IconRoute size={32} stroke={1.7} />
+                      <IconTool
+                        size={32}
+                        stroke={1.7}
+                      />
                     </ThemeIcon>
 
                     <CardArrow />
@@ -673,6 +886,7 @@ export default function Page() {
                     mt={42}
                     style={{
                       position: "relative",
+
                       zIndex: 2,
                     }}
                   >
@@ -691,10 +905,12 @@ export default function Page() {
                       mt={8}
                       lh={1.7}
                       style={{
-                        color: "rgba(30,55,70,0.68)",
+                        color:
+                          "rgba(30,55,70,0.68)",
                       }}
                     >
-                      Create and manage maintenance tasks easily.
+                      Create and manage maintenance
+                      tasks easily.
                     </Text>
                   </Box>
 
@@ -704,8 +920,10 @@ export default function Page() {
                     mt="auto"
                     style={{
                       position: "relative",
+
                       zIndex: 2,
-                      color: "#7048e8",
+
+                      color: "#c92a2a",
                     }}
                   >
                     Open Maintenance →
@@ -713,28 +931,23 @@ export default function Page() {
                 </Box>
               </Link>
             )}
+
             {/* =================================================
-      BIN COLLECTION — TEAL / GREEN
-  ================================================= */}
+                BIN COLLECTION — GREEN
+            ================================================= */}
+
             {hasAccess("binCollection") && (
               <Box
                 className="glass-card"
                 style={{
                   ...cardStyle,
-                  position: "relative",
                 }}
               >
                 <Box
+                  className="card-glow"
                   style={{
-                    position: "absolute",
-                    width: 220,
-                    height: 220,
-                    borderRadius: "50%",
-                    background: "rgba(18,184,134,0.18)",
-                    filter: "blur(48px)",
-                    top: -90,
-                    right: -80,
-                    pointerEvents: "none",
+                    backgroundColor:
+                      "rgba(18,184,134,0.18)",
                   }}
                 />
 
@@ -743,6 +956,7 @@ export default function Page() {
                   align="flex-start"
                   style={{
                     position: "relative",
+
                     zIndex: 2,
                   }}
                 >
@@ -751,13 +965,22 @@ export default function Page() {
                     radius={18}
                     variant="light"
                     style={{
-                      background: "rgba(18,184,134,0.10)",
-                      border: "1px solid rgba(18,184,134,0.18)",
+                      backgroundColor:
+                        "rgba(18,184,134,0.10)",
+
+                      border:
+                        "1px solid rgba(18,184,134,0.18)",
+
                       color: "#0ca678",
-                      boxShadow: "0 8px 25px rgba(18,184,134,0.12)",
+
+                      boxShadow:
+                        "0 8px 25px rgba(18,184,134,0.12)",
                     }}
                   >
-                    <IconTrash size={32} stroke={1.7} />
+                    <IconTrash
+                      size={32}
+                      stroke={1.7}
+                    />
                   </ThemeIcon>
 
                   <CardArrow />
@@ -767,6 +990,7 @@ export default function Page() {
                   mt={42}
                   style={{
                     position: "relative",
+
                     zIndex: 2,
                   }}
                 >
@@ -785,10 +1009,12 @@ export default function Page() {
                     mt={8}
                     lh={1.7}
                     style={{
-                      color: "rgba(30,55,70,0.68)",
+                      color:
+                        "rgba(30,55,70,0.68)",
                     }}
                   >
-                    Manage bin locations and collection areas.
+                    Manage bin locations and
+                    collection areas.
                   </Text>
                 </Box>
 
@@ -798,78 +1024,217 @@ export default function Page() {
                   wrap="wrap"
                   style={{
                     position: "relative",
+
                     zIndex: 3,
                   }}
                 >
-                  {/* Map */}
+                  {/* MAP */}
 
                   <Badge
                     size="md"
                     radius="md"
                     variant="light"
                     color="teal"
-                    leftSection={<IconMapPin size={14} />}
-                    onClick={() => openProtectedLink("/binCollection/map")}
+                    leftSection={
+                      <IconMapPin size={14} />
+                    }
+                    onClick={() =>
+                      openProtectedLink(
+                        "/binCollection/map"
+                      )
+                    }
                     style={{
                       cursor: "pointer",
+
                       textTransform: "none",
                     }}
                   >
                     Open Map
                   </Badge>
+
+                  {/* AREAS */}
+
                   <Badge
                     size="md"
                     radius="md"
                     variant="light"
                     color="cyan"
-                    leftSection={<IconMap2 size={14} />}
+                    leftSection={
+                      <IconMap2 size={14} />
+                    }
                     onClick={() =>
                       openProtectedLink(
-                        "/binCollection/collection-areas/manage",
+                        "/binCollection/collection-areas/manage"
                       )
                     }
                     style={{
                       cursor: "pointer",
+
                       textTransform: "none",
                     }}
                   >
                     Areas
                   </Badge>
-                  {/* Export */}
+
+                  {/* SAVED COLLECTION */}
 
                   <Badge
                     size="md"
                     radius="md"
                     variant="light"
                     color="green"
-                    leftSection={<IconFileTypeXls size={14} />}
+                    leftSection={
+                      <IconFileTypeXls size={14} />
+                    }
                     onClick={() =>
-                      openProtectedLink("/binCollection/export-bins")
+                      openProtectedLink(
+                        "/binCollection/export-bins"
+                      )
                     }
                     style={{
                       cursor: "pointer",
+
                       textTransform: "none",
                     }}
                   >
                     Saved Collection
                   </Badge>
-
-                  {/* Collection Areas */}
                 </Group>
               </Box>
+            )}
+
+            {/* =================================================
+                USER MANAGEMENT — BLUE / INDIGO
+                ADMIN ONLY
+            ================================================= */}
+
+            {hasAccess("users") && (
+              <Link
+                href="/users"
+                style={{
+                  textDecoration: "none",
+
+                  color: "inherit",
+                }}
+              >
+                <Box
+                  className="glass-card"
+                  style={cardStyle}
+                >
+                  <Box
+                    className="card-glow"
+                    style={{
+                      backgroundColor:
+                        "rgba(72,84,255,0.18)",
+                    }}
+                  />
+
+                  <Group
+                    justify="space-between"
+                    align="flex-start"
+                    style={{
+                      position: "relative",
+
+                      zIndex: 2,
+                    }}
+                  >
+                    <ThemeIcon
+                      size={62}
+                      radius={18}
+                      variant="light"
+                      style={{
+                        backgroundColor:
+                          "rgba(72,84,255,0.10)",
+
+                        border:
+                          "1px solid rgba(72,84,255,0.18)",
+
+                        color: "#4c6ef5",
+
+                        boxShadow:
+                          "0 8px 25px rgba(72,84,255,0.12)",
+                      }}
+                    >
+                      <IconUsers
+                        size={32}
+                        stroke={1.7}
+                      />
+                    </ThemeIcon>
+
+                    <CardArrow />
+                  </Group>
+
+                  <Box
+                    mt={42}
+                    style={{
+                      position: "relative",
+
+                      zIndex: 2,
+                    }}
+                  >
+                    <Text
+                      fw={900}
+                      size="xl"
+                      style={{
+                        color: "#172b3a",
+                      }}
+                    >
+                      User Management
+                    </Text>
+
+                    <Text
+                      size="sm"
+                      mt={8}
+                      lh={1.7}
+                      style={{
+                        color:
+                          "rgba(30,55,70,0.68)",
+                      }}
+                    >
+                      Create, edit and manage system
+                      users and roles.
+                    </Text>
+                  </Box>
+
+                  <Text
+                    size="xs"
+                    fw={800}
+                    mt="auto"
+                    style={{
+                      position: "relative",
+
+                      zIndex: 2,
+
+                      color: "#3b5bdb",
+                    }}
+                  >
+                    Manage Users →
+                  </Text>
+                </Box>
+              </Link>
             )}
           </SimpleGrid>
         </Box>
       </Container>
 
+      {/* =====================================================
+          PASSWORD MODAL
+      ===================================================== */}
+
       <Modal
         opened={passwordModalOpened}
-        onClose={() => setPasswordModalOpened(false)}
+        onClose={() =>
+          setPasswordModalOpened(false)
+        }
         title="Protected Area"
         centered
         radius="lg"
       >
-        <Text size="sm" c="dimmed" mb="md">
+        <Text
+          size="sm"
+          c="dimmed"
+          mb="md"
+        >
           Please enter the password to continue.
         </Text>
 
@@ -878,7 +1243,10 @@ export default function Page() {
           placeholder="Enter password"
           value={password}
           onChange={(event) => {
-            setPassword(event.currentTarget.value);
+            setPassword(
+              event.currentTarget.value
+            );
+
             setPasswordError("");
           }}
           error={passwordError}
@@ -890,26 +1258,30 @@ export default function Page() {
           autoFocus
         />
 
-        <Group justify="flex-end" mt="xl">
+        <Group
+          justify="flex-end"
+          mt="xl"
+        >
           <Button
             variant="default"
-            onClick={() => setPasswordModalOpened(false)}
+            onClick={() =>
+              setPasswordModalOpened(false)
+            }
           >
             Cancel
           </Button>
 
-          <Button color="teal" onClick={handlePasswordSubmit}>
+          <Button
+            color="teal"
+            onClick={handlePasswordSubmit}
+          >
             Continue
           </Button>
         </Group>
       </Modal>
 
       {/* =====================================================
-          HOVER
-      ===================================================== */}
-
-      {/* =====================================================
-          HOVER
+          CSS
       ===================================================== */}
 
       <style>{`
@@ -922,7 +1294,7 @@ export default function Page() {
             translateY(-7px)
             scale(1.015);
 
-          background:
+          background-image:
             linear-gradient(
               135deg,
               rgba(255,255,255,0.84),
@@ -945,6 +1317,22 @@ export default function Page() {
             scale(1.005);
         }
 
+        .card-glow {
+          position: absolute;
+
+          width: 220px;
+          height: 220px;
+
+          border-radius: 50%;
+
+          filter: blur(48px);
+
+          top: -90px;
+          right: -80px;
+
+          pointer-events: none;
+        }
+
         .glass-card .mantine-Badge-root {
           transition:
             transform 160ms ease,
@@ -953,41 +1341,45 @@ export default function Page() {
 
         .glass-card .mantine-Badge-root:hover {
           transform: translateY(-2px);
+
           box-shadow:
-            0 6px 18px rgba(40,70,90,0.12);
+            0 6px 18px
+              rgba(40,70,90,0.12);
         }
 
-   @media (max-width: 576px) {
-  .ops-title {
-    font-size: 42px !important;
-  }
+        @media (max-width: 576px) {
+          .ops-title {
+            font-size: 42px !important;
+          }
 
-  .matrix-title {
-    font-size: 40px !important;
-  }
+          .matrix-title {
+            font-size: 40px !important;
+          }
 
-  .glass-card {
-    height: 280px !important;
-    min-height: 280px !important;
-    padding: 22px !important;
-    border-radius: 20px !important;
-  }
+          .glass-card {
+            height: 280px !important;
 
-  /* Header spacing on mobile */
-  .ops-header {
-    margin-top: 100px !important;
-  }
-}
+            min-height: 280px !important;
 
-  .glass-card {
-    height: 280px !important;
-    min-height: 280px !important;
+            padding: 22px !important;
 
-    padding: 22px !important;
+            border-radius: 20px !important;
+          }
 
-    border-radius: 20px !important;
-  }
-}
+          .ops-header {
+            margin-top: 30px !important;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .ops-title {
+            font-size: 36px !important;
+          }
+
+          .matrix-title {
+            font-size: 34px !important;
+          }
+        }
 
         @media (prefers-reduced-motion: reduce) {
           .glass-card {
@@ -1002,7 +1394,7 @@ export default function Page() {
             transition: none !important;
           }
         }
-           `}</style>
+      `}</style>
     </Box>
   );
 }
