@@ -14,11 +14,7 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const {
-      exit_at,
-      notes,
-      updated_by,
-    } = body;
+    const { exit_at, notes } = body;
 
     // =========================
     // Validation
@@ -122,9 +118,7 @@ export async function PATCH(
     // Check exit >= entry
     // =========================
 
-    const entryDate = new Date(
-      maintenance.entry_at
-    );
+    const entryDate = new Date(maintenance.entry_at);
 
     if (Number.isNaN(entryDate.getTime())) {
       return NextResponse.json(
@@ -163,10 +157,9 @@ export async function PATCH(
             THEN notes
             ELSE $2
           END,
-        updated_by = $3,
         updated_at = NOW()
 
-      WHERE id = $4
+      WHERE id = $3
 
       RETURNING
         id,
@@ -185,7 +178,6 @@ export async function PATCH(
       [
         exitDate.toISOString(),
         notes?.trim() || null,
-        updated_by || null,
         id,
       ]
     );
