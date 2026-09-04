@@ -1192,7 +1192,8 @@ export default function MaintenanceVehiclesPage() {
           ADD / EDIT MODAL
       ================================================= */}
 
-      <Modal
+      <Modal 
+       dir={"rtl"}
         opened={formOpened}
         onClose={
           formHandlers.close

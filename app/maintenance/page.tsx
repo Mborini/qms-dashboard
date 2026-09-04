@@ -589,7 +589,7 @@ export default function MaintenancePage() {
                       color: "rgba(30,55,70,0.68)",
                     }}
                   >
-                  Manage and monitor maintenance KPIs for Maintenance.
+                  Manage and monitor maintenance Types.
                   </Text>
                 </Box>
 
@@ -605,7 +605,7 @@ export default function MaintenancePage() {
                     color: "#087f5b",
                   }}
                 >
-                  Open KPIs →
+                  Open Manitenance Types →
                 </Text>
               </Box>
             </Link>)}
@@ -704,7 +704,7 @@ export default function MaintenancePage() {
                     color: "#087f5b",
                   }}
                 >
-                  Open KPIs →
+                  Open Vehicles List →
                 </Text>
               </Box>
             </Link>)}

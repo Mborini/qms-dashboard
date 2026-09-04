@@ -2074,6 +2074,7 @@ export default function MaintenancePage() {
         ============================================ */}
 
         <Modal
+        dir={"rtl"}
           opened={
             entryModalOpened
           }
