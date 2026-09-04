@@ -27,6 +27,7 @@ import {
   IconLogout,
   IconTool,
 } from "@tabler/icons-react";
+
 import { useSession } from "next-auth/react";
 
 // =====================================================
@@ -103,6 +104,39 @@ function getCurrentTime(date = new Date()) {
   return `${pad(date.getHours())}:${pad(
     date.getMinutes()
   )}`;
+}
+
+/**
+ * تحويل التاريخ والوقت المحلي الذي اختاره المستخدم
+ * إلى ISO UTC.
+ *
+ * مثال في الأردن:
+ *
+ * 2026-09-04 + 12:00
+ *
+ * تصبح:
+ *
+ * 2026-09-04T09:00:00.000Z
+ *
+ * وهذا يجعل المقارنة مع السيرفر UTC صحيحة.
+ */
+function localDateTimeToISOString(
+  date: string,
+  time: string
+) {
+  if (!date || !time) {
+    return null;
+  }
+
+  const localDate = new Date(
+    `${date}T${time}:00`
+  );
+
+  if (Number.isNaN(localDate.getTime())) {
+    return null;
+  }
+
+  return localDate.toISOString();
 }
 
 function formatDateTime(value?: string | null) {
@@ -269,11 +303,18 @@ function extractArray(
 
 export default function MaintenancePage() {
   // ===================================================
+  // Session
+  // ===================================================
+
+  const { data: session } = useSession();
+
+  const username =
+    session?.user?.username ?? null;
+
+  // ===================================================
   // Data
   // ===================================================
-const { data: session } = useSession();
 
-  const username = session?.user?.username 
   const [vehicles, setVehicles] = useState<
     Vehicle[]
   >([]);
@@ -831,62 +872,74 @@ const { data: session } = useSession();
   // ===================================================
   // Vehicle options
   // ===================================================
-const vehiclesInMaintenance = useMemo(() => {
-  return new Set(
-    currentMaintenance.map((record) =>
-      String(record.vehicle_id)
-    )
-  );
-}, [currentMaintenance]);
-  const vehicleOptions = useMemo(() => {
-  const map = new Map<
-    string,
-    {
-      value: string;
-      label: string;
-      disabled?: boolean;
-    }
-  >();
 
-  vehicles.forEach((vehicle) => {
-    if (
-      vehicle.id === undefined ||
-      vehicle.id === null
-    ) {
-      return;
-    }
+  const vehiclesInMaintenance =
+    useMemo(() => {
+      return new Set(
+        currentMaintenance.map(
+          (record) =>
+            String(record.vehicle_id)
+        )
+      );
+    }, [currentMaintenance]);
 
-    const value = String(vehicle.id);
+  const vehicleOptions =
+    useMemo(() => {
+      const map = new Map<
+        string,
+        {
+          value: string;
+          label: string;
+          disabled?: boolean;
+        }
+      >();
 
-    const isInMaintenance =
-      vehiclesInMaintenance.has(value);
+      vehicles.forEach((vehicle) => {
+        if (
+          vehicle.id === undefined ||
+          vehicle.id === null
+        ) {
+          return;
+        }
 
-    const vehicleName =
-      vehicle.plate_number ||
-      vehicle.vehicle_number ||
-      vehicle.plate ||
-      vehicle.name ||
-      vehicle.model ||
-      `مركبة ${value}`;
+        const value =
+          String(vehicle.id);
 
-    const label = isInMaintenance
-      ? `${vehicleName} (بالصيانة)`
-      : vehicleName;
+        const isInMaintenance =
+          vehiclesInMaintenance.has(
+            value
+          );
 
-    if (!map.has(value)) {
-      map.set(value, {
-        value,
-        label,
-        disabled: isInMaintenance,
+        const vehicleName =
+          vehicle.plate_number ||
+          vehicle.vehicle_number ||
+          vehicle.plate ||
+          vehicle.name ||
+          vehicle.model ||
+          `مركبة ${value}`;
+
+        const label =
+          isInMaintenance
+            ? `${vehicleName} (بالصيانة)`
+            : vehicleName;
+
+        if (!map.has(value)) {
+          map.set(value, {
+            value,
+            label,
+            disabled:
+              isInMaintenance,
+          });
+        }
       });
-    }
-  });
 
-  return Array.from(map.values());
-}, [
-  vehicles,
-  vehiclesInMaintenance,
-]);
+      return Array.from(
+        map.values()
+      );
+    }, [
+      vehicles,
+      vehiclesInMaintenance,
+    ]);
 
   // ===================================================
   // KPI options
@@ -1102,7 +1155,6 @@ const vehiclesInMaintenance = useMemo(() => {
     value: string | null
   ) => {
     setEntryKpi(value);
-
     setEntrySubKpi(null);
   };
 
@@ -1150,7 +1202,10 @@ const vehiclesInMaintenance = useMemo(() => {
       return;
     }
 
+    // ===============================================
     // Final client-side future check
+    // ===============================================
+
     if (
       isFutureDateTime(
         entryDate,
@@ -1166,6 +1221,36 @@ const vehiclesInMaintenance = useMemo(() => {
 
       return;
     }
+
+    // ===============================================
+    // Convert local Jordan time -> UTC ISO
+    // ===============================================
+
+    const entryAt =
+      localDateTimeToISOString(
+        entryDate,
+        entryTime
+      );
+
+    if (!entryAt) {
+      setMessage({
+        type: "error",
+        text:
+          "تاريخ ووقت الدخول غير صحيح",
+      });
+
+      return;
+    }
+
+    console.log(
+      "LOCAL ENTRY:",
+      `${entryDate}T${entryTime}:00`
+    );
+
+    console.log(
+      "UTC ENTRY:",
+      entryAt
+    );
 
     try {
       setSavingEntry(true);
@@ -1191,8 +1276,10 @@ const vehiclesInMaintenance = useMemo(() => {
               sub_kpi_id:
                 Number(entrySubKpi),
 
+              // IMPORTANT:
+              // send UTC ISO
               entry_at:
-                `${entryDate}T${entryTime}:00`,
+                entryAt,
 
               description:
                 entryDescription.trim() ||
@@ -1202,8 +1289,8 @@ const vehiclesInMaintenance = useMemo(() => {
                 entryNotes.trim() ||
                 null,
 
-  created_by:
-    username,
+              created_by:
+                username,
             }),
           }
         );
@@ -1228,8 +1315,6 @@ const vehiclesInMaintenance = useMemo(() => {
         false
       );
 
-      // Important:
-      // background refresh only
       await loadData(false);
 
       // Reset
@@ -1329,7 +1414,10 @@ const vehiclesInMaintenance = useMemo(() => {
       return;
     }
 
+    // ===============================================
     // Future protection
+    // ===============================================
+
     if (
       isFutureDateTime(
         exitDate,
@@ -1346,7 +1434,40 @@ const vehiclesInMaintenance = useMemo(() => {
       return;
     }
 
+    // ===============================================
+    // Convert local exit time -> UTC ISO
+    // ===============================================
+
+    const exitAt =
+      localDateTimeToISOString(
+        exitDate,
+        exitTime
+      );
+
+    if (!exitAt) {
+      setMessage({
+        type: "error",
+        text:
+          "تاريخ ووقت الخروج غير صحيح",
+      });
+
+      return;
+    }
+
+    console.log(
+      "LOCAL EXIT:",
+      `${exitDate}T${exitTime}:00`
+    );
+
+    console.log(
+      "UTC EXIT:",
+      exitAt
+    );
+
+    // ===============================================
     // Exit cannot be before entry
+    // ===============================================
+
     const entryTimestamp =
       new Date(
         selectedExitRecord.entry_at
@@ -1392,12 +1513,17 @@ const vehiclesInMaintenance = useMemo(() => {
             },
 
             body: JSON.stringify({
+              // IMPORTANT:
+              // send UTC ISO
               exit_at:
-                `${exitDate}T${exitTime}:00`,
+                exitAt,
 
               notes:
                 exitNotes.trim() ||
                 null,
+
+              updated_by:
+                username,
             }),
           }
         );
@@ -1426,8 +1552,6 @@ const vehiclesInMaintenance = useMemo(() => {
         null
       );
 
-      // Important:
-      // refresh without full loading screen
       await loadData(false);
     } catch (error) {
       console.error(
@@ -1454,7 +1578,7 @@ const vehiclesInMaintenance = useMemo(() => {
   if (loading) {
     return (
       <Container
-      dir="rtl"
+        dir="rtl"
         size="xl"
         py="xl"
       >
@@ -1486,8 +1610,7 @@ const vehiclesInMaintenance = useMemo(() => {
 
   return (
     <Container
-          dir="rtl"
-
+      dir="rtl"
       size="xl"
       py="xl"
     >
@@ -1611,8 +1734,6 @@ const vehiclesInMaintenance = useMemo(() => {
               </div>
             </Group>
           </Card>
-
-          
 
           <Card
             withBorder
@@ -1759,6 +1880,7 @@ const vehiclesInMaintenance = useMemo(() => {
                     <Stack gap="md">
 
                       {/* Vehicle */}
+
                       <Group
                         justify="space-between"
                         align="flex-start"
@@ -1802,6 +1924,7 @@ const vehiclesInMaintenance = useMemo(() => {
                       <Divider />
 
                       {/* KPI */}
+
                       <div>
                         <Text
                           size="xs"
@@ -1821,6 +1944,7 @@ const vehiclesInMaintenance = useMemo(() => {
                       </div>
 
                       {/* Sub KPI */}
+
                       <div>
                         <Text
                           size="xs"
@@ -1840,6 +1964,7 @@ const vehiclesInMaintenance = useMemo(() => {
                       </div>
 
                       {/* Description */}
+
                       {record.description && (
                         <div>
                           <Text
@@ -1860,6 +1985,7 @@ const vehiclesInMaintenance = useMemo(() => {
                       )}
 
                       {/* Entry */}
+
                       <Group
                         justify="space-between"
                       >
@@ -1906,6 +2032,7 @@ const vehiclesInMaintenance = useMemo(() => {
                       </Group>
 
                       {/* Created */}
+
                       {record.created_at && (
                         <Text
                           size="xs"
@@ -1970,6 +2097,7 @@ const vehiclesInMaintenance = useMemo(() => {
           <Stack gap="md">
 
             {/* Vehicle */}
+
             <Select
               label="المركبة"
               placeholder="اختر المركبة"
@@ -1988,6 +2116,7 @@ const vehiclesInMaintenance = useMemo(() => {
             />
 
             {/* KPI */}
+
             <Select
               label="مؤشر الصيانة"
               placeholder="اختر مؤشر الصيانة"
@@ -2006,6 +2135,7 @@ const vehiclesInMaintenance = useMemo(() => {
             />
 
             {/* Sub KPI */}
+
             <Select
               label="المؤشر الفرعي"
               placeholder={
@@ -2030,7 +2160,8 @@ const vehiclesInMaintenance = useMemo(() => {
               nothingFoundMessage="لا توجد مؤشرات فرعية"
             />
 
-            {/* Entry Date */}
+            {/* Entry Date / Time */}
+
             <SimpleGrid
               cols={2}
             >
@@ -2077,7 +2208,6 @@ const vehiclesInMaintenance = useMemo(() => {
                 />
               </div>
 
-              {/* Entry Time */}
               <div>
                 <Text
                   size="sm"
@@ -2126,6 +2256,7 @@ const vehiclesInMaintenance = useMemo(() => {
             </SimpleGrid>
 
             {/* Entry error */}
+
             {entryDateTimeError && (
               <Alert
                 color="red"
@@ -2142,6 +2273,7 @@ const vehiclesInMaintenance = useMemo(() => {
             )}
 
             {/* Description */}
+
             <Textarea
               label="وصف الصيانة"
               placeholder="اكتب وصف المشكلة أو أعمال الصيانة"
@@ -2162,6 +2294,7 @@ const vehiclesInMaintenance = useMemo(() => {
             />
 
             {/* Notes */}
+
             <Textarea
               label="ملاحظات"
               placeholder="أي ملاحظات إضافية"
@@ -2329,7 +2462,8 @@ const vehiclesInMaintenance = useMemo(() => {
               </Card>
             )}
 
-            {/* Exit Date */}
+            {/* Exit Date / Time */}
+
             <SimpleGrid
               cols={2}
             >
@@ -2376,7 +2510,6 @@ const vehiclesInMaintenance = useMemo(() => {
                 />
               </div>
 
-              {/* Exit Time */}
               <div>
                 <Text
                   size="sm"
@@ -2425,6 +2558,7 @@ const vehiclesInMaintenance = useMemo(() => {
             </SimpleGrid>
 
             {/* Exit error */}
+
             {exitDateTimeError && (
               <Alert
                 color="red"
@@ -2441,6 +2575,7 @@ const vehiclesInMaintenance = useMemo(() => {
             )}
 
             {/* Notes */}
+
             <Textarea
               label="ملاحظات الخروج"
               placeholder="اكتب ملاحظات عند إخراج المركبة"

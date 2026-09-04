@@ -51,6 +51,8 @@ type Vehicle = {
   manufacture_year: number | null;
   model: string | null;
   area: string | null;
+    type:string| null;
+
 };
 
 type VehicleForm = {
@@ -60,6 +62,7 @@ type VehicleForm = {
   manufacture_year: number | string;
   model: string;
   area: string | null;
+  type:string| null;
 };
 
 const PAGE_SIZE = 10;
@@ -352,6 +355,9 @@ export default function MaintenanceVehiclesPage() {
 
       model:
         vehicle.model ?? "",
+        
+      type:
+        vehicle.type ?? null,
 
       area:
         vehicle.area &&

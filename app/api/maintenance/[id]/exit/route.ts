@@ -20,15 +20,17 @@ export async function PATCH(
       updated_by,
     } = body;
 
+    // =========================
+    // Validation
+    // =========================
+
     if (!id) {
       return NextResponse.json(
         {
           success: false,
           error: "Maintenance ID is required",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
@@ -38,14 +40,12 @@ export async function PATCH(
           success: false,
           error: "exit_at is required",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
     // =========================
-    // Validate exit date
+    // Parse exit date
     // =========================
 
     const exitDate = new Date(exit_at);
@@ -56,27 +56,26 @@ export async function PATCH(
           success: false,
           error: "Invalid exit_at",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
-    // Cannot exit in the future
+    // =========================
+    // Future check
+    // =========================
+
     if (exitDate.getTime() > Date.now()) {
       return NextResponse.json(
         {
           success: false,
           error: "Exit date/time cannot be in the future",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
     // =========================
-    // Get maintenance
+    // Get maintenance record
     // =========================
 
     const maintenanceResult = await pool.query(
@@ -99,35 +98,43 @@ export async function PATCH(
           success: false,
           error: "Maintenance record not found",
         },
-        {
-          status: 404,
-        }
+        { status: 404 }
       );
     }
 
     const maintenance = maintenanceResult.rows[0];
 
+    // =========================
     // Already closed
+    // =========================
+
     if (maintenance.exit_at) {
       return NextResponse.json(
         {
           success: false,
           error: "Maintenance record is already closed",
-          exit_at: maintenance.exit_at,
         },
-        {
-          status: 409,
-        }
+        { status: 409 }
       );
     }
 
     // =========================
-    // Exit cannot be before entry
+    // Check exit >= entry
     // =========================
 
     const entryDate = new Date(
       maintenance.entry_at
     );
+
+    if (Number.isNaN(entryDate.getTime())) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid maintenance entry date",
+        },
+        { status: 500 }
+      );
+    }
 
     if (exitDate.getTime() < entryDate.getTime()) {
       return NextResponse.json(
@@ -135,9 +142,7 @@ export async function PATCH(
           success: false,
           error: "Exit date/time cannot be before entry date/time",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
@@ -148,16 +153,21 @@ export async function PATCH(
     const result = await pool.query(
       `
       UPDATE maintenance_records
+
       SET
         exit_at = $1,
-        notes = CASE
-          WHEN $2::text IS NULL OR $2::text = ''
+        notes =
+          CASE
+            WHEN $2::text IS NULL
+              OR $2::text = ''
             THEN notes
-          ELSE $2
-        END,
+            ELSE $2
+          END,
         updated_by = $3,
         updated_at = NOW()
+
       WHERE id = $4
+
       RETURNING
         id,
         vehicle_id,
@@ -173,8 +183,8 @@ export async function PATCH(
         updated_at
       `,
       [
-        exit_at,
-        notes || null,
+        exitDate.toISOString(),
+        notes?.trim() || null,
         updated_by || null,
         id,
       ]
@@ -182,28 +192,23 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-      message: "Maintenance closed successfully",
+      message: "Maintenance record closed successfully",
       data: result.rows[0],
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(
       "PATCH /api/maintenance/[id]/exit error:",
       error
     );
 
-    const pgError = error as {
-      message?: string;
-    };
-
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to close maintenance",
-        detail: pgError.message,
+        error:
+          error?.message ||
+          "Failed to close maintenance record",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
