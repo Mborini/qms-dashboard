@@ -15,6 +15,7 @@ export async function GET() {
         capacity,
         manufacture_year,
         model,
+        type,
         area
       FROM maintenance_vehicles
       ORDER BY

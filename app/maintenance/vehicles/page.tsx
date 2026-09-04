@@ -93,7 +93,7 @@ const EMPTY_FORM: VehicleForm = {
   weight: "",
   capacity: "",
   manufacture_year: "",
-  model: "",
+  type: "",
   area: null,
 };
 
@@ -943,6 +943,9 @@ export default function MaintenanceVehiclesPage() {
                       <Table.Th>
                         الموديل
                       </Table.Th>
+                      <Table.Th>
+                        الموديل
+                      </Table.Th>
 
                       <Table.Th>
                         الوزن
@@ -1022,6 +1025,12 @@ export default function MaintenanceVehiclesPage() {
                             <Table.Td>
                               <Text size="sm">
                                 {vehicle.model ||
+                                  "—"}
+                              </Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">
+                                {vehicle.type ||
                                   "—"}
                               </Text>
                             </Table.Td>
