@@ -26,9 +26,10 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    "**/*.d.ts",
+    "**/*.mts",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
-, "app/api/bins/route.tsx", "app/api/collection-areas/[id]/route.ts", "app/api/collection-areas/route.ts", "app/api/export-bins/route.ts", "app/components/route-notes/RouteNotesForm.jsx"  ],
+    ".next/dev/types/**/*.ts"
+  ],
   "exclude": ["node_modules"]
 }

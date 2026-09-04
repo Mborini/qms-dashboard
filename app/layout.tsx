@@ -1,9 +1,10 @@
-
 import "@mantine/core/styles.css";
 
 import { MantineProvider } from "@mantine/core";
 import { Inter, Bungee } from "next/font/google";
 import type { Viewport } from "next";
+
+import Providers from "./providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -30,13 +31,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <MantineProvider>
-          {children}
-        </MantineProvider>
+        <Providers>
+          <MantineProvider>
+            {children}
+          </MantineProvider>
+        </Providers>
       </body>
     </html>
   );
 }
 
 export { inter, bungee };
-

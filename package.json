@@ -2,12 +2,12 @@
   "name": "avtr-dashboard",
   "version": "0.1.0",
   "private": true,
- "scripts": {
-  "dev": "next dev --webpack",
-  "build": "next build --webpack",
-  "start": "next start",
-  "lint": "eslint"
-},
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "eslint"
+  },
   "dependencies": {
     "@mantine/core": "^9.5.1",
     "@mantine/dates": "^9.5.1",
@@ -26,6 +26,7 @@
     "leaflet.heat": "^0.2.0",
     "motion": "^12.43.0",
     "next": "16.2.11",
+    "next-auth": "^4.24.15",
     "pg": "^8.23.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
