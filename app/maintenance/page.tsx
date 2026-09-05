@@ -296,7 +296,7 @@ export default function MaintenancePage() {
             dir="ltr"
             cols={{
               base: 2,
-              sm: 2,
+              sm: 1,
               lg: 4,
             }}
             spacing="lg"
@@ -304,7 +304,7 @@ export default function MaintenancePage() {
             {/* =================================================
                 CARD 1 — MAINTENANCE MANAGEMENT
             ================================================= */}
-            {(hasAccess("maintenance_maneger")  ) && (
+            {(hasAccess("maintenance_maneger") || hasAccess("maintenance_staff") ) && (
             <Link
               href="/maintenance/management"
               style={{
@@ -407,7 +407,7 @@ export default function MaintenancePage() {
             {/* =================================================
                 CARD 2 — MAINTENANCE HISTORY
             ================================================= */}
-            {(hasAccess("maintenance_maneger") || hasAccess("maintenance_staff") ) && (
+            {hasAccess("maintenance_maneger") && (
 
             <Link
               href="/maintenance/history"
