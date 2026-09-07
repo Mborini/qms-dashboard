@@ -11,38 +11,33 @@ export async function proxy(request: NextRequest) {
   });
 
   // =========================================
-  // الصفحة الرئيسية /
+  // LOGIN PAGE
+  // /
   // =========================================
   if (pathname === "/") {
-    // يوجد Token → Dashboard
+    // مسجل دخول → Home
     if (token) {
       return NextResponse.redirect(
         new URL("/home", request.url)
       );
     }
 
-    // لا يوجد Token → Login
+    // غير مسجل → خليه على Login
     return NextResponse.next();
   }
 
   // =========================================
-  // جميع الصفحات الأخرى محمية
+  // PROTECTED PAGES
   // =========================================
+
+  // غير مسجل دخول → Login /
   if (!token) {
-    const loginUrl = new URL("/", request.url);
-
-    // الصفحة التي حاول الوصول إليها
-    loginUrl.searchParams.set(
-      "callbackUrl",
-      pathname
+    return NextResponse.redirect(
+      new URL("/", request.url)
     );
-
-    return NextResponse.redirect(loginUrl);
   }
 
-  // =========================================
-  // المستخدم مسجل دخول
-  // =========================================
+  // مسجل دخول → يسمح بالصفحة
   return NextResponse.next();
 }
 
