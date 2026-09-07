@@ -60,7 +60,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/Home");
+      router.push("/home");
       router.refresh();
     } catch (err) {
       console.error("Login error:", err);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { signOut, useSession } from "next-auth/react";
 
 import {
@@ -13,14 +13,12 @@ import {
   ThemeIcon,
   Badge,
   Button,
-  PasswordInput,
-  Modal,
+  Divider,
 } from "@mantine/core";
 
 import {
   IconChartBar,
   IconMap,
-  IconArrowUpRight,
   IconRoute,
   IconTrash,
   IconMapPin,
@@ -29,149 +27,373 @@ import {
   IconUsers,
   IconLogout,
   IconTool,
+  IconHistory,
+  IconSettings,
+  IconTruck,
+  IconChevronDown,
+  IconChevronUp,
+  IconRefresh,
 } from "@tabler/icons-react";
 
 import { bungee } from "../layout";
 
 /* =========================================================
-   CARD ACCESS
+   ACCESS
 ========================================================= */
-
-/*
-  1 => Admin
-  2 => Maintenance Manager
-  3 => User
-  4 => Route Notes
-  5 => Maintenance Staff
-*/
 
 const cardAccess = {
   statistics: [1, 3],
   map: [1, 3],
   routeNotes: [1, 4],
-  binCollection: [1],
-  maintenance_manager: [1, 2],
-  maintenance_staff: [1, 2, 5],
+
+  binMap: [1],
+  binAreas: [1],
+  binExport: [1],
+
+  maintenanceManagement: [1, 2, 5],
+  maintenanceHistory: [1, 2],
+  maintenanceTypes: [1, 2],
+  maintenanceVehicles: [1, 2],
+
   users: [1],
 };
 
 /* =========================================================
-   BASE CARD STYLE
+   SECTION HEADER
 ========================================================= */
 
-const cardStyle = {
-  position: "relative" as const,
-
-  height: 300,
-  minHeight: 300,
-
-  padding: 28,
-
-  borderRadius: 24,
-
-  backgroundImage:
-    "linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,255,255,0.38))",
-
-  border: "1px solid rgba(255,255,255,0.78)",
-
-  backdropFilter: "blur(18px)",
-  WebkitBackdropFilter: "blur(18px)",
-
-  boxShadow: "0 20px 60px rgba(40,70,90,0.15)",
-
-  overflow: "hidden",
-
-  transition: "all 220ms ease",
-
-  display: "flex",
-  flexDirection: "column" as const,
-};
-
-/* =========================================================
-   CARD ARROW
-========================================================= */
-
-function CardArrow() {
+function SectionHeader({
+  icon,
+  title,
+  description,
+  color,
+  count,
+  collapsible = false,
+  opened = true,
+  onToggle,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  color: string;
+  count: number;
+  collapsible?: boolean;
+  opened?: boolean;
+  onToggle?: () => void;
+}) {
   return (
     <Box
       style={{
-        width: 38,
-        height: 38,
-        flexShrink: 0,
-
-        borderRadius: "50%",
-
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-
-        backgroundColor: "rgba(255,255,255,0.48)",
-
-        border: "1px solid rgba(255,255,255,0.62)",
-
-        color: "rgba(30,60,80,0.65)",
+        textAlign: "center",
+        marginBottom: 28,
+        cursor: collapsible ? "pointer" : "default",
       }}
+      onClick={collapsible ? onToggle : undefined}
     >
-      <IconArrowUpRight size={19} />
+      <Group
+        justify="center"
+        align="center"
+        gap={12}
+      >
+        <Box
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 16,
+
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+
+            background: `${color}0d`,
+            border: `1px solid ${color}18`,
+
+            color,
+          }}
+        >
+          {icon}
+        </Box>
+
+        <Box>
+          <Group
+            justify="center"
+            align="center"
+            gap={8}
+          >
+            <Text
+              fw={850}
+              style={{
+                fontSize: 23,
+                color: "#243746",
+                letterSpacing: "-0.4px",
+              }}
+            >
+              {title}
+            </Text>
+
+            <Badge
+              size="sm"
+              radius="xl"
+              variant="light"
+              style={{
+                background: `${color}0d`,
+                color,
+                fontWeight: 800,
+              }}
+            >
+              {count}
+            </Badge>
+
+            {collapsible && (
+              <ThemeIcon
+                size={28}
+                radius="xl"
+                variant="light"
+                color="gray"
+              >
+                {opened ? (
+                  <IconChevronUp size={15} />
+                ) : (
+                  <IconChevronDown size={15} />
+                )}
+              </ThemeIcon>
+            )}
+          </Group>
+
+          <Text
+            size="xs"
+            mt={4}
+            style={{
+              color: "#82909a",
+              fontWeight: 500,
+            }}
+          >
+            {description}
+          </Text>
+        </Box>
+      </Group>
+
+      <Box
+        style={{
+          width: 55,
+          height: 2,
+          margin: "14px auto 0",
+          borderRadius: 10,
+          background: color,
+          opacity: 0.55,
+        }}
+      />
     </Box>
   );
 }
 
 /* =========================================================
-   MAIN PAGE
+   MODULE CARD
+========================================================= */
+
+function ModuleCard({
+  href,
+  title,
+  description,
+  footer,
+  icon,
+  color,
+}: {
+  href: string;
+  title: string;
+  description: string;
+  footer: string;
+  icon: ReactNode;
+  color: string;
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        textDecoration: "none",
+        color: "inherit",
+        display: "block",
+        height: "100%",
+      }}
+    >
+      <Box
+        className="module-card"
+        style={{
+          position: "relative",
+
+          minHeight: 245,
+
+          padding: 24,
+
+          borderRadius: 20,
+
+          background:
+            "rgba(255,255,255,0.78)",
+
+          border:
+            "1px solid rgba(35,55,70,0.07)",
+
+          boxShadow:
+            "0 8px 30px rgba(35,55,70,0.055)",
+
+          overflow: "hidden",
+
+          transition:
+            "all 180ms ease",
+
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* TOP ACCENT */}
+
+        <Box
+          className="card-accent"
+          style={{
+            position: "absolute",
+
+            top: 0,
+            left: 0,
+            right: 0,
+
+            height: 3,
+
+            background: color,
+
+            opacity: 0.75,
+
+            transform:
+              "scaleX(0.35)",
+
+            transformOrigin:
+              "center",
+
+            transition:
+              "transform 180ms ease",
+          }}
+        />
+
+        {/* ICON */}
+
+        <Group
+          justify="space-between"
+          align="flex-start"
+        >
+          <ThemeIcon
+            size={56}
+            radius={17}
+            variant="light"
+            style={{
+              background: `${color}0d`,
+              color,
+              border: `1px solid ${color}14`,
+            }}
+          >
+            {icon}
+          </ThemeIcon>
+
+          <Box
+            className="card-number"
+            style={{
+              width: 30,
+              height: 30,
+
+              borderRadius: "50%",
+
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+
+              background:
+                "rgba(35,55,70,0.035)",
+
+              color: "#a0abb2",
+
+              fontSize: 12,
+              fontWeight: 800,
+            }}
+          >
+            ↗
+          </Box>
+        </Group>
+
+        {/* CONTENT */}
+
+        <Box mt={30}>
+          <Text
+            fw={850}
+            style={{
+              color: "#263a49",
+              fontSize: 18,
+              letterSpacing: "-0.2px",
+            }}
+          >
+            {title}
+          </Text>
+
+          <Text
+            size="sm"
+            mt={8}
+            lh={1.65}
+            style={{
+              color: "#87949d",
+            }}
+          >
+            {description}
+          </Text>
+        </Box>
+
+        {/* FOOTER */}
+
+        <Text
+          size="xs"
+          fw={800}
+          mt="auto"
+          pt={20}
+          style={{
+            color,
+          }}
+        >
+          {footer}
+          <span
+            style={{
+              marginRight: 5,
+            }}
+          >
+            →
+          </span>
+        </Text>
+      </Box>
+    </Link>
+  );
+}
+
+/* =========================================================
+   PAGE
 ========================================================= */
 
 export default function Page() {
-  const { data: session, status } = useSession();
+  const {
+    data: session,
+    status,
+  } = useSession();
 
-  const role = Number(session?.user?.roleId);
+  const role =
+    Number(session?.user?.roleId);
 
-  /* =======================================================
-     PASSWORD MODAL
-  ======================================================= */
-
-  const [passwordModalOpened, setPasswordModalOpened] =
-    useState(false);
-
-  const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [pendingLink, setPendingLink] = useState("");
+  const [
+    maintenanceOpen,
+    setMaintenanceOpen,
+  ] = useState(true);
 
   /* =======================================================
-     ACCESS CHECK
+     ACCESS
   ======================================================= */
 
   const hasAccess = (
     card: keyof typeof cardAccess
   ) => {
     return cardAccess[card].includes(role);
-  };
-
-  /* =======================================================
-     OPEN PROTECTED LINK
-  ======================================================= */
-
-  const openProtectedLink = (link: string) => {
-    setPendingLink(link);
-    setPassword("");
-    setPasswordError("");
-    setPasswordModalOpened(true);
-  };
-
-  /* =======================================================
-     PASSWORD SUBMIT
-  ======================================================= */
-
-  const handlePasswordSubmit = () => {
-    if (password === "271998") {
-      setPasswordModalOpened(false);
-
-      window.location.href = pendingLink;
-
-      return;
-    }
-
-    setPasswordError("كلمة المرور غير صحيحة");
   };
 
   /* =======================================================
@@ -200,19 +422,101 @@ export default function Page() {
           alignItems: "center",
           justifyContent: "center",
 
-          backgroundImage:
-            "linear-gradient(135deg, #f8fafc 0%, #eef5f9 50%, #f5f7fb 100%)",
-
-          backgroundSize: "cover",
-          backgroundPosition: "center",
+          background:
+            "#f7f9fb",
         }}
       >
-        <Text fw={700} c="dimmed">
-          جاري التحميل...
-        </Text>
+        <Box
+          style={{
+            textAlign: "center",
+          }}
+        >
+          <ThemeIcon
+            size={55}
+            radius={17}
+            variant="light"
+            color="blue"
+            mx="auto"
+          >
+            <IconRefresh
+              size={26}
+              className="loading-icon"
+            />
+          </ThemeIcon>
+
+          <Text
+            mt={12}
+            size="sm"
+            fw={700}
+            c="dimmed"
+          >
+            جاري التحميل...
+          </Text>
+        </Box>
       </Box>
     );
   }
+
+  /* =======================================================
+     VISIBILITY
+  ======================================================= */
+
+  const showOperations =
+    hasAccess("statistics") ||
+    hasAccess("map") ||
+    hasAccess("routeNotes") ||
+    hasAccess("binMap") ||
+    hasAccess("binAreas") ||
+    hasAccess("binExport");
+
+  const showMaintenance =
+    hasAccess(
+      "maintenanceManagement"
+    ) ||
+    hasAccess(
+      "maintenanceHistory"
+    ) ||
+    hasAccess(
+      "maintenanceTypes"
+    ) ||
+    hasAccess(
+      "maintenanceVehicles"
+    );
+
+  const showAdmin =
+    hasAccess("users");
+
+  /* =======================================================
+     COUNTS
+  ======================================================= */
+
+  const operationsCount = [
+    hasAccess("statistics"),
+    hasAccess("map"),
+    hasAccess("routeNotes"),
+    hasAccess("binMap"),
+    hasAccess("binAreas"),
+    hasAccess("binExport"),
+  ].filter(Boolean).length;
+
+  const maintenanceCount = [
+    hasAccess(
+      "maintenanceManagement"
+    ),
+    hasAccess(
+      "maintenanceHistory"
+    ),
+    hasAccess(
+      "maintenanceTypes"
+    ),
+    hasAccess(
+      "maintenanceVehicles"
+    ),
+  ].filter(Boolean).length;
+
+  /* =======================================================
+     RETURN
+  ======================================================= */
 
   return (
     <Box
@@ -220,136 +524,45 @@ export default function Page() {
       style={{
         minHeight: "100vh",
 
-        position: "relative",
+        background:
+          "linear-gradient(135deg, #f8fafc 0%, #f4f7f9 50%, #f8fafb 100%)",
 
-        overflow: "hidden",
-
-        /*
-          مهم:
-          استخدمنا backgroundImage بدل background
-          حتى لا يحدث تعارض مع backgroundSize
-        */
-        backgroundImage:
-          "linear-gradient(135deg, #f8fafc 0%, #eef5f9 50%, #f5f7fb 100%)",
-
-        backgroundSize: "cover",
-
-        backgroundPosition: "center",
-
-        backgroundAttachment: "fixed",
+        color: "#263746",
       }}
     >
-      {/* =====================================================
-          BACKGROUND OVERLAY
-      ===================================================== */}
-
-      <Box
-        style={{
-          position: "absolute",
-
-          inset: 0,
-
-          backgroundImage:
-            "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04))",
-
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* =====================================================
-          BLUE BACKGROUND GLOW
-      ===================================================== */}
-
-      <Box
-        style={{
-          position: "absolute",
-
-          width: 500,
-          height: 500,
-
-          borderRadius: "50%",
-
-          backgroundColor: "rgba(34,139,230,0.15)",
-
-          filter: "blur(110px)",
-
-          top: -180,
-          right: -150,
-
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* =====================================================
-          PURPLE BACKGROUND GLOW
-      ===================================================== */}
-
-      <Box
-        style={{
-          position: "absolute",
-
-          width: 450,
-          height: 450,
-
-          borderRadius: "50%",
-
-          backgroundColor: "rgba(132,94,247,0.12)",
-
-          filter: "blur(110px)",
-
-          bottom: -180,
-          left: -150,
-
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* =====================================================
-          CONTENT
-      ===================================================== */}
+      {/* ===================================================
+          HEADER
+      =================================================== */}
 
       <Container
-        size="xl"
-        style={{
-          position: "relative",
-
-          zIndex: 2,
-
-          minHeight: "100vh",
-
-          paddingTop: 30,
-
-          paddingBottom: 50,
-        }}
+        size={1150}
+        pt={25}
       >
-        {/* ===================================================
-            TOP BAR
-        =================================================== */}
-
         <Group
           justify="space-between"
           align="center"
-          mb={35}
         >
-          {/* USER INFO */}
+          {/* USER */}
 
           <Box>
             {session?.user?.name && (
               <Text
-                fw={800}
                 size="sm"
+                fw={800}
                 style={{
-                  color: "#263746",
+                  color: "#354957",
                 }}
               >
-                مرحباً، {session.user.name}
+                مرحباً،{" "}
+                {session.user.name}
               </Text>
             )}
 
             <Text
               size="xs"
+              mt={2}
               style={{
-                color: "rgba(30,50,65,0.52)",
+                color: "#9aa5ac",
               }}
             >
               Operations Intelligence
@@ -359,1041 +572,649 @@ export default function Page() {
           {/* LOGOUT */}
 
           <Button
-            variant="light"
+            variant="subtle"
             color="red"
             radius="xl"
-            leftSection={<IconLogout size={17} />}
-            onClick={handleLogout}
-            styles={{
-              root: {
-                fontWeight: 800,
-                paddingLeft: 18,
-                paddingRight: 18,
-              },
-            }}
+            size="sm"
+            leftSection={
+              <IconLogout
+                size={16}
+              />
+            }
+            onClick={
+              handleLogout
+            }
           >
             تسجيل الخروج
           </Button>
         </Group>
+      </Container>
+
+      {/* ===================================================
+          MAIN
+      =================================================== */}
+
+      <Container 
+      dir={"ltr"}
+        size={1150}
+        py={45}
+      >
+        {/* =================================================
+            BRAND
+        ================================================= */}
 
         <Box
           style={{
-            width: "100%",
-
-            maxWidth: 1250,
-
-            margin: "0 auto",
+            textAlign: "center",
+            marginBottom: 65,
           }}
         >
-          {/* =================================================
-              HEADER
-          ================================================= */}
-
           <Box
-            className="ops-header"
             style={{
-              textAlign: "center",
-
-              marginBottom: 44,
+              display: "inline-flex",
+              alignItems: "baseline",
+              justifyContent: "center",
+              gap: 6,
             }}
           >
-            <Box
-              style={{
-                display: "inline-flex",
-
-                alignItems: "baseline",
-
-                justifyContent: "center",
-
-                gap: 6,
-              }}
-            >
-              {/* OPS */}
-
-              <Text
-                component="span"
-                className="ops-title"
-                style={{
-                  fontFamily: "Inter, sans-serif",
-
-                  fontSize: "clamp(42px, 5vw, 56px)",
-
-                  fontWeight: 600,
-
-                  letterSpacing: "-2px",
-
-                  color: "#263746",
-
-                  lineHeight: 1,
-                }}
-              >
-                Ops
-              </Text>
-
-              {/* MATRIX */}
-
-              <Text
-                component="span"
-                className={`${bungee.className} matrix-title`}
-                style={{
-                  fontSize: "clamp(40px, 4.5vw, 52px)",
-
-                  lineHeight: 1,
-
-                  backgroundImage:
-                    "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
-
-                  WebkitBackgroundClip: "text",
-
-                  WebkitTextFillColor: "transparent",
-
-                  backgroundClip: "text",
-
-                  display: "inline-block",
-
-                  letterSpacing: "0px",
-                }}
-              >
-                Matrix
-              </Text>
-            </Box>
-
             <Text
-              mt={16}
+              component="span"
               style={{
-                fontFamily: "Inter, sans-serif",
+                fontFamily:
+                  "Inter, sans-serif",
 
-                fontSize: 12,
+                fontSize:
+                  "clamp(42px, 5vw, 58px)",
 
                 fontWeight: 600,
 
-                letterSpacing: "2.4px",
+                letterSpacing:
+                  "-2px",
 
-                textTransform: "uppercase",
+                color:
+                  "#344955",
 
-                color: "rgba(30,50,65,0.52)",
+                lineHeight: 1,
               }}
             >
-              Operations Intelligence
+              Ops
+            </Text>
+
+            <Text
+              component="span"
+              className={
+                bungee.className
+              }
+              style={{
+                fontSize:
+                  "clamp(40px, 4.5vw, 55px)",
+
+                lineHeight: 1,
+
+                background:
+                  "linear-gradient(110deg, #1971c2, #228be6, #12b886)",
+
+                WebkitBackgroundClip:
+                  "text",
+
+                WebkitTextFillColor:
+                  "transparent",
+
+                backgroundClip:
+                  "text",
+              }}
+            >
+              Matrix
             </Text>
           </Box>
 
-          {/* =================================================
-              CARDS
-          ================================================= */}
+          <Text
+            mt={13}
+            size="xs"
+            fw={700}
+            style={{
+              letterSpacing:
+                "2.5px",
 
-          <SimpleGrid
-            dir="ltr"
-            cols={{
-              base: 2,
-              sm: 2,
-              lg: 4,
+              color:
+                "#9aa5ac",
+
+              textTransform:
+                "uppercase",
             }}
-            spacing="lg"
           >
-            {/* =================================================
-                STATISTICS — BLUE
-            ================================================= */}
-
-            {hasAccess("statistics") && (
-              <Link
-                href="/failures/stats"
-                style={{
-                  textDecoration: "none",
-
-                  color: "inherit",
-                }}
-              >
-                <Box
-                  className="glass-card"
-                  style={cardStyle}
-                >
-                  <Box
-                    className="card-glow"
-                    style={{
-                      backgroundColor:
-                        "rgba(34,139,230,0.18)",
-                    }}
-                  />
-
-                  <Group
-                    justify="space-between"
-                    align="flex-start"
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-                    }}
-                  >
-                    <ThemeIcon
-                      size={62}
-                      radius={18}
-                      variant="light"
-                      style={{
-                        backgroundColor:
-                          "rgba(34,139,230,0.10)",
-
-                        border:
-                          "1px solid rgba(34,139,230,0.18)",
-
-                        color: "#228be6",
-
-                        boxShadow:
-                          "0 8px 25px rgba(34,139,230,0.12)",
-                      }}
-                    >
-                      <IconChartBar
-                        size={32}
-                        stroke={1.7}
-                      />
-                    </ThemeIcon>
-
-                    <CardArrow />
-                  </Group>
-
-                  <Box
-                    mt={42}
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-                    }}
-                  >
-                    <Text
-                      fw={900}
-                      size="xl"
-                      style={{
-                        color: "#172b3a",
-                      }}
-                    >
-                      Violations Statistics
-                    </Text>
-
-                    <Text
-                      size="sm"
-                      mt={8}
-                      lh={1.7}
-                      style={{
-                        color:
-                          "rgba(30,55,70,0.68)",
-                      }}
-                    >
-                      Analyze violations by areas,
-                      statuses, and KPIs.
-                    </Text>
-                  </Box>
-
-                  <Text
-                    size="xs"
-                    fw={800}
-                    mt="auto"
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-
-                      color: "#1971c2",
-                    }}
-                  >
-                    Open Statistics →
-                  </Text>
-                </Box>
-              </Link>
-            )}
-
-            {/* =================================================
-                MAP — ORANGE
-            ================================================= */}
-
-            {hasAccess("map") && (
-              <Link
-                href="/failures/osm"
-                style={{
-                  textDecoration: "none",
-
-                  color: "inherit",
-                }}
-              >
-                <Box
-                  className="glass-card"
-                  style={cardStyle}
-                >
-                  <Box
-                    className="card-glow"
-                    style={{
-                      backgroundColor:
-                        "rgba(253,126,20,0.18)",
-                    }}
-                  />
-
-                  <Group
-                    justify="space-between"
-                    align="flex-start"
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-                    }}
-                  >
-                    <ThemeIcon
-                      size={62}
-                      radius={18}
-                      variant="light"
-                      style={{
-                        backgroundColor:
-                          "rgba(253,126,20,0.10)",
-
-                        border:
-                          "1px solid rgba(253,126,20,0.18)",
-
-                        color: "#f76707",
-
-                        boxShadow:
-                          "0 8px 25px rgba(253,126,20,0.12)",
-                      }}
-                    >
-                      <IconMap
-                        size={32}
-                        stroke={1.7}
-                      />
-                    </ThemeIcon>
-
-                    <CardArrow />
-                  </Group>
-
-                  <Box
-                    mt={42}
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-                    }}
-                  >
-                    <Text
-                      fw={900}
-                      size="xl"
-                      style={{
-                        color: "#172b3a",
-                      }}
-                    >
-                      Violations Map
-                    </Text>
-
-                    <Text
-                      size="sm"
-                      mt={8}
-                      lh={1.7}
-                      style={{
-                        color:
-                          "rgba(30,55,70,0.68)",
-                      }}
-                    >
-                      View violations with filters
-                      and heatmap.
-                    </Text>
-                  </Box>
-
-                  <Text
-                    size="xs"
-                    fw={800}
-                    mt="auto"
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-
-                      color: "#e8590c",
-                    }}
-                  >
-                    Open Map →
-                  </Text>
-                </Box>
-              </Link>
-            )}
-
-            {/* =================================================
-                ROUTE NOTES — PURPLE
-            ================================================= */}
-
-            {hasAccess("routeNotes") && (
-              <Link
-                href="/route-notes"
-                style={{
-                  textDecoration: "none",
-
-                  color: "inherit",
-                }}
-              >
-                <Box
-                  className="glass-card"
-                  style={cardStyle}
-                >
-                  <Box
-                    className="card-glow"
-                    style={{
-                      backgroundColor:
-                        "rgba(132,94,247,0.18)",
-                    }}
-                  />
-
-                  <Group
-                    justify="space-between"
-                    align="flex-start"
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-                    }}
-                  >
-                    <ThemeIcon
-                      size={62}
-                      radius={18}
-                      variant="light"
-                      style={{
-                        backgroundColor:
-                          "rgba(132,94,247,0.10)",
-
-                        border:
-                          "1px solid rgba(132,94,247,0.18)",
-
-                        color: "#7950f2",
-
-                        boxShadow:
-                          "0 8px 25px rgba(132,94,247,0.12)",
-                      }}
-                    >
-                      <IconRoute
-                        size={32}
-                        stroke={1.7}
-                      />
-                    </ThemeIcon>
-
-                    <CardArrow />
-                  </Group>
-
-                  <Box
-                    mt={42}
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-                    }}
-                  >
-                    <Text
-                      fw={900}
-                      size="xl"
-                      style={{
-                        color: "#172b3a",
-                      }}
-                    >
-                      Route Notes
-                    </Text>
-
-                    <Text
-                      size="sm"
-                      mt={8}
-                      lh={1.7}
-                      style={{
-                        color:
-                          "rgba(30,55,70,0.68)",
-                      }}
-                    >
-                      Create and manage route
-                      notes easily.
-                    </Text>
-                  </Box>
-
-                  <Text
-                    size="xs"
-                    fw={800}
-                    mt="auto"
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-
-                      color: "#7048e8",
-                    }}
-                  >
-                    Open Route Notes →
-                  </Text>
-                </Box>
-              </Link>
-            )}
-
-            {/* =================================================
-                MAINTENANCE — RED
-            ================================================= */}
-
-            {(hasAccess("maintenance_manager") ||
-              hasAccess("maintenance_staff")) && (
-              <Link
-                href="/maintenance"
-                style={{
-                  textDecoration: "none",
-
-                  color: "inherit",
-                }}
-              >
-                <Box
-                  className="glass-card"
-                  style={cardStyle}
-                >
-                  <Box
-                    className="card-glow"
-                    style={{
-                      backgroundColor:
-                        "rgba(250,82,82,0.18)",
-                    }}
-                  />
-
-                  <Group
-                    justify="space-between"
-                    align="flex-start"
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-                    }}
-                  >
-                    <ThemeIcon
-                      size={62}
-                      radius={18}
-                      variant="light"
-                      style={{
-                        backgroundColor:
-                          "rgba(250,82,82,0.10)",
-
-                        border:
-                          "1px solid rgba(250,82,82,0.18)",
-
-                        color: "#e03131",
-
-                        boxShadow:
-                          "0 8px 25px rgba(250,82,82,0.12)",
-                      }}
-                    >
-                      <IconTool
-                        size={32}
-                        stroke={1.7}
-                      />
-                    </ThemeIcon>
-
-                    <CardArrow />
-                  </Group>
-
-                  <Box
-                    mt={42}
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-                    }}
-                  >
-                    <Text
-                      fw={900}
-                      size="xl"
-                      style={{
-                        color: "#172b3a",
-                      }}
-                    >
-                      Maintenance
-                    </Text>
-
-                    <Text
-                      size="sm"
-                      mt={8}
-                      lh={1.7}
-                      style={{
-                        color:
-                          "rgba(30,55,70,0.68)",
-                      }}
-                    >
-                      Create and manage maintenance
-                      tasks easily.
-                    </Text>
-                  </Box>
-
-                  <Text
-                    size="xs"
-                    fw={800}
-                    mt="auto"
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-
-                      color: "#c92a2a",
-                    }}
-                  >
-                    Open Maintenance →
-                  </Text>
-                </Box>
-              </Link>
-            )}
-
-            {/* =================================================
-                BIN COLLECTION — GREEN
-            ================================================= */}
-
-            {hasAccess("binCollection") && (
-              <Box
-                className="glass-card"
-                style={{
-                  ...cardStyle,
-                }}
-              >
-                <Box
-                  className="card-glow"
-                  style={{
-                    backgroundColor:
-                      "rgba(18,184,134,0.18)",
-                  }}
-                />
-
-                <Group
-                  justify="space-between"
-                  align="flex-start"
-                  style={{
-                    position: "relative",
-
-                    zIndex: 2,
-                  }}
-                >
-                  <ThemeIcon
-                    size={62}
-                    radius={18}
-                    variant="light"
-                    style={{
-                      backgroundColor:
-                        "rgba(18,184,134,0.10)",
-
-                      border:
-                        "1px solid rgba(18,184,134,0.18)",
-
-                      color: "#0ca678",
-
-                      boxShadow:
-                        "0 8px 25px rgba(18,184,134,0.12)",
-                    }}
-                  >
-                    <IconTrash
-                      size={32}
-                      stroke={1.7}
-                    />
-                  </ThemeIcon>
-
-                  <CardArrow />
-                </Group>
-
-                <Box
-                  mt={42}
-                  style={{
-                    position: "relative",
-
-                    zIndex: 2,
-                  }}
-                >
-                  <Text
-                    fw={900}
-                    size="xl"
-                    style={{
-                      color: "#172b3a",
-                    }}
-                  >
-                    Bin Collection System
-                  </Text>
-
-                  <Text
-                    size="sm"
-                    mt={8}
-                    lh={1.7}
-                    style={{
-                      color:
-                        "rgba(30,55,70,0.68)",
-                    }}
-                  >
-                    Manage bin locations and
-                    collection areas.
-                  </Text>
-                </Box>
-
-                <Group
-                  mt="auto"
-                  gap={8}
-                  wrap="wrap"
-                  style={{
-                    position: "relative",
-
-                    zIndex: 3,
-                  }}
-                >
-                  {/* MAP */}
-
-                  <Badge
-                    size="md"
-                    radius="md"
-                    variant="light"
-                    color="teal"
-                    leftSection={
-                      <IconMapPin size={14} />
-                    }
-                    onClick={() =>
-                      openProtectedLink(
-                        "/binCollection/map"
-                      )
-                    }
-                    style={{
-                      cursor: "pointer",
-
-                      textTransform: "none",
-                    }}
-                  >
-                    Open Map
-                  </Badge>
-
-                  {/* AREAS */}
-
-                  <Badge
-                    size="md"
-                    radius="md"
-                    variant="light"
-                    color="cyan"
-                    leftSection={
-                      <IconMap2 size={14} />
-                    }
-                    onClick={() =>
-                      openProtectedLink(
-                        "/binCollection/collection-areas/manage"
-                      )
-                    }
-                    style={{
-                      cursor: "pointer",
-
-                      textTransform: "none",
-                    }}
-                  >
-                    Areas
-                  </Badge>
-
-                  {/* SAVED COLLECTION */}
-
-                  <Badge
-                    size="md"
-                    radius="md"
-                    variant="light"
-                    color="green"
-                    leftSection={
-                      <IconFileTypeXls size={14} />
-                    }
-                    onClick={() =>
-                      openProtectedLink(
-                        "/binCollection/export-bins"
-                      )
-                    }
-                    style={{
-                      cursor: "pointer",
-
-                      textTransform: "none",
-                    }}
-                  >
-                    Saved Collection
-                  </Badge>
-                </Group>
-              </Box>
-            )}
-
-            {/* =================================================
-                USER MANAGEMENT — BLUE / INDIGO
-                ADMIN ONLY
-            ================================================= */}
-
-            {hasAccess("users") && (
-              <Link
-                href="/users"
-                style={{
-                  textDecoration: "none",
-
-                  color: "inherit",
-                }}
-              >
-                <Box
-                  className="glass-card"
-                  style={cardStyle}
-                >
-                  <Box
-                    className="card-glow"
-                    style={{
-                      backgroundColor:
-                        "rgba(72,84,255,0.18)",
-                    }}
-                  />
-
-                  <Group
-                    justify="space-between"
-                    align="flex-start"
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-                    }}
-                  >
-                    <ThemeIcon
-                      size={62}
-                      radius={18}
-                      variant="light"
-                      style={{
-                        backgroundColor:
-                          "rgba(72,84,255,0.10)",
-
-                        border:
-                          "1px solid rgba(72,84,255,0.18)",
-
-                        color: "#4c6ef5",
-
-                        boxShadow:
-                          "0 8px 25px rgba(72,84,255,0.12)",
-                      }}
-                    >
-                      <IconUsers
-                        size={32}
-                        stroke={1.7}
-                      />
-                    </ThemeIcon>
-
-                    <CardArrow />
-                  </Group>
-
-                  <Box
-                    mt={42}
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-                    }}
-                  >
-                    <Text
-                      fw={900}
-                      size="xl"
-                      style={{
-                        color: "#172b3a",
-                      }}
-                    >
-                      User Management
-                    </Text>
-
-                    <Text
-                      size="sm"
-                      mt={8}
-                      lh={1.7}
-                      style={{
-                        color:
-                          "rgba(30,55,70,0.68)",
-                      }}
-                    >
-                      Create, edit and manage system
-                      users and roles.
-                    </Text>
-                  </Box>
-
-                  <Text
-                    size="xs"
-                    fw={800}
-                    mt="auto"
-                    style={{
-                      position: "relative",
-
-                      zIndex: 2,
-
-                      color: "#3b5bdb",
-                    }}
-                  >
-                    Manage Users →
-                  </Text>
-                </Box>
-              </Link>
-            )}
-          </SimpleGrid>
+            Operations Intelligence
+          </Text>
+
+          <Group
+            justify="center"
+            gap={7}
+            mt={14}
+          >
+            <Box
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: "#20c997",
+                boxShadow:
+                  "0 0 0 4px rgba(32,201,151,0.10)",
+              }}
+            />
+
+            <Text
+              size="xs"
+              fw={700}
+              style={{
+                color: "#8e9ba3",
+              }}
+            >
+              System Online
+            </Text>
+          </Group>
         </Box>
+
+        {/* =================================================
+            OPERATIONS
+        ================================================= */}
+
+        {showOperations && (
+          <Box
+            className="dashboard-section"
+            mb={60}
+          >
+            <SectionHeader
+              icon={
+                <IconMap2
+                  size={27}
+                  stroke={1.8}
+                />
+              }
+              title="Operations"
+              description="Operational monitoring, field activities and collection"
+              color="#228be6"
+              count={
+                operationsCount
+              }
+            />
+
+            <SimpleGrid
+              cols={{
+                base: 1,
+                sm: 2,
+                lg: 3,
+              }}
+              spacing="lg"
+            >
+              {/* STATISTICS */}
+
+              {hasAccess(
+                "statistics"
+              ) && (
+                <ModuleCard
+                  href="/failures/stats"
+                  title="Violations Statistics"
+                  description="Analyze violations, KPIs, areas and operational performance."
+                  footer="Open Statistics"
+                  icon={
+                    <IconChartBar
+                      size={28}
+                    />
+                  }
+                  color="#228be6"
+                />
+              )}
+
+              {/* MAP */}
+
+              {hasAccess("map") && (
+                <ModuleCard
+                  href="/failures/osm"
+                  title="Violations Map"
+                  description="Explore violations geographically using the interactive map."
+                  footer="Open Map"
+                  icon={
+                    <IconMap
+                      size={28}
+                    />
+                  }
+                  color="#f08c00"
+                />
+              )}
+
+              {/* ROUTE NOTES */}
+
+              {hasAccess(
+                "routeNotes"
+              ) && (
+                <ModuleCard
+                  href="/route-notes"
+                  title="Route Notes"
+                  description="Create, review and manage route notes and field observations."
+                  footer="Open Route Notes"
+                  icon={
+                    <IconRoute
+                      size={28}
+                    />
+                  }
+                  color="#7950f2"
+                />
+              )}
+
+              {/* =================================================
+                  BIN MAP
+              ================================================= */}
+
+              {hasAccess(
+                "binMap"
+              ) && (
+                <ModuleCard
+                  href="/binCollection/map"
+                  title="Collection Map"
+                  description="View and manage bin locations directly on the map."
+                  footer="Open Collection Map"
+                  icon={
+                    <IconMapPin
+                      size={28}
+                    />
+                  }
+                  color="#12b886"
+                />
+              )}
+
+              {/* =================================================
+                  COLLECTION AREAS
+              ================================================= */}
+
+              {hasAccess(
+                "binAreas"
+              ) && (
+                <ModuleCard
+                  href="/binCollection/collection-areas/manage"
+                  title="Collection Areas"
+                  description="Manage collection areas, zones and operational boundaries."
+                  footer="Manage Areas"
+                  icon={
+                    <IconMap2
+                      size={28}
+                    />
+                  }
+                  color="#0ca678"
+                />
+              )}
+
+              {/* =================================================
+                  EXPORT BINS
+              ================================================= */}
+
+              {hasAccess(
+                "binExport"
+              ) && (
+                <ModuleCard
+                  href="/binCollection/export-bins"
+                  title="Export Bins"
+                  description="Export bin data and collection information for reporting."
+                  footer="Export Data"
+                  icon={
+                    <IconFileTypeXls
+                      size={28}
+                    />
+                  }
+                  color="#2f9e44"
+                />
+              )}
+            </SimpleGrid>
+          </Box>
+        )}
+
+        {/* ===================================================
+            DIVIDER
+        =================================================== */}
+
+        {showOperations &&
+          showMaintenance && (
+            <Divider
+              mb={60}
+              color="rgba(35,55,70,0.06)"
+            />
+          )}
+
+        {/* ===================================================
+            MAINTENANCE
+        =================================================== */}
+
+        {showMaintenance && (
+          <Box
+            className="dashboard-section"
+            mb={60}
+          >
+            <SectionHeader
+              icon={
+                <IconTool
+                  size={27}
+                  stroke={1.8}
+                />
+              }
+              title="Maintenance"
+              description="Vehicle maintenance, records and configuration"
+              color="#e03131"
+              count={
+                maintenanceCount
+              }
+              collapsible
+              opened={
+                maintenanceOpen
+              }
+              onToggle={() =>
+                setMaintenanceOpen(
+                  (value) =>
+                    !value
+                )
+              }
+            />
+
+            {maintenanceOpen && (
+              <SimpleGrid
+                cols={{
+                  base: 1,
+                  sm: 2,
+                  lg: 4,
+                }}
+                spacing="lg"
+              >
+                {/* MANAGEMENT */}
+
+                {hasAccess(
+                  "maintenanceManagement"
+                ) && (
+                  <ModuleCard
+                    href="/maintenance/management"
+                    title="Maintenance Management"
+                    description="Manage maintenance tasks, work orders and operational actions."
+                    footer="Open Management"
+                    icon={
+                      <IconTool
+                        size={28}
+                      />
+                    }
+                    color="#228be6"
+                  />
+                )}
+
+                {/* HISTORY */}
+
+                {hasAccess(
+                  "maintenanceHistory"
+                ) && (
+                  <ModuleCard
+                    href="/maintenance/history"
+                    title="Maintenance History"
+                    description="Review previous maintenance operations and service records."
+                    footer="Open History"
+                    icon={
+                      <IconHistory
+                        size={28}
+                      />
+                    }
+                    color="#7950f2"
+                  />
+                )}
+
+                {/* TYPES */}
+
+                {hasAccess(
+                  "maintenanceTypes"
+                ) && (
+                  <ModuleCard
+                    href="/maintenance/setup"
+                    title="Maintenance Types"
+                    description="Configure maintenance types and service categories."
+                    footer="Open Configuration"
+                    icon={
+                      <IconSettings
+                        size={28}
+                      />
+                    }
+                    color="#12b886"
+                  />
+                )}
+
+                {/* VEHICLES */}
+
+                {hasAccess(
+                  "maintenanceVehicles"
+                ) && (
+                  <ModuleCard
+                    href="/maintenance/vehicles"
+                    title="Maintenance Vehicles"
+                    description="Manage vehicles and their maintenance information."
+                    footer="Open Vehicles"
+                    icon={
+                      <IconTruck
+                        size={28}
+                      />
+                    }
+                    color="#f08c00"
+                  />
+                )}
+              </SimpleGrid>
+            )}
+          </Box>
+        )}
+
+        {/* ===================================================
+            DIVIDER
+        =================================================== */}
+
+        {showMaintenance &&
+          showAdmin && (
+            <Divider
+              mb={60}
+              color="rgba(35,55,70,0.06)"
+            />
+          )}
+
+        {/* ===================================================
+            ADMINISTRATION
+        =================================================== */}
+
+        {showAdmin && (
+          <Box
+            className="dashboard-section"
+            mb={20}
+          >
+            <SectionHeader
+              icon={
+                <IconUsers
+                  size={27}
+                  stroke={1.8}
+                />
+              }
+              title="Administration"
+              description="Users, roles and system access"
+              color="#4c6ef5"
+              count={1}
+            />
+
+            <Box
+              style={{
+                maxWidth: 420,
+                margin: "0 auto",
+              }}
+            >
+              <ModuleCard
+                href="/users"
+                title="User Management"
+                description="Create, edit and manage system users and their roles."
+                footer="Manage Users"
+                icon={
+                  <IconUsers
+                    size={28}
+                  />
+                }
+                color="#4c6ef5"
+              />
+            </Box>
+          </Box>
+        )}
       </Container>
 
       {/* =====================================================
-          PASSWORD MODAL
+          FOOTER
       ===================================================== */}
 
-      <Modal
-        opened={passwordModalOpened}
-        onClose={() =>
-          setPasswordModalOpened(false)
-        }
-        title="Protected Area"
-        centered
-        radius="lg"
+      <Box
+        style={{
+          textAlign: "center",
+          paddingBottom: 30,
+        }}
       >
         <Text
-          size="sm"
-          c="dimmed"
-          mb="md"
+          size="xs"
+          style={{
+            color: "#b0b9bf",
+          }}
         >
-          Please enter the password to continue.
+          Ops Matrix · Operations
+          Intelligence
         </Text>
-
-        <PasswordInput
-          label="Password"
-          placeholder="Enter password"
-          value={password}
-          onChange={(event) => {
-            setPassword(
-              event.currentTarget.value
-            );
-
-            setPasswordError("");
-          }}
-          error={passwordError}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              handlePasswordSubmit();
-            }
-          }}
-          autoFocus
-        />
-
-        <Group
-          justify="flex-end"
-          mt="xl"
-        >
-          <Button
-            variant="default"
-            onClick={() =>
-              setPasswordModalOpened(false)
-            }
-          >
-            Cancel
-          </Button>
-
-          <Button
-            color="teal"
-            onClick={handlePasswordSubmit}
-          >
-            Continue
-          </Button>
-        </Group>
-      </Modal>
+      </Box>
 
       {/* =====================================================
           CSS
       ===================================================== */}
 
       <style>{`
-        .glass-card {
-          transform: translateY(0) scale(1);
-        }
 
-        .glass-card:hover {
+        /* ================================================
+           CARD HOVER
+        ================================================ */
+
+        .module-card:hover {
           transform:
-            translateY(-7px)
-            scale(1.015);
+            translateY(-5px);
 
-          background-image:
-            linear-gradient(
-              135deg,
-              rgba(255,255,255,0.84),
-              rgba(255,255,255,0.50)
-            ) !important;
-
-          border-color:
+          background:
             rgba(255,255,255,0.96) !important;
 
+          border-color:
+            rgba(35,55,70,0.10) !important;
+
           box-shadow:
-            0 28px 80px
-              rgba(40,70,90,0.22),
-            inset 0 1px 0
-              rgba(255,255,255,0.85);
+            0 18px 42px
+            rgba(35,55,70,0.10) !important;
         }
 
-        .glass-card:active {
+        .module-card:hover
+        .card-accent {
           transform:
-            translateY(-3px)
-            scale(1.005);
+            scaleX(1);
         }
 
-        .card-glow {
-          position: absolute;
-
-          width: 220px;
-          height: 220px;
-
-          border-radius: 50%;
-
-          filter: blur(48px);
-
-          top: -90px;
-          right: -80px;
-
-          pointer-events: none;
+        .module-card:hover
+        .card-number {
+          background:
+            rgba(35,55,70,0.06);
         }
 
-        .glass-card .mantine-Badge-root {
-          transition:
-            transform 160ms ease,
-            box-shadow 160ms ease;
+        /* ================================================
+           SECTION ANIMATION
+        ================================================ */
+
+        .dashboard-section {
+          animation:
+            sectionIn
+            420ms
+            ease
+            both;
         }
 
-        .glass-card .mantine-Badge-root:hover {
-          transform: translateY(-2px);
+        @keyframes sectionIn {
 
-          box-shadow:
-            0 6px 18px
-              rgba(40,70,90,0.12);
+          from {
+            opacity: 0;
+
+            transform:
+              translateY(12px);
+          }
+
+          to {
+            opacity: 1;
+
+            transform:
+              translateY(0);
+          }
+
         }
+
+        /* ================================================
+           LOADING
+        ================================================ */
+
+        .loading-icon {
+          animation:
+            spin
+            1s
+            linear
+            infinite;
+        }
+
+        @keyframes spin {
+
+          from {
+            transform:
+              rotate(0deg);
+          }
+
+          to {
+            transform:
+              rotate(360deg);
+          }
+
+        }
+
+        /* ================================================
+           MOBILE
+        ================================================ */
 
         @media (max-width: 576px) {
-          .ops-title {
-            font-size: 42px !important;
+
+          .module-card {
+            min-height:
+              225px !important;
+
+            padding:
+              21px !important;
+
+            border-radius:
+              18px !important;
           }
 
-          .matrix-title {
-            font-size: 40px !important;
-          }
-
-          .glass-card {
-            height: 280px !important;
-
-            min-height: 280px !important;
-
-            padding: 22px !important;
-
-            border-radius: 20px !important;
-          }
-
-          .ops-header {
-            margin-top: 30px !important;
-          }
         }
 
-        @media (max-width: 380px) {
-          .ops-title {
-            font-size: 36px !important;
-          }
-
-          .matrix-title {
-            font-size: 34px !important;
-          }
-        }
+        /* ================================================
+           REDUCED MOTION
+        ================================================ */
 
         @media (prefers-reduced-motion: reduce) {
-          .glass-card {
-            transition: none !important;
+
+          .module-card,
+          .dashboard-section,
+          .loading-icon {
+            animation:
+              none !important;
+
+            transition:
+              none !important;
           }
 
-          .glass-card:hover {
-            transform: none !important;
+          .module-card:hover {
+            transform:
+              none !important;
           }
 
-          .glass-card .mantine-Badge-root {
-            transition: none !important;
-          }
         }
+
       `}</style>
     </Box>
   );

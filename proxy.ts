@@ -10,18 +10,24 @@ export async function proxy(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
+  // ================================
   // صفحة تسجيل الدخول
+  // ================================
   if (pathname === "/") {
+    // إذا المستخدم مسجل دخول
+    // حوّله إلى Dashboard
     if (token) {
       return NextResponse.redirect(
-        new URL("/Home", request.url)
+        new URL("/home", request.url)
       );
     }
 
     return NextResponse.next();
   }
 
-  // كل الصفحات الأخرى محمية
+  // ================================
+  // الصفحات الأخرى محمية
+  // ================================
   if (!token) {
     const loginUrl = new URL("/", request.url);
 
@@ -33,6 +39,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // المستخدم مسجل دخول
   return NextResponse.next();
 }
 
