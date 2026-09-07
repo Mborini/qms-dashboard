@@ -11,7 +11,7 @@ export async function PUT(
 
   const { rows } = await pool.query(
     `
-    UPDATE collection_areas
+    UPDATE areas
     SET name = $1
     WHERE id = $2
     RETURNING id, name, created_at
@@ -30,7 +30,7 @@ export async function DELETE(
 
   await pool.query(
     `
-    UPDATE collection_areas
+    UPDATE reas
     SET is_deleted = true
     WHERE id = $1
     `,

@@ -6,7 +6,7 @@ export async function GET() {
     const { rows } = await pool.query(
       `
       SELECT id, name, created_at
-      FROM collection_areas
+      FROM areas
       WHERE is_deleted = false
       ORDER BY created_at DESC
       `
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
     const { rows } = await pool.query(
       `
-      INSERT INTO collection_areas (name)
+      INSERT INTO areas (name)
       VALUES ($1)
       RETURNING id, name, created_at
       `,

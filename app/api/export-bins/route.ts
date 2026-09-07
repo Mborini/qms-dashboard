@@ -64,10 +64,10 @@ export async function GET(req: Request) {
     bins.image_url,
     bins.created_at,
     
-    collection_areas.name AS area_name
+    areas.name AS area_name
   FROM bins
-  INNER JOIN collection_areas
-    ON bins.area = collection_areas.id
+  INNER JOIN areas
+    ON bins.area = areas.id
   WHERE bins.area = $1
 ORDER BY bins.id ASC
 
