@@ -10,15 +10,28 @@ export async function proxy(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  // الصفحة الرئيسية متاحة للجميع
+  // =========================================
+  // الصفحة الرئيسية /
+  // =========================================
   if (pathname === "/") {
+    // يوجد Token → Dashboard
+    if (token) {
+      return NextResponse.redirect(
+        new URL("/home", request.url)
+      );
+    }
+
+    // لا يوجد Token → Login
     return NextResponse.next();
   }
 
-  // باقي الصفحات تحتاج تسجيل دخول
+  // =========================================
+  // جميع الصفحات الأخرى محمية
+  // =========================================
   if (!token) {
     const loginUrl = new URL("/", request.url);
 
+    // الصفحة التي حاول الوصول إليها
     loginUrl.searchParams.set(
       "callbackUrl",
       pathname
@@ -27,6 +40,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // =========================================
+  // المستخدم مسجل دخول
+  // =========================================
   return NextResponse.next();
 }
 
