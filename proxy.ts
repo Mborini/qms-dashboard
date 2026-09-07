@@ -18,7 +18,7 @@ export async function proxy(request: NextRequest) {
     // مسجل دخول → Home
     if (token) {
       return NextResponse.redirect(
-        new URL("/home", request.url)
+        new URL("/dashboard", request.url)
       );
     }
 
