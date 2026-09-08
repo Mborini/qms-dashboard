@@ -12,25 +12,22 @@ export async function proxy(request: NextRequest) {
 
   // =========================================
   // LOGIN PAGE
-  // /
   // =========================================
   if (pathname === "/") {
-    // مسجل دخول → Home
+    // مسجل دخول → Dashboard
     if (token) {
       return NextResponse.redirect(
         new URL("/dashboard", request.url)
       );
     }
 
-    // غير مسجل → خليه على Login
+    // غير مسجل → Login
     return NextResponse.next();
   }
 
   // =========================================
   // PROTECTED PAGES
   // =========================================
-
-  // غير مسجل دخول → Login /
   if (!token) {
     return NextResponse.redirect(
       new URL("/", request.url)

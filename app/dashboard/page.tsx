@@ -51,7 +51,7 @@ const cardAccess = {
   binExport: [1],
 
   maintenanceManagement: [1, 2, 5],
-  maintenanceHistory: [1, 2],
+  maintenanceHistory: [1, 2, 5],
   maintenanceTypes: [1, 2],
   maintenanceVehicles: [1, 2],
 
