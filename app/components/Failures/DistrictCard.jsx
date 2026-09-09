@@ -21,6 +21,7 @@ import {
 
 import {
   IconBuildings,
+  IconCopy,
   IconDownload,
   IconEye,
   IconLiveView,
@@ -678,15 +679,35 @@ const districtColors = {
                                   style={{
                                     cursor: "pointer",
                                   }}
-                                  onClick={() => {
-                                    setSelectedUser({
-                                      name: user,
+                                 onClick={() => {
+  const userFailures = [];
 
-                                      ids: count.ids,
-                                    });
+  Object.entries(data.blocks || {}).forEach(
+    ([blockName, blockData]) => {
+      Object.entries(blockData.statuses || {}).forEach(
+        ([status, statusData]) => {
+          const userData = statusData.users?.[user];
 
-                                    setOpened(true);
-                                  }}
+          if (!userData) return;
+
+          (userData.ids || []).forEach((id) => {
+            userFailures.push({
+              id,
+              block: blockName,
+            });
+          });
+        }
+      );
+    }
+  );
+
+  setSelectedUser({
+    name: user,
+    failures: userFailures,
+  });
+
+  setOpened(true);
+}}
                                 >
                                   {user}
                                 </Text>
@@ -712,40 +733,79 @@ const districtColors = {
       {/* ================= USER MODAL ================= */}
 
       <Modal
-        dir="rtl"
-        opened={opened}
-        onClose={() => setOpened(false)}
-        title={
-          selectedUser
-            ? `قائمة المخالفات التي قام ${selectedUser.name} بإجراء عليها`
-            : ""
-        }
-        centered
-        styles={{
-          title: {
-            fontSize: "14px",
-            fontWeight: 700,
-          },
+  dir="rtl"
+  opened={opened}
+  onClose={() => setOpened(false)}
+  title={
+    selectedUser
+      ? `قائمة المخالفات التي قام ${selectedUser.name} بإجراء عليها`
+      : ""
+  }
+  centered
+  size="md"
+  styles={{
+    title: {
+      fontSize: "14px",
+      fontWeight: 700,
+    },
+  }}
+>
+  <Stack>
+    {/* العدد + زر النسخ */}
+    <Group justify="space-between">
+      <Text size="sm" c="dimmed" fw={700}>
+        عدد المخالفات: {selectedUser?.failures?.length || 0}
+      </Text>
+
+      <Button
+        leftSection={<IconCopy size={16} />}
+        variant="light"
+        size="xs"
+        onClick={() => {
+          const text = (selectedUser?.failures || [])
+            .map((item) => `${item.id} - ${item.block}`)
+            .join("\n");
+
+          navigator.clipboard.writeText(text);
         }}
       >
-        <Stack>
-          <Text size="sm" c="dimmed" fw={700}>
-            عدد المخالفات: {selectedUser?.ids?.length || 0}
-          </Text>
+        نسخ 
+      </Button>
+    </Group>
 
-          {selectedUser?.ids?.map((id, index) => (
-            <Card key={`${id}-${index}`} withBorder radius="md" p="sm">
-              <Group justify="space-between">
-                <Text fw={700}>رقم المخالفة</Text>
+    {/* قائمة المخالفات */}
+    {selectedUser?.failures?.map((item, index) => (
+      <Card
+        key={`${item.id}-${index}`}
+        withBorder
+        radius="md"
+        p="sm"
+      >
+        <Group justify="space-between">
+          <div>
+            <Text size="xs" c="dimmed">
+              رقم المخالفة
+            </Text>
 
-                <Badge size="lg" variant="light" color="blue">
-                  {id}
-                </Badge>
-              </Group>
-            </Card>
-          ))}
-        </Stack>
-      </Modal>
+            <Text fw={700}>
+              {item.id}
+            </Text>
+          </div>
+
+          <div style={{ textAlign: "left" }}>
+            <Text size="xs" c="dimmed">
+              الحي
+            </Text>
+
+            <Text fw={700}>
+              {item.block}
+            </Text>
+          </div>
+        </Group>
+      </Card>
+    ))}
+  </Stack>
+</Modal>
 
       <Modal
         dir="rtl"
