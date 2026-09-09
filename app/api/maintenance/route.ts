@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
       FROM maintenance_records mr
 
-      LEFT JOIN maintenance_vehicles v
+      LEFT JOIN vehicles v
         ON v.id = mr.vehicle_id
 
       LEFT JOIN maintenance_kpis k
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
         id,
         plate_number
         
-      FROM maintenance_vehicles
+      FROM vehicles
       WHERE id = $1
       LIMIT 1
       `,

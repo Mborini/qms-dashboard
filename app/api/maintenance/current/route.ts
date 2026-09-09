@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
       FROM maintenance_records mr
 
-      INNER JOIN maintenance_vehicles v
+      INNER JOIN vehicles v
         ON v.id = mr.vehicle_id
 
       INNER JOIN maintenance_kpis k

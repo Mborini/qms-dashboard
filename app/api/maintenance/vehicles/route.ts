@@ -106,7 +106,7 @@ export async function GET() {
         is_active,
         created_at,
         updated_at
-      FROM maintenance_vehicles
+      FROM vehicles
       ORDER BY
         plate_number NULLS LAST,
         id DESC
@@ -250,7 +250,7 @@ export async function POST(
     const duplicate = await pool.query(
       `
         SELECT id
-        FROM maintenance_vehicles
+        FROM vehicles
         WHERE LOWER(TRIM(plate_number)) =
               LOWER(TRIM($1))
         LIMIT 1
@@ -271,7 +271,7 @@ export async function POST(
 
     const result = await pool.query(
       `
-        INSERT INTO maintenance_vehicles (
+        INSERT INTO vehicles (
           plate_number,
           weight,
           capacity,
@@ -393,7 +393,7 @@ export async function PATCH(
       await pool.query(
         `
           SELECT id
-          FROM maintenance_vehicles
+          FROM vehicles
           WHERE id = $1
           LIMIT 1
         `,
@@ -503,7 +503,7 @@ export async function PATCH(
       await pool.query(
         `
           SELECT id
-          FROM maintenance_vehicles
+          FROM vehicles
           WHERE LOWER(TRIM(plate_number)) =
                 LOWER(TRIM($1))
             AND id <> $2
@@ -528,7 +528,7 @@ export async function PATCH(
 
     const result = await pool.query(
       `
-        UPDATE maintenance_vehicles
+        UPDATE vehicles
         SET
           plate_number = $1,
           weight = $2,
@@ -625,7 +625,7 @@ export async function DELETE(
 
     const result = await pool.query(
       `
-        DELETE FROM maintenance_vehicles
+        DELETE FROM vehicles
         WHERE id = $1
         RETURNING
           id,
