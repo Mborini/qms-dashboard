@@ -1,5 +1,91 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/app/lib/db";
+
+/* =========================================================
+   TYPES
+   ========================================================= */
+
+type VehicleBody = {
+  id?: number | string;
+  plate_number?: string | null;
+  weight?: number | string | null;
+  capacity?: number | string | null;
+  manufacture_year?: number | string | null;
+  model?: string | null;
+  type?: string | null;
+  area?: string | null;
+};
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+
+function normalizeString(
+  value: unknown
+): string | null {
+  if (
+    value === undefined ||
+    value === null
+  ) {
+    return null;
+  }
+
+  const result = String(value).trim();
+
+  return result === "" ? null : result;
+}
+
+function normalizeNumber(
+  value: unknown
+): number | null {
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const result = Number(value);
+
+  return Number.isFinite(result)
+    ? result
+    : null;
+}
+
+function normalizeInteger(
+  value: unknown
+): number | null {
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const result = Number(value);
+
+  return Number.isInteger(result)
+    ? result
+    : null;
+}
+
+function errorResponse(
+  message: string,
+  status = 400
+) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: message,
+    },
+    {
+      status,
+    }
+  );
+}
 
 /* =========================================================
    GET
@@ -16,11 +102,14 @@ export async function GET() {
         manufacture_year,
         model,
         type,
-        area
+        area,
+        is_active,
+        created_at,
+        updated_at
       FROM maintenance_vehicles
       ORDER BY
         plate_number NULLS LAST,
-        id ASC
+        id DESC
     `);
 
     return NextResponse.json({
@@ -53,7 +142,8 @@ export async function POST(
   request: NextRequest
 ) {
   try {
-    const body = await request.json();
+    const body =
+      (await request.json()) as VehicleBody;
 
     const {
       plate_number,
@@ -61,25 +151,20 @@ export async function POST(
       capacity,
       manufacture_year,
       model,
+      type,
       area,
     } = body;
 
     /* -------------------------------------------------------
-       VALIDATION
+       PLATE VALIDATION
        ------------------------------------------------------- */
 
-    if (
-      !plate_number ||
-      String(plate_number).trim() === ""
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Plate number is required",
-        },
-        {
-          status: 400,
-        }
+    const normalizedPlate =
+      normalizeString(plate_number);
+
+    if (!normalizedPlate) {
+      return errorResponse(
+        "Plate number is required"
       );
     }
 
@@ -87,90 +172,74 @@ export async function POST(
        NORMALIZE
        ------------------------------------------------------- */
 
-    const normalizedPlate =
-      String(plate_number).trim();
-
     const normalizedModel =
-      model !== undefined &&
-      model !== null &&
-      String(model).trim() !== ""
-        ? String(model).trim()
-        : null;
+      normalizeString(model);
+
+    const normalizedType =
+      normalizeString(type);
 
     const normalizedArea =
-      area !== undefined &&
-      area !== null &&
-      String(area).trim() !== ""
-        ? String(area).trim()
-        : null;
+      normalizeString(area);
 
     const normalizedWeight =
-      weight !== undefined &&
-      weight !== null &&
-      weight !== ""
-        ? Number(weight)
-        : null;
+      normalizeNumber(weight);
 
     const normalizedCapacity =
-      capacity !== undefined &&
-      capacity !== null &&
-      capacity !== ""
-        ? Number(capacity)
-        : null;
+      normalizeNumber(capacity);
 
     const normalizedYear =
-      manufacture_year !== undefined &&
-      manufacture_year !== null &&
-      manufacture_year !== ""
-        ? Number(manufacture_year)
-        : null;
+      normalizeInteger(manufacture_year);
 
     /* -------------------------------------------------------
        NUMBER VALIDATION
        ------------------------------------------------------- */
 
     if (
-      normalizedWeight !== null &&
-      !Number.isFinite(normalizedWeight)
+      weight !== undefined &&
+      weight !== null &&
+      weight !== "" &&
+      normalizedWeight === null
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid weight",
-        },
-        {
-          status: 400,
-        }
+      return errorResponse(
+        "Invalid weight"
       );
     }
 
     if (
-      normalizedCapacity !== null &&
-      !Number.isFinite(normalizedCapacity)
+      capacity !== undefined &&
+      capacity !== null &&
+      capacity !== "" &&
+      normalizedCapacity === null
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid capacity",
-        },
-        {
-          status: 400,
-        }
+      return errorResponse(
+        "Invalid capacity"
       );
     }
+
+    if (
+      manufacture_year !== undefined &&
+      manufacture_year !== null &&
+      manufacture_year !== "" &&
+      normalizedYear === null
+    ) {
+      return errorResponse(
+        "Invalid manufacture year"
+      );
+    }
+
+    /* -------------------------------------------------------
+       YEAR RANGE VALIDATION
+       ------------------------------------------------------- */
 
     if (
       normalizedYear !== null &&
-      !Number.isInteger(normalizedYear)
+      (
+        normalizedYear < 1900 ||
+        normalizedYear > new Date().getFullYear() + 1
+      )
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid manufacture year",
-        },
-        {
-          status: 400,
-        }
+      return errorResponse(
+        "Invalid manufacture year"
       );
     }
 
@@ -182,21 +251,17 @@ export async function POST(
       `
         SELECT id
         FROM maintenance_vehicles
-        WHERE plate_number = $1
+        WHERE LOWER(TRIM(plate_number)) =
+              LOWER(TRIM($1))
         LIMIT 1
       `,
       [normalizedPlate]
     );
 
     if (duplicate.rows.length > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Vehicle with this plate number already exists",
-        },
-        {
-          status: 409,
-        }
+      return errorResponse(
+        "Vehicle with this plate number already exists",
+        409
       );
     }
 
@@ -212,6 +277,7 @@ export async function POST(
           capacity,
           manufacture_year,
           model,
+          type,
           area
         )
         VALUES (
@@ -220,7 +286,8 @@ export async function POST(
           $3,
           $4,
           $5,
-          $6
+          $6,
+          $7
         )
         RETURNING
           id,
@@ -229,7 +296,11 @@ export async function POST(
           capacity,
           manufacture_year,
           model,
-          area
+          type,
+          area,
+          is_active,
+          created_at,
+          updated_at
       `,
       [
         normalizedPlate,
@@ -237,6 +308,7 @@ export async function POST(
         normalizedCapacity,
         normalizedYear,
         normalizedModel,
+        normalizedType,
         normalizedArea,
       ]
     );
@@ -277,7 +349,8 @@ export async function PATCH(
   request: NextRequest
 ) {
   try {
-    const body = await request.json();
+    const body =
+      (await request.json()) as VehicleBody;
 
     const {
       id,
@@ -286,6 +359,7 @@ export async function PATCH(
       capacity,
       manufacture_year,
       model,
+      type,
       area,
     } = body;
 
@@ -298,28 +372,16 @@ export async function PATCH(
       id === null ||
       id === ""
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Vehicle ID is required",
-        },
-        {
-          status: 400,
-        }
+      return errorResponse(
+        "Vehicle ID is required"
       );
     }
 
     const vehicleId = Number(id);
 
     if (!Number.isInteger(vehicleId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid vehicle ID",
-        },
-        {
-          status: 400,
-        }
+      return errorResponse(
+        "Invalid vehicle ID"
       );
     }
 
@@ -339,121 +401,97 @@ export async function PATCH(
       );
 
     if (existing.rows.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Vehicle not found",
-        },
-        {
-          status: 404,
-        }
+      return errorResponse(
+        "Vehicle not found",
+        404
       );
     }
 
     /* -------------------------------------------------------
-       VALIDATION
+       PLATE VALIDATION
        ------------------------------------------------------- */
 
-    if (
-      plate_number === undefined ||
-      plate_number === null ||
-      String(plate_number).trim() === ""
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Plate number is required",
-        },
-        {
-          status: 400,
-        }
+    const normalizedPlate =
+      normalizeString(plate_number);
+
+    if (!normalizedPlate) {
+      return errorResponse(
+        "Plate number is required"
       );
     }
 
-    const normalizedPlate =
-      String(plate_number).trim();
+    /* -------------------------------------------------------
+       NORMALIZE
+       ------------------------------------------------------- */
 
     const normalizedModel =
-      model !== undefined &&
-      model !== null &&
-      String(model).trim() !== ""
-        ? String(model).trim()
-        : null;
+      normalizeString(model);
+
+    const normalizedType =
+      normalizeString(type);
 
     const normalizedArea =
-      area !== undefined &&
-      area !== null &&
-      String(area).trim() !== ""
-        ? String(area).trim()
-        : null;
+      normalizeString(area);
 
     const normalizedWeight =
-      weight !== undefined &&
-      weight !== null &&
-      weight !== ""
-        ? Number(weight)
-        : null;
+      normalizeNumber(weight);
 
     const normalizedCapacity =
-      capacity !== undefined &&
-      capacity !== null &&
-      capacity !== ""
-        ? Number(capacity)
-        : null;
+      normalizeNumber(capacity);
 
     const normalizedYear =
-      manufacture_year !== undefined &&
-      manufacture_year !== null &&
-      manufacture_year !== ""
-        ? Number(manufacture_year)
-        : null;
+      normalizeInteger(manufacture_year);
 
     /* -------------------------------------------------------
        NUMBER VALIDATION
        ------------------------------------------------------- */
 
     if (
-      normalizedWeight !== null &&
-      !Number.isFinite(normalizedWeight)
+      weight !== undefined &&
+      weight !== null &&
+      weight !== "" &&
+      normalizedWeight === null
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid weight",
-        },
-        {
-          status: 400,
-        }
+      return errorResponse(
+        "Invalid weight"
       );
     }
 
     if (
-      normalizedCapacity !== null &&
-      !Number.isFinite(normalizedCapacity)
+      capacity !== undefined &&
+      capacity !== null &&
+      capacity !== "" &&
+      normalizedCapacity === null
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid capacity",
-        },
-        {
-          status: 400,
-        }
+      return errorResponse(
+        "Invalid capacity"
       );
     }
+
+    if (
+      manufacture_year !== undefined &&
+      manufacture_year !== null &&
+      manufacture_year !== "" &&
+      normalizedYear === null
+    ) {
+      return errorResponse(
+        "Invalid manufacture year"
+      );
+    }
+
+    /* -------------------------------------------------------
+       YEAR RANGE VALIDATION
+       ------------------------------------------------------- */
 
     if (
       normalizedYear !== null &&
-      !Number.isInteger(normalizedYear)
+      (
+        normalizedYear < 1900 ||
+        normalizedYear > new Date().getFullYear() + 1
+      )
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid manufacture year",
-        },
-        {
-          status: 400,
-        }
+      return errorResponse(
+        "Invalid manufacture year"
       );
     }
 
@@ -466,7 +504,8 @@ export async function PATCH(
         `
           SELECT id
           FROM maintenance_vehicles
-          WHERE plate_number = $1
+          WHERE LOWER(TRIM(plate_number)) =
+                LOWER(TRIM($1))
             AND id <> $2
           LIMIT 1
         `,
@@ -477,15 +516,9 @@ export async function PATCH(
       );
 
     if (duplicate.rows.length > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Another vehicle with this plate number already exists",
-        },
-        {
-          status: 409,
-        }
+      return errorResponse(
+        "Another vehicle with this plate number already exists",
+        409
       );
     }
 
@@ -502,8 +535,10 @@ export async function PATCH(
           capacity = $3,
           manufacture_year = $4,
           model = $5,
-          area = $6
-        WHERE id = $7
+          type = $6,
+          area = $7,
+          updated_at = NOW()
+        WHERE id = $8
         RETURNING
           id,
           plate_number,
@@ -511,7 +546,11 @@ export async function PATCH(
           capacity,
           manufacture_year,
           model,
-          area
+          type,
+          area,
+          is_active,
+          created_at,
+          updated_at
       `,
       [
         normalizedPlate,
@@ -519,6 +558,7 @@ export async function PATCH(
         normalizedCapacity,
         normalizedYear,
         normalizedModel,
+        normalizedType,
         normalizedArea,
         vehicleId,
       ]
@@ -558,62 +598,24 @@ export async function DELETE(
     const { searchParams } =
       new URL(request.url);
 
-    const id = searchParams.get("id");
+    const id =
+      searchParams.get("id");
 
     /* -------------------------------------------------------
        VALIDATION
        ------------------------------------------------------- */
 
     if (!id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Vehicle ID is required",
-        },
-        {
-          status: 400,
-        }
+      return errorResponse(
+        "Vehicle ID is required"
       );
     }
 
     const vehicleId = Number(id);
 
     if (!Number.isInteger(vehicleId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid vehicle ID",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    /* -------------------------------------------------------
-       CHECK VEHICLE
-       ------------------------------------------------------- */
-
-    const existing =
-      await pool.query(
-        `
-          SELECT id
-          FROM maintenance_vehicles
-          WHERE id = $1
-          LIMIT 1
-        `,
-        [vehicleId]
-      );
-
-    if (existing.rows.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Vehicle not found",
-        },
-        {
-          status: 404,
-        }
+      return errorResponse(
+        "Invalid vehicle ID"
       );
     }
 
@@ -632,10 +634,18 @@ export async function DELETE(
           capacity,
           manufacture_year,
           model,
+          type,
           area
       `,
       [vehicleId]
     );
+
+    if (result.rows.length === 0) {
+      return errorResponse(
+        "Vehicle not found",
+        404
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -659,3 +669,4 @@ export async function DELETE(
     );
   }
 }
+
