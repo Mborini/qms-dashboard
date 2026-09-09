@@ -36,6 +36,7 @@ import {
   IconTool,
   IconTrash,
 } from "@tabler/icons-react";
+import { exportMaintenanceExcel } from "@/utils/maintenanceExcel";
 
 type MaintenanceRecord = {
   id: number;
@@ -221,7 +222,70 @@ export default function MaintenanceHistoryPage() {
       kpiMap.values()
     );
   };
+const handleExportExcel = async () => {
+  try {
+    setError("");
 
+    if (filteredRecords.length === 0) {
+      setError(
+        "لا توجد سجلات مطابقة للفلاتر لتصديرها"
+      );
+      return;
+    }
+
+    const selectedVehicle = vehicles.find(
+      (vehicle) =>
+        String(vehicle.id) === vehicleId
+    );
+
+    const selectedKpi = kpis.find(
+      (kpi) =>
+        String(kpi.id) === kpiId
+    );
+
+    const selectedSubKpi =
+      selectedKpi?.sub_kpis.find(
+        (subKpi) =>
+          String(subKpi.id) === subKpiId
+      );
+
+    await exportMaintenanceExcel({
+      records: filteredRecords,
+
+      filters: {
+        search,
+        date,
+
+        vehicle:
+          selectedVehicle?.plate_number,
+
+        kpi:
+          selectedKpi?.name,
+
+        subKpi:
+          selectedSubKpi?.name,
+
+        status:
+          status === "open"
+            ? "مفتوحة"
+            : status === "closed"
+            ? "مغلقة"
+            : undefined,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Excel export error:",
+      error
+    );
+
+    setError(
+      error instanceof Error
+        ? error.message
+        : "حدث خطأ أثناء تصدير ملف Excel"
+    );
+  }
+};
   /**
    * ========================================
    * Load Filter Data
@@ -912,12 +976,22 @@ export default function MaintenanceHistoryPage() {
             </Text>
           </div>
 
-          <Badge
-            size="lg"
-            variant="light"
-          >
-            {filteredRecords.length} سجل
-          </Badge>
+          
+          <Button
+          radius="xl"
+          color="green"
+  variant="light"
+  leftSection={
+    <IconFileDescription size={18} />
+  }
+  onClick={handleExportExcel}
+  disabled={
+    loading ||
+    filteredRecords.length === 0
+  }
+>
+  تصدير Excel
+</Button>
         </Group>
 
         {/* ================= Error ================= */}
