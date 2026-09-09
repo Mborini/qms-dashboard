@@ -24,10 +24,7 @@ const handler = NextAuth({
       },
 
       async authorize(credentials) {
-        if (
-          !credentials?.username ||
-          !credentials?.password
-        ) {
+        if (!credentials?.username || !credentials?.password) {
           return null;
         }
 
@@ -40,11 +37,34 @@ const handler = NextAuth({
                 u.username,
                 u.password,
                 r.id AS role_id,
-                r.name AS role_name
+                r.name AS role_name,
+
+                COALESCE(
+                  ARRAY_AGG(p.name) FILTER (WHERE p.name IS NOT NULL),
+                  '{}'
+                ) AS permissions
+
               FROM users u
+
               INNER JOIN roles r
                 ON u.role_id = r.id
+
+              LEFT JOIN role_permissions rp
+                ON r.id = rp.role_id
+
+              LEFT JOIN permissions p
+                ON rp.permission_id = p.id
+
               WHERE u.username = $1
+
+              GROUP BY
+                u.id,
+                u.name,
+                u.username,
+                u.password,
+                r.id,
+                r.name
+
               LIMIT 1
             `,
             [credentials.username]
@@ -67,12 +87,10 @@ const handler = NextAuth({
             username: user.username,
             role: user.role_name,
             roleId: user.role_id,
+            permissions: user.permissions || [],
           };
         } catch (error) {
-          console.error(
-            "NextAuth authorize error:",
-            error
-          );
+          console.error("NextAuth authorize error:", error);
 
           return null;
         }
@@ -84,29 +102,31 @@ const handler = NextAuth({
     strategy: "jwt",
   },
 
- callbacks: {
-  async jwt({ token, user }) {
-    if (user) {
-      token.id = user.id;
-      token.username = user.username;
-      token.role = user.role;
-      token.roleId = user.roleId;
-    }
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.username = user.username;
+        token.role = user.role;
+        token.roleId = user.roleId;
+        token.permissions = user.permissions || [];
+      }
 
-    return token;
+      return token;
+    },
+
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id;
+        session.user.username = token.username;
+        session.user.role = token.role;
+        session.user.roleId = token.roleId;
+        session.user.permissions = token.permissions || [];
+      }
+
+      return session;
+    },
   },
-
-  async session({ session, token }) {
-    if (session.user) {
-      session.user.id = token.id;
-      session.user.username = token.username;
-      session.user.role = token.role;
-      session.user.roleId = token.roleId;
-    }
-
-    return session;
-  },
-},
 
   pages: {
     signIn: "/",

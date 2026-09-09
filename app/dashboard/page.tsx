@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -20,7 +21,6 @@ import {
   IconChartBar,
   IconMap,
   IconRoute,
-  IconTrash,
   IconMapPin,
   IconFileTypeXls,
   IconMap2,
@@ -33,30 +33,12 @@ import {
   IconChevronDown,
   IconChevronUp,
   IconRefresh,
+  IconShield,
+  IconLock,
 } from "@tabler/icons-react";
 
 import { bungee } from "../layout";
-
-/* =========================================================
-   ACCESS
-========================================================= */
-
-const cardAccess = {
-  statistics: [1, 3],
-  map: [1, 3],
-  routeNotes: [1, 4],
-
-  binMap: [1],
-  binAreas: [1],
-  binExport: [1],
-
-  maintenanceManagement: [1, 2, 5],
-  maintenanceHistory: [1, 2, 5],
-  maintenanceTypes: [1, 2],
-  maintenanceVehicles: [1, 2],
-
-  users: [1],
-};
+import { hasPermission } from "../lib/permissions";
 
 /* =========================================================
    SECTION HEADER
@@ -90,11 +72,7 @@ function SectionHeader({
       }}
       onClick={collapsible ? onToggle : undefined}
     >
-      <Group
-        justify="center"
-        align="center"
-        gap={12}
-      >
+      <Group justify="center" align="center" gap={12}>
         <Box
           style={{
             width: 52,
@@ -115,11 +93,7 @@ function SectionHeader({
         </Box>
 
         <Box>
-          <Group
-            justify="center"
-            align="center"
-            gap={8}
-          >
+          <Group justify="center" align="center" gap={8}>
             <Text
               fw={850}
               style={{
@@ -227,19 +201,15 @@ function ModuleCard({
 
           borderRadius: 20,
 
-          background:
-            "rgba(255,255,255,0.78)",
+          background: "rgba(255,255,255,0.78)",
 
-          border:
-            "1px solid rgba(35,55,70,0.07)",
+          border: "1px solid rgba(35,55,70,0.07)",
 
-          boxShadow:
-            "0 8px 30px rgba(35,55,70,0.055)",
+          boxShadow: "0 8px 30px rgba(35,55,70,0.055)",
 
           overflow: "hidden",
 
-          transition:
-            "all 180ms ease",
+          transition: "all 180ms ease",
 
           display: "flex",
           flexDirection: "column",
@@ -262,23 +232,17 @@ function ModuleCard({
 
             opacity: 0.75,
 
-            transform:
-              "scaleX(0.35)",
+            transform: "scaleX(0.35)",
 
-            transformOrigin:
-              "center",
+            transformOrigin: "center",
 
-            transition:
-              "transform 180ms ease",
+            transition: "transform 180ms ease",
           }}
         />
 
         {/* ICON */}
 
-        <Group
-          justify="space-between"
-          align="flex-start"
-        >
+        <Group justify="space-between" align="flex-start">
           <ThemeIcon
             size={56}
             radius={17}
@@ -304,8 +268,7 @@ function ModuleCard({
               alignItems: "center",
               justifyContent: "center",
 
-              background:
-                "rgba(35,55,70,0.035)",
+              background: "rgba(35,55,70,0.035)",
 
               color: "#a0abb2",
 
@@ -355,6 +318,7 @@ function ModuleCard({
           }}
         >
           {footer}
+
           <span
             style={{
               marginRight: 5,
@@ -373,27 +337,18 @@ function ModuleCard({
 ========================================================= */
 
 export default function Page() {
-  const {
-    data: session,
-    status,
-  } = useSession();
+  const { data: session, status } = useSession();
 
-  const role =
-    Number(session?.user?.roleId);
-
-  const [
-    maintenanceOpen,
-    setMaintenanceOpen,
-  ] = useState(true);
+  const [maintenanceOpen, setMaintenanceOpen] = useState(true);
 
   /* =======================================================
-     ACCESS
+     PERMISSIONS
   ======================================================= */
 
-  const hasAccess = (
-    card: keyof typeof cardAccess
-  ) => {
-    return cardAccess[card].includes(role);
+  const permissions = session?.user?.permissions  || [];
+
+  const can = (permission: string) => {
+    return hasPermission(permissions, permission);
   };
 
   /* =======================================================
@@ -422,8 +377,7 @@ export default function Page() {
           alignItems: "center",
           justifyContent: "center",
 
-          background:
-            "#f7f9fb",
+          background: "#f7f9fb",
         }}
       >
         <Box
@@ -461,59 +415,53 @@ export default function Page() {
      VISIBILITY
   ======================================================= */
 
-  const showOperations =
-    hasAccess("statistics") ||
-    hasAccess("map") ||
-    hasAccess("routeNotes") ||
-    hasAccess("binMap") ||
-    hasAccess("binAreas") ||
-    hasAccess("binExport");
-
-  const showMaintenance =
-    hasAccess(
-      "maintenanceManagement"
-    ) ||
-    hasAccess(
-      "maintenanceHistory"
-    ) ||
-    hasAccess(
-      "maintenanceTypes"
-    ) ||
-    hasAccess(
-      "maintenanceVehicles"
-    );
-
-  const showAdmin =
-    hasAccess("users");
-
   /* =======================================================
-     COUNTS
-  ======================================================= */
+   PERMISSION GROUPS
+======================================================= */
 
-  const operationsCount = [
-    hasAccess("statistics"),
-    hasAccess("map"),
-    hasAccess("routeNotes"),
-    hasAccess("binMap"),
-    hasAccess("binAreas"),
-    hasAccess("binExport"),
-  ].filter(Boolean).length;
+const operationsPermissions = [
+  "statistics",
+  "map",
+  "route_notes",
+  "bins",
+  "collection_areas",
+  "bin_export",
+];
 
-  const maintenanceCount = [
-    hasAccess(
-      "maintenanceManagement"
-    ),
-    hasAccess(
-      "maintenanceHistory"
-    ),
-    hasAccess(
-      "maintenanceTypes"
-    ),
-    hasAccess(
-      "maintenanceVehicles"
-    ),
-  ].filter(Boolean).length;
+const maintenancePermissions = [
+  "maintenance",
+  "maintenance_history",
+  "maintenance_types",
+  "vehicles",
+];
 
+const adminPermissions = [
+  "users",
+  "roles",
+  "permissions",
+];
+
+/* =======================================================
+   VISIBILITY
+======================================================= */
+
+const showOperations = operationsPermissions.some(can);
+
+const showMaintenance = maintenancePermissions.some(can);
+
+const showAdmin = adminPermissions.some(can);
+
+/* =======================================================
+   COUNTS
+======================================================= */
+
+const operationsCount = operationsPermissions.filter(can).length;
+
+const maintenanceCount = maintenancePermissions.filter(can).length;
+
+const adminCount = adminPermissions.filter(can).length;
+
+ 
   /* =======================================================
      RETURN
   ======================================================= */
@@ -534,14 +482,8 @@ export default function Page() {
           HEADER
       =================================================== */}
 
-      <Container
-        size={1150}
-        pt={25}
-      >
-        <Group
-          justify="space-between"
-          align="center"
-        >
+      <Container size={1150} pt={25}>
+        <Group justify="space-between" align="center">
           {/* USER */}
 
           <Box>
@@ -553,8 +495,7 @@ export default function Page() {
                   color: "#354957",
                 }}
               >
-                مرحباً،{" "}
-                {session.user.name}
+                مرحباً، {session.user.name}
               </Text>
             )}
 
@@ -576,14 +517,8 @@ export default function Page() {
             color="red"
             radius="xl"
             size="sm"
-            leftSection={
-              <IconLogout
-                size={16}
-              />
-            }
-            onClick={
-              handleLogout
-            }
+            leftSection={<IconLogout size={16} />}
+            onClick={handleLogout}
           >
             تسجيل الخروج
           </Button>
@@ -594,11 +529,7 @@ export default function Page() {
           MAIN
       =================================================== */}
 
-      <Container 
-      dir={"ltr"}
-        size={1150}
-        py={45}
-      >
+      <Container dir="ltr" size={1150} py={45}>
         {/* =================================================
             BRAND
         ================================================= */}
@@ -620,19 +551,15 @@ export default function Page() {
             <Text
               component="span"
               style={{
-                fontFamily:
-                  "Inter, sans-serif",
+                fontFamily: "Inter, sans-serif",
 
-                fontSize:
-                  "clamp(42px, 5vw, 58px)",
+                fontSize: "clamp(42px, 5vw, 58px)",
 
                 fontWeight: 600,
 
-                letterSpacing:
-                  "-2px",
+                letterSpacing: "-2px",
 
-                color:
-                  "#344955",
+                color: "#344955",
 
                 lineHeight: 1,
               }}
@@ -642,26 +569,20 @@ export default function Page() {
 
             <Text
               component="span"
-              className={
-                bungee.className
-              }
+              className={bungee.className}
               style={{
-                fontSize:
-                  "clamp(40px, 4.5vw, 55px)",
+                fontSize: "clamp(40px, 4.5vw, 55px)",
 
                 lineHeight: 1,
 
                 background:
                   "linear-gradient(110deg, #1971c2, #228be6, #12b886)",
 
-                WebkitBackgroundClip:
-                  "text",
+                WebkitBackgroundClip: "text",
 
-                WebkitTextFillColor:
-                  "transparent",
+                WebkitTextFillColor: "transparent",
 
-                backgroundClip:
-                  "text",
+                backgroundClip: "text",
               }}
             >
               Matrix
@@ -673,24 +594,17 @@ export default function Page() {
             size="xs"
             fw={700}
             style={{
-              letterSpacing:
-                "2.5px",
+              letterSpacing: "2.5px",
 
-              color:
-                "#9aa5ac",
+              color: "#9aa5ac",
 
-              textTransform:
-                "uppercase",
+              textTransform: "uppercase",
             }}
           >
             Operations Intelligence
           </Text>
 
-          <Group
-            justify="center"
-            gap={7}
-            mt={14}
-          >
+          <Group justify="center" gap={7} mt={14}>
             <Box
               style={{
                 width: 7,
@@ -719,10 +633,7 @@ export default function Page() {
         ================================================= */}
 
         {showOperations && (
-          <Box
-            className="dashboard-section"
-            mb={60}
-          >
+          <Box className="dashboard-section" mb={60}>
             <SectionHeader
               icon={
                 <IconMap2
@@ -733,9 +644,7 @@ export default function Page() {
               title="Operations"
               description="Operational monitoring, field activities and collection"
               color="#228be6"
-              count={
-                operationsCount
-              }
+              count={operationsCount}
             />
 
             <SimpleGrid
@@ -748,118 +657,78 @@ export default function Page() {
             >
               {/* STATISTICS */}
 
-              {hasAccess(
-                "statistics"
-              ) && (
+              {can("statistics") && (
                 <ModuleCard
                   href="/failures/stats"
                   title="Violations Statistics"
                   description="Analyze violations, KPIs, areas and operational performance."
                   footer="Open Statistics"
-                  icon={
-                    <IconChartBar
-                      size={28}
-                    />
-                  }
+                  icon={<IconChartBar size={28} />}
                   color="#228be6"
                 />
               )}
 
               {/* MAP */}
 
-              {hasAccess("map") && (
+              {can("map") && (
                 <ModuleCard
                   href="/failures/osm"
                   title="Violations Map"
                   description="Explore violations geographically using the interactive map."
                   footer="Open Map"
-                  icon={
-                    <IconMap
-                      size={28}
-                    />
-                  }
+                  icon={<IconMap size={28} />}
                   color="#f08c00"
                 />
               )}
 
               {/* ROUTE NOTES */}
 
-              {hasAccess(
-                "routeNotes"
-              ) && (
+              {can("route_notes") && (
                 <ModuleCard
                   href="/route-notes"
                   title="Route Notes"
                   description="Create, review and manage route notes and field observations."
                   footer="Open Route Notes"
-                  icon={
-                    <IconRoute
-                      size={28}
-                    />
-                  }
+                  icon={<IconRoute size={28} />}
                   color="#7950f2"
                 />
               )}
 
-              {/* =================================================
-                  BIN MAP
-              ================================================= */}
+              {/* BIN MAP */}
 
-              {hasAccess(
-                "binMap"
-              ) && (
+              {can("bins") && (
                 <ModuleCard
                   href="/binCollection/map"
                   title="Collection Map"
                   description="View and manage bin locations directly on the map."
                   footer="Open Collection Map"
-                  icon={
-                    <IconMapPin
-                      size={28}
-                    />
-                  }
+                  icon={<IconMapPin size={28} />}
                   color="#12b886"
                 />
               )}
 
-              {/* =================================================
-                  COLLECTION AREAS
-              ================================================= */}
+              {/* COLLECTION AREAS */}
 
-              {hasAccess(
-                "binAreas"
-              ) && (
+              {can("collection_areas") && (
                 <ModuleCard
                   href="/binCollection/collection-areas/manage"
                   title="Collection Areas"
                   description="Manage collection areas, zones and operational boundaries."
                   footer="Manage Areas"
-                  icon={
-                    <IconMap2
-                      size={28}
-                    />
-                  }
+                  icon={<IconMap2 size={28} />}
                   color="#0ca678"
                 />
               )}
 
-              {/* =================================================
-                  EXPORT BINS
-              ================================================= */}
+              {/* EXPORT BINS */}
 
-              {hasAccess(
-                "binExport"
-              ) && (
+              {can("bin_export") && (
                 <ModuleCard
                   href="/binCollection/export-bins"
                   title="Export Bins"
                   description="Export bin data and collection information for reporting."
                   footer="Export Data"
-                  icon={
-                    <IconFileTypeXls
-                      size={28}
-                    />
-                  }
+                  icon={<IconFileTypeXls size={28} />}
                   color="#2f9e44"
                 />
               )}
@@ -867,27 +736,23 @@ export default function Page() {
           </Box>
         )}
 
-        {/* ===================================================
+        {/* =================================================
             DIVIDER
-        =================================================== */}
+        ================================================= */}
 
-        {showOperations &&
-          showMaintenance && (
-            <Divider
-              mb={60}
-              color="rgba(35,55,70,0.06)"
-            />
-          )}
+        {showOperations && showMaintenance && (
+          <Divider
+            mb={60}
+            color="rgba(35,55,70,0.06)"
+          />
+        )}
 
-        {/* ===================================================
+        {/* =================================================
             MAINTENANCE
-        =================================================== */}
+        ================================================= */}
 
         {showMaintenance && (
-          <Box
-            className="dashboard-section"
-            mb={60}
-          >
+          <Box className="dashboard-section" mb={60}>
             <SectionHeader
               icon={
                 <IconTool
@@ -898,18 +763,11 @@ export default function Page() {
               title="Maintenance"
               description="Vehicle maintenance, records and configuration"
               color="#e03131"
-              count={
-                maintenanceCount
-              }
+              count={maintenanceCount}
               collapsible
-              opened={
-                maintenanceOpen
-              }
+              opened={maintenanceOpen}
               onToggle={() =>
-                setMaintenanceOpen(
-                  (value) =>
-                    !value
-                )
+                setMaintenanceOpen((value) => !value)
               }
             />
 
@@ -924,76 +782,52 @@ export default function Page() {
               >
                 {/* MANAGEMENT */}
 
-                {hasAccess(
-                  "maintenanceManagement"
-                ) && (
+                {can("maintenance") && (
                   <ModuleCard
                     href="/maintenance/management"
                     title="Maintenance Management"
                     description="Manage maintenance tasks, work orders and operational actions."
                     footer="Open Management"
-                    icon={
-                      <IconTool
-                        size={28}
-                      />
-                    }
+                    icon={<IconTool size={28} />}
                     color="#228be6"
                   />
                 )}
 
                 {/* HISTORY */}
 
-                {hasAccess(
-                  "maintenanceHistory"
-                ) && (
+                {can("maintenance_history") && (
                   <ModuleCard
                     href="/maintenance/history"
                     title="Maintenance History"
                     description="Review previous maintenance operations and service records."
                     footer="Open History"
-                    icon={
-                      <IconHistory
-                        size={28}
-                      />
-                    }
+                    icon={<IconHistory size={28} />}
                     color="#7950f2"
                   />
                 )}
 
                 {/* TYPES */}
 
-                {hasAccess(
-                  "maintenanceTypes"
-                ) && (
+                {can("maintenance_types") && (
                   <ModuleCard
                     href="/maintenance/setup"
                     title="Maintenance Types"
                     description="Configure maintenance types and service categories."
                     footer="Open Configuration"
-                    icon={
-                      <IconSettings
-                        size={28}
-                      />
-                    }
+                    icon={<IconSettings size={28} />}
                     color="#12b886"
                   />
                 )}
 
                 {/* VEHICLES */}
 
-                {hasAccess(
-                  "maintenanceVehicles"
-                ) && (
+                {can("vehicles") && (
                   <ModuleCard
                     href="/maintenance/vehicles"
                     title="Maintenance Vehicles"
                     description="Manage vehicles and their maintenance information."
                     footer="Open Vehicles"
-                    icon={
-                      <IconTruck
-                        size={28}
-                      />
-                    }
+                    icon={<IconTruck size={28} />}
                     color="#f08c00"
                   />
                 )}
@@ -1002,61 +836,85 @@ export default function Page() {
           </Box>
         )}
 
-        {/* ===================================================
+        {/* =================================================
             DIVIDER
-        =================================================== */}
+        ================================================= */}
 
-        {showMaintenance &&
-          showAdmin && (
-            <Divider
-              mb={60}
-              color="rgba(35,55,70,0.06)"
-            />
-          )}
-
-        {/* ===================================================
-            ADMINISTRATION
-        =================================================== */}
-
-        {showAdmin && (
-          <Box
-            className="dashboard-section"
-            mb={20}
-          >
-            <SectionHeader
-              icon={
-                <IconUsers
-                  size={27}
-                  stroke={1.8}
-                />
-              }
-              title="Administration"
-              description="Users, roles and system access"
-              color="#4c6ef5"
-              count={1}
-            />
-
-            <Box
-              style={{
-                maxWidth: 420,
-                margin: "0 auto",
-              }}
-            >
-              <ModuleCard
-                href="/users"
-                title="User Management"
-                description="Create, edit and manage system users and their roles."
-                footer="Manage Users"
-                icon={
-                  <IconUsers
-                    size={28}
-                  />
-                }
-                color="#4c6ef5"
-              />
-            </Box>
-          </Box>
+        {showMaintenance && showAdmin && (
+          <Divider
+            mb={60}
+            color="rgba(35,55,70,0.06)"
+          />
         )}
+
+        {/* =================================================
+            ADMINISTRATION
+        ================================================= */}
+
+       {showAdmin && (
+  <Box className="dashboard-section" mb={20}>
+    <SectionHeader
+      icon={
+        <IconUsers
+          size={27}
+          stroke={1.8}
+        />
+      }
+      title="Administration"
+      description="Users, roles and system access"
+      color="#4c6ef5"
+      count={adminCount}
+    />
+
+    <SimpleGrid
+      cols={{
+        base: 1,
+        sm: 2,
+        lg: 3,
+      }}
+      spacing="lg"
+    >
+      {/* USERS */}
+
+      {can("users") && (
+        <ModuleCard
+          href="admin/users"
+          title="User Management"
+          description="Create, edit and manage system users and their roles."
+          footer="Manage Users"
+          icon={<IconUsers size={28} />}
+          color="#4c6ef5"
+        />
+      )}
+
+      {/* ROLES */}
+
+      {can("roles") && (
+        <ModuleCard
+          href="/admin/roles"
+          title="Roles Management"
+          description="Create, edit and manage system roles and access levels."
+          footer="Manage Roles"
+          icon={<IconShield size={28} />}
+          color="#7950f2"
+        />
+      )}
+
+      {/* PERMISSIONS */}
+
+      {can("permissions") && (
+        <ModuleCard
+          href="/admin/permissions"
+          title="Permissions Management"
+          description="Assign permissions to roles and control system access."
+          footer="Manage Permissions"
+          icon={<IconLock size={28} />}
+          color="#12b886"
+        />
+      )}
+    </SimpleGrid>
+  </Box>
+)}
       </Container>
 
       {/* =====================================================
@@ -1075,8 +933,7 @@ export default function Page() {
             color: "#b0b9bf",
           }}
         >
-          Ops Matrix · Operations
-          Intelligence
+          Ops Matrix · Operations Intelligence
         </Text>
       </Box>
 
@@ -1085,20 +942,16 @@ export default function Page() {
       ===================================================== */}
 
       <style>{`
-
         /* ================================================
            CARD HOVER
         ================================================ */
 
         .module-card:hover {
-          transform:
-            translateY(-5px);
+          transform: translateY(-5px);
 
-          background:
-            rgba(255,255,255,0.96) !important;
+          background: rgba(255,255,255,0.96) !important;
 
-          border-color:
-            rgba(35,55,70,0.10) !important;
+          border-color: rgba(35,55,70,0.10) !important;
 
           box-shadow:
             0 18px 42px
@@ -1107,14 +960,12 @@ export default function Page() {
 
         .module-card:hover
         .card-accent {
-          transform:
-            scaleX(1);
+          transform: scaleX(1);
         }
 
         .module-card:hover
         .card-number {
-          background:
-            rgba(35,55,70,0.06);
+          background: rgba(35,55,70,0.06);
         }
 
         /* ================================================
@@ -1130,7 +981,6 @@ export default function Page() {
         }
 
         @keyframes sectionIn {
-
           from {
             opacity: 0;
 
@@ -1144,7 +994,6 @@ export default function Page() {
             transform:
               translateY(0);
           }
-
         }
 
         /* ================================================
@@ -1160,7 +1009,6 @@ export default function Page() {
         }
 
         @keyframes spin {
-
           from {
             transform:
               rotate(0deg);
@@ -1170,7 +1018,6 @@ export default function Page() {
             transform:
               rotate(360deg);
           }
-
         }
 
         /* ================================================
@@ -1178,7 +1025,6 @@ export default function Page() {
         ================================================ */
 
         @media (max-width: 576px) {
-
           .module-card {
             min-height:
               225px !important;
@@ -1189,7 +1035,6 @@ export default function Page() {
             border-radius:
               18px !important;
           }
-
         }
 
         /* ================================================
@@ -1197,7 +1042,6 @@ export default function Page() {
         ================================================ */
 
         @media (prefers-reduced-motion: reduce) {
-
           .module-card,
           .dashboard-section,
           .loading-icon {
@@ -1212,10 +1056,9 @@ export default function Page() {
             transform:
               none !important;
           }
-
         }
-
       `}</style>
     </Box>
   );
 }
+
