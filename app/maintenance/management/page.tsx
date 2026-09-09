@@ -90,8 +90,11 @@ type MaintenanceRecord = {
   entry_at: string;
   exit_at?: string | null;
 
-  created_at?: string | null;
-};
+created_at?: string | null;
+created_by?: string | null;
+
+updated_at?: string | null;
+updated_by?: string | null;};
 
 type Message = {
   type: "success" | "error";
@@ -149,24 +152,58 @@ function localDateTimeToISOString(
   return localDate.toISOString();
 }
 
-function formatDateTime(value?: string | null) {
+
+function formatDateTime(
+  value?: string | null
+) {
   if (!value) return "-";
 
-  const date = new Date(value);
+  let normalizedValue = value.trim();
+
+  // PostgreSQL timestamp without time zone
+  // created_at عندنا مخزن UTC
+  //
+  // مثال:
+  // 2026-09-09 06:00:00
+  //
+  // نحوله إلى:
+  // 2026-09-09T06:00:00Z
+  //
+  // حتى لا يضيف JavaScript +3 ساعات.
+
+  if (
+    !normalizedValue.endsWith("Z") &&
+    !/[+-]\d{2}:\d{2}$/.test(normalizedValue)
+  ) {
+    normalizedValue =
+      normalizedValue.replace(" ", "T") + "Z";
+  }
+
+  const date =
+    new Date(normalizedValue);
 
   if (Number.isNaN(date.getTime())) {
     return "-";
   }
 
-  return date.toLocaleString("en-GB", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  return date.toLocaleString(
+    "en-GB",
+    {
+      timeZone: "Asia/Amman",
+
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+
+      hour12: false,
+    }
+  );
 }
+
 
 function getDateTimeTimestamp(
   date: string,
@@ -866,9 +903,25 @@ export default function MaintenancePage() {
               item.exit_at ??
               null,
 
-            created_at:
-              item.created_at ??
-              null,
+            // =========================================
+// Created / Updated information
+// =========================================
+
+created_at:
+  item.created_at ??
+  null,
+
+created_by:
+  item.created_by ??
+  null,
+
+updated_at:
+  item.updated_at ??
+  null,
+
+updated_by:
+  item.updated_by ??
+  null,
           })
         );
 
@@ -1447,176 +1500,148 @@ const vehicleOptions = useMemo(() => {
   // Submit exit
   // ===================================================
 
-  const handleExit = async () => {
-    if (!selectedExitRecord) {
-      return;
-    }
+ const handleExit = async () => {
+  if (!selectedExitRecord) {
+    return;
+  }
 
-    setMessage(null);
+  // =========================================
+  // التأكد من وجود المستخدم
+  // =========================================
+  if (!username) {
+    setMessage({
+      type: "error",
+      text: "لم يتم التعرف على المستخدم الحالي، يرجى تسجيل الدخول مرة أخرى.",
+    });
 
-    if (exitDateTimeError) {
-      setMessage({
-        type: "error",
-        text: exitDateTimeError,
-      });
+    return;
+  }
 
-      return;
-    }
+  // =========================================
+  // التحقق من تاريخ الخروج
+  // =========================================
+  if (!exitDate) {
+    setMessage({
+      type: "error",
+      text: "يرجى تحديد تاريخ الخروج.",
+    });
 
-    // ===============================================
-    // Future protection
-    // ===============================================
+    return;
+  }
+
+  // =========================================
+  // التحقق من وقت الخروج
+  // =========================================
+  if (!exitTime) {
+    setMessage({
+      type: "error",
+      text: "يرجى تحديد وقت الخروج.",
+    });
+
+    return;
+  }
+
+  // =========================================
+  // تحويل التاريخ والوقت إلى ISO
+  // =========================================
+  const exitAt = localDateTimeToISOString(
+    exitDate,
+    exitTime
+  );
+
+  if (!exitAt) {
+    setMessage({
+      type: "error",
+      text: "تاريخ أو وقت الخروج غير صحيح.",
+    });
+
+    return;
+  }
+
+  // =========================================
+  // التحقق من أن الخروج بعد الدخول
+  // =========================================
+  if (selectedExitRecord.entry_at) {
+    const entryDate = new Date(selectedExitRecord.entry_at);
+    const parsedExitDate = new Date(exitAt);
 
     if (
-      isFutureDateTime(
-        exitDate,
-        exitTime,
-        new Date()
-      )
+      !Number.isNaN(entryDate.getTime()) &&
+      !Number.isNaN(parsedExitDate.getTime()) &&
+      parsedExitDate.getTime() < entryDate.getTime()
     ) {
       setMessage({
         type: "error",
-        text:
-          "لا يمكن تسجيل خروج بتاريخ أو وقت مستقبلي",
+        text: "وقت الخروج لا يمكن أن يكون قبل وقت الدخول.",
       });
 
       return;
     }
+  }
 
-    // ===============================================
-    // Convert local exit time -> UTC ISO
-    // ===============================================
+  try {
+    setLoading(true);
 
-    const exitAt =
-      localDateTimeToISOString(
-        exitDate,
-        exitTime
-      );
+    // Debug
+    console.log("EXIT USERNAME:", username);
 
-    if (!exitAt) {
-      setMessage({
-        type: "error",
-        text:
-          "تاريخ ووقت الخروج غير صحيح",
-      });
+    const response = await fetch(
+      `/api/maintenance/${selectedExitRecord.id}/exit`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          exit_at: exitAt,
+          notes: exitNotes.trim() || null,
 
-      return;
-    }
-
-    console.log(
-      "LOCAL EXIT:",
-      `${exitDate}T${exitTime}:00`
-    );
-
-    console.log(
-      "UTC EXIT:",
-      exitAt
-    );
-
-    // ===============================================
-    // Exit cannot be before entry
-    // ===============================================
-
-    const entryTimestamp =
-      new Date(
-        selectedExitRecord.entry_at
-      ).getTime();
-
-    // مهم:
-    // نستخدم exitAt بعد تحويله إلى UTC
-    // حتى تكون المقارنة بنفس المنطقة الزمنية
-    const exitTimestamp =
-      new Date(exitAt).getTime();
-
-    if (
-      !Number.isNaN(
-        entryTimestamp
-      ) &&
-      !Number.isNaN(
-        exitTimestamp
-      ) &&
-      exitTimestamp <
-        entryTimestamp
-    ) {
-      setMessage({
-        type: "error",
-        text:
-          "وقت الخروج لا يمكن أن يكون قبل وقت الدخول",
-      });
-
-      return;
-    }
-
-    try {
-      setSavingExit(true);
-
-      const response =
-        await fetch(
-          `/api/maintenance/${selectedExitRecord.id}/exit`,
-          {
-            method: "PATCH",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              exit_at:
-                exitAt,
-
-              notes:
-                exitNotes.trim() ||
-                null,
-
-              updated_by:
-                username,
-            }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error ||
-            "تعذر إنهاء الصيانة"
-        );
+          // المستخدم الذي قام بإغلاق الصيانة
+          updated_by: username,
+        }),
       }
+    );
 
-      setMessage({
-        type: "success",
-        text:
-          "تم إخراج المركبة من الصيانة بنجاح",
-      });
+    const data = await response.json();
 
-      setExitModalOpened(
-        false
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data?.error || "Failed to close maintenance record"
       );
-
-      setSelectedExitRecord(
-        null
-      );
-
-      await loadData(false);
-    } catch (error) {
-      console.error(
-        "EXIT ERROR:",
-        error
-      );
-
-      setMessage({
-        type: "error",
-        text:
-          error instanceof Error
-            ? error.message
-            : "تعذر إنهاء الصيانة",
-      });
-    } finally {
-      setSavingExit(false);
     }
-  };
+
+    // =========================================
+    // نجاح العملية
+    // =========================================
+    setMessage({
+      type: "success",
+      text: "تم إخراج المركبة من الصيانة بنجاح.",
+    });
+
+    // إغلاق المودال
+    setExitModalOpened(false);
+
+    // تنظيف البيانات
+    setSelectedExitRecord(null);
+setExitDate(getCurrentDate());    setExitTime("");
+    setExitNotes("");
+
+    // تحديث البيانات
+    await loadData(false);
+  } catch (error) {
+    console.error("Exit maintenance error:", error);
+
+    setMessage({
+      type: "error",
+      text:
+        error instanceof Error
+          ? error.message
+          : "حدث خطأ أثناء إخراج المركبة من الصيانة.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ===================================================
   // Loading screen
@@ -2206,17 +2231,29 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
 
                       {/* Created */}
 
-                      {record.created_at && (
-                        <Text
-                          size="xs"
-                          c="dimmed"
-                        >
-                          تم إنشاء السجل:{" "}
-                          {formatDateTime(
-                            record.created_at
-                          )}
-                        </Text>
-                      )}
+                     {/* Created / Updated */}
+
+<Stack gap={3}>
+
+  {/* Created */}
+
+  {record.created_at && (
+    <Text
+      size="xs"
+      c="dimmed"
+    >
+      تم إنشاء السجل:{" "}
+      {formatDateTime(record.created_at)}
+
+      {record.created_by
+        ? ` بواسطة ${record.created_by}`
+        : ""}
+    </Text>
+  )}
+
+  
+
+</Stack>
 
                       <Button
                         color="red"

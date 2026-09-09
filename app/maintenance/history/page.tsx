@@ -17,15 +17,22 @@ import {
   Stack,
   Text,
   Textarea,
+  ThemeIcon,
   Title,
 } from "@mantine/core";
 
 import {
   IconAlertCircle,
   IconCar,
+  IconCircleCheck,
   IconClock,
+  IconFileDescription,
+  IconHistory,
+  IconInfoCircle,
   IconLogin,
   IconLogout,
+  IconNotes,
+  IconTimeline,
   IconTool,
   IconTrash,
 } from "@tabler/icons-react";
@@ -1615,412 +1622,746 @@ export default function MaintenanceHistoryPage() {
 
       {/* ================= Details Modal ================= */}
 
-      <Modal
-        opened={
-          detailsOpened
-        }
-        onClose={() => {
-          setDetailsOpened(
-            false
-          );
-
-          setSelectedRecord(
-            null
-          );
-        }}
-        title={
-          <Group gap="sm">
-            <IconTool
-              size={22}
-            />
-
-            <Text fw={700}>
-              تفاصيل الصيانة
-            </Text>
-          </Group>
-        }
-        size="lg"
-        centered
+     <Modal
+  dir="rtl"
+  opened={detailsOpened}
+  onClose={() => {
+    setDetailsOpened(false);
+    setSelectedRecord(null);
+  }}
+  size="xl"
+  centered
+  radius="lg"
+  padding={20}
+  withCloseButton
+  title={
+    <Group gap="sm" px="xs">
+      <ThemeIcon
+        size={38}
+        radius="md"
+        variant="light"
+        color="blue"
       >
-        {selectedRecord && (
-          <Stack gap="md">
+        <IconTool size={21} />
+      </ThemeIcon>
 
-            {/* Vehicle */}
+      <div>
+        <Text fw={700} size="md">
+          تفاصيل سجل الصيانة
+        </Text>
 
-            <Card
-              withBorder
-              radius="md"
-              padding="md"
+        <Text size="xs" c="dimmed">
+          معلومات الصيانة والتوقيت وسجل الإجراءات
+        </Text>
+      </div>
+    </Group>
+  }
+>
+  {selectedRecord && (
+    <Stack gap="lg">
+
+      {/* ===================================================== */}
+      {/* Vehicle Header */}
+      {/* ===================================================== */}
+
+      <Card
+        withBorder
+        radius="lg"
+        padding="lg"
+        bg="var(--mantine-color-gray-0)"
+      >
+        <Group
+          justify="space-between"
+          align="center"
+          wrap="nowrap"
+        >
+          <Group gap="md" wrap="nowrap">
+
+            <ThemeIcon
+              size={54}
+              radius="xl"
+              variant="light"
+              color="blue"
             >
-              <Group>
-                <IconCar
-                  size={25}
-                />
+              <IconCar size={30} />
+            </ThemeIcon>
 
-                <div>
-                  <Text
-                    size="sm"
-                    c="dimmed"
-                  >
-                    المركبة
-                  </Text>
-
-                  <Text fw={700}>
-                    {
-                      selectedRecord.plate_number
-                    }
-                  </Text>
-
-                  <Text
-                    size="sm"
-                    c="dimmed"
-                  >
-                    {
-                      selectedRecord.model ||
-                      "-"
-                    }
-                  </Text>
-                </div>
-              </Group>
-            </Card>
-
-            {/* Maintenance */}
-
-            <Card
-              withBorder
-              radius="md"
-              padding="md"
-            >
-              <Group
-                justify="space-between"
+            <div>
+              <Text
+                size="xs"
+                c="dimmed"
+                fw={500}
               >
-                <div>
-                  <Text
-                    size="sm"
-                    c="dimmed"
-                  >
-                    نوع الصيانة
-                  </Text>
-
-                  <Text fw={700}>
-                    {
-                      selectedRecord.kpi_name
-                    }
-                  </Text>
-
-                  <Text
-                    size="sm"
-                    c="dimmed"
-                  >
-                    {
-                      selectedRecord.sub_kpi_name
-                    }
-                  </Text>
-                </div>
-
-                <Badge
-                  color={
-                    selectedRecord.status ===
-                    "open"
-                      ? "orange"
-                      : "green"
-                  }
-                >
-                  {selectedRecord.status ===
-                  "open"
-                    ? "مفتوحة"
-                    : "مغلقة"}
-                </Badge>
-              </Group>
-            </Card>
-
-            <Divider />
-
-            {/* Timeline */}
-
-            <SimpleGrid
-              cols={{
-                base: 1,
-                sm: 2,
-              }}
-            >
-              {/* Entry */}
-
-              <Card
-                withBorder
-                radius="md"
-                padding="md"
-              >
-                <Group gap="xs">
-                  <IconLogin
-                    size={20}
-                  />
-
-                  <Text fw={600}>
-                    وقت الدخول
-                  </Text>
-                </Group>
-
-                <Text
-                  mt="xs"
-                  size="sm"
-                >
-                  {formatDateTime(
-                    selectedRecord.entry_at
-                  )}
-                </Text>
-              </Card>
-
-              {/* Exit */}
-
-              <Card
-                withBorder
-                radius="md"
-                padding="md"
-              >
-                <Group gap="xs">
-                  <IconLogout
-                    size={20}
-                  />
-
-                  <Text fw={600}>
-                    وقت الخروج
-                  </Text>
-                </Group>
-
-                <Text
-                  mt="xs"
-                  size="sm"
-                >
-                  {formatDateTime(
-                    selectedRecord.exit_at
-                  )}
-                </Text>
-              </Card>
-            </SimpleGrid>
-
-            {/* Duration */}
-
-            <Card
-              withBorder
-              radius="md"
-              padding="md"
-            >
-              <Group gap="xs">
-                <IconClock
-                  size={20}
-                />
-
-                <Text fw={600}>
-                  مدة الصيانة
-                </Text>
-              </Group>
+                المركبة
+              </Text>
 
               <Text
-                mt="xs"
+                size="xl"
+                fw={800}
+                lh={1.2}
+              >
+                {selectedRecord.plate_number || "-"}
+              </Text>
+
+              <Text
+                size="sm"
+                c="dimmed"
+                mt={3}
+              >
+                {selectedRecord.model || "-"}
+              </Text>
+            </div>
+
+          </Group>
+
+          <Badge
+            size="lg"
+            radius="md"
+            variant="light"
+            color={
+              selectedRecord.status === "open"
+                ? "orange"
+                : "green"
+            }
+            leftSection={
+              selectedRecord.status === "open" ? (
+                <IconClock size={15} />
+              ) : (
+                <IconCircleCheck size={15} />
+              )
+            }
+          >
+            {selectedRecord.status === "open"
+              ? "الصيانة مفتوحة"
+              : "الصيانة مغلقة"}
+          </Badge>
+        </Group>
+      </Card>
+
+
+      {/* ===================================================== */}
+      {/* Maintenance Type */}
+      {/* ===================================================== */}
+
+      <Card
+        withBorder
+        radius="lg"
+        padding="lg"
+      >
+        <Group
+          justify="space-between"
+          align="flex-start"
+          wrap="nowrap"
+        >
+
+          <Group
+            gap="md"
+            align="flex-start"
+            wrap="nowrap"
+          >
+            <ThemeIcon
+              size={42}
+              radius="md"
+              variant="light"
+              color="orange"
+            >
+              <IconTool size={22} />
+            </ThemeIcon>
+
+            <div>
+              <Text
+                size="xs"
+                c="dimmed"
+                fw={500}
+              >
+                نوع الصيانة
+              </Text>
+
+              <Text
                 fw={700}
+                size="md"
+                mt={2}
+              >
+                {selectedRecord.kpi_name || "-"}
+              </Text>
+
+              <Text
+                size="sm"
+                c="dimmed"
+                mt={3}
+              >
+                {selectedRecord.sub_kpi_name || "-"}
+              </Text>
+            </div>
+          </Group>
+
+          <Badge
+            variant="dot"
+            color={
+              selectedRecord.status === "open"
+                ? "orange"
+                : "green"
+            }
+          >
+            {selectedRecord.status === "open"
+              ? "مفتوحة"
+              : "مغلقة"}
+          </Badge>
+
+        </Group>
+      </Card>
+
+
+      {/* ===================================================== */}
+      {/* Maintenance Timeline */}
+      {/* ===================================================== */}
+
+      <div>
+        <Group gap="xs" mb="sm">
+          <IconTimeline size={18} />
+
+          <Text fw={700} size="sm">
+            دورة الصيانة
+          </Text>
+        </Group>
+
+        <SimpleGrid
+          cols={{
+            base: 1,
+            sm: 2,
+          }}
+          spacing="md"
+        >
+
+          {/* Entry */}
+
+          <Card
+            withBorder
+            radius="lg"
+            padding="lg"
+          >
+            <Group
+              justify="space-between"
+              align="flex-start"
+            >
+              <Group gap="sm">
+                <ThemeIcon
+                  size={40}
+                  radius="xl"
+                  variant="light"
+                  color="green"
+                >
+                  <IconLogin size={20} />
+                </ThemeIcon>
+
+                <div>
+                  <Text
+                    size="xs"
+                    c="dimmed"
+                  >
+                    وقت الدخول
+                  </Text>
+
+                  <Text
+                    fw={700}
+                    size="sm"
+                    mt={2}
+                  >
+                    دخول الصيانة
+                  </Text>
+                </div>
+              </Group>
+            </Group>
+
+            <Divider my="md" />
+
+            <Text
+              fw={600}
+              size="sm"
+            >
+              {formatDateTime(
+                selectedRecord.entry_at
+              )}
+            </Text>
+          </Card>
+
+
+          {/* Exit */}
+
+          <Card
+            withBorder
+            radius="lg"
+            padding="lg"
+          >
+            <Group
+              justify="space-between"
+              align="flex-start"
+            >
+              <Group gap="sm">
+                <ThemeIcon
+                  size={40}
+                  radius="xl"
+                  variant="light"
+                  color="red"
+                >
+                  <IconLogout size={20} />
+                </ThemeIcon>
+
+                <div>
+                  <Text
+                    size="xs"
+                    c="dimmed"
+                  >
+                    وقت الخروج
+                  </Text>
+
+                  <Text
+                    fw={700}
+                    size="sm"
+                    mt={2}
+                  >
+                    إخراج من الصيانة
+                  </Text>
+                </div>
+              </Group>
+            </Group>
+
+            <Divider my="md" />
+
+            <Text
+              fw={600}
+              size="sm"
+            >
+              {selectedRecord.exit_at
+                ? formatDateTime(
+                    selectedRecord.exit_at
+                  )
+                : "المركبة ما زالت في الصيانة"}
+            </Text>
+          </Card>
+
+        </SimpleGrid>
+      </div>
+
+
+      {/* ===================================================== */}
+      {/* Duration */}
+      {/* ===================================================== */}
+
+      <Card
+        withBorder
+        radius="lg"
+        padding="lg"
+      >
+        <Group
+          justify="space-between"
+          align="center"
+        >
+
+          <Group gap="sm">
+            <ThemeIcon
+              size={42}
+              radius="md"
+              variant="light"
+              color="violet"
+            >
+              <IconClock size={22} />
+            </ThemeIcon>
+
+            <div>
+              <Text
+                size="xs"
+                c="dimmed"
+              >
+                مدة الصيانة
+              </Text>
+
+              <Text
+                fw={800}
                 size="lg"
+                mt={2}
               >
                 {formatDuration(
                   selectedRecord.entry_at,
                   selectedRecord.exit_at
                 )}
               </Text>
-            </Card>
+            </div>
+          </Group>
 
-            {/* Description */}
+        </Group>
+      </Card>
 
-            {selectedRecord.description && (
-              <Card
-                withBorder
-                radius="md"
-                padding="md"
-              >
-                <Text fw={600}>
-                  الوصف
-                </Text>
 
-                <Text
-                  size="sm"
-                  mt="xs"
+      {/* ===================================================== */}
+      {/* Description & Notes */}
+      {/* ===================================================== */}
+
+      {(selectedRecord.description ||
+        selectedRecord.notes) && (
+        <SimpleGrid
+          cols={{
+            base: 1,
+            sm: 2,
+          }}
+          spacing="md"
+        >
+
+          {/* Description */}
+
+          {selectedRecord.description && (
+            <Card
+              withBorder
+              radius="lg"
+              padding="lg"
+            >
+              <Group gap="sm" mb="sm">
+                <ThemeIcon
+                  size={34}
+                  radius="md"
+                  variant="light"
+                  color="blue"
                 >
-                  {
-                    selectedRecord.description
-                  }
+                  <IconFileDescription size={18} />
+                </ThemeIcon>
+
+                <Text fw={700} size="sm">
+                  وصف الصيانة
                 </Text>
-              </Card>
-            )}
+              </Group>
 
-            {/* Notes */}
-
-            {selectedRecord.notes && (
-              <Card
-                withBorder
-                radius="md"
-                padding="md"
+              <Text
+                size="sm"
+                c="dimmed"
+                lh={1.7}
               >
-                <Text fw={600}>
+                {selectedRecord.description}
+              </Text>
+            </Card>
+          )}
+
+
+          {/* Notes */}
+
+          {selectedRecord.notes && (
+            <Card
+              withBorder
+              radius="lg"
+              padding="lg"
+            >
+              <Group gap="sm" mb="sm">
+                <ThemeIcon
+                  size={34}
+                  radius="md"
+                  variant="light"
+                  color="yellow"
+                >
+                  <IconNotes size={18} />
+                </ThemeIcon>
+
+                <Text fw={700} size="sm">
                   الملاحظات
                 </Text>
+              </Group>
 
-                <Text
-                  size="sm"
-                  mt="xs"
-                >
-                  {
-                    selectedRecord.notes
-                  }
-                </Text>
-              </Card>
-            )}
+              <Text
+                size="sm"
+                c="dimmed"
+                lh={1.7}
+              >
+                {selectedRecord.notes}
+              </Text>
+            </Card>
+          )}
 
-            {/* Vehicle Information */}
+        </SimpleGrid>
+      )}
 
-            <SimpleGrid
-              cols={{
-                base: 1,
-                sm: 2,
-              }}
-            >
-              <div>
-                <Text
-                  size="xs"
-                  c="dimmed"
-                >
-                  المنطقة
-                </Text>
 
-                <Text
-                  size="sm"
-                  fw={600}
-                >
-                  {
-                    selectedRecord.area ||
-                    "-"
-                  }
-                </Text>
-              </div>
+      {/* ===================================================== */}
+      {/* Vehicle Information */}
+      {/* ===================================================== */}
 
-              <div>
-                <Text
-                  size="xs"
-                  c="dimmed"
-                >
-                  سنة الصنع
-                </Text>
+      <div>
 
-                <Text
-                  size="sm"
-                  fw={600}
-                >
-                  {
-                    selectedRecord.manufacture_year ||
-                    "-"
-                  }
-                </Text>
-              </div>
+        <Group gap="xs" mb="sm">
+          <IconInfoCircle size={18} />
 
-              <div>
-                <Text
-                  size="xs"
-                  c="dimmed"
-                >
-                  الوزن
-                </Text>
+          <Text fw={700} size="sm">
+            معلومات المركبة
+          </Text>
+        </Group>
 
-                <Text
-                  size="sm"
-                  fw={600}
-                >
-                  {
-                    selectedRecord.weight ??
-                    "-"
-                  }
-                </Text>
-              </div>
+        <Card
+          withBorder
+          radius="lg"
+          padding="lg"
+        >
+          <SimpleGrid
+            cols={{
+              base: 2,
+              sm: 4,
+            }}
+            spacing="lg"
+          >
 
-              <div>
-                <Text
-                  size="xs"
-                  c="dimmed"
-                >
-                  السعة
-                </Text>
+            <div>
+              <Text
+                size="xs"
+                c="dimmed"
+                mb={4}
+              >
+                المنطقة
+              </Text>
 
-                <Text
-                  size="sm"
-                  fw={600}
-                >
-                  {
-                    selectedRecord.capacity ??
-                    "-"
-                  }
-                </Text>
-              </div>
-            </SimpleGrid>
+              <Text
+                size="sm"
+                fw={700}
+              >
+                {selectedRecord.area || "-"}
+              </Text>
+            </div>
 
-            <Divider />
 
-            {/* Created Information */}
+            <div>
+              <Text
+                size="xs"
+                c="dimmed"
+                mb={4}
+              >
+                سنة الصنع
+              </Text>
+
+              <Text
+                size="sm"
+                fw={700}
+              >
+                {selectedRecord.manufacture_year || "-"}
+              </Text>
+            </div>
+
+
+            <div>
+              <Text
+                size="xs"
+                c="dimmed"
+                mb={4}
+              >
+                الوزن
+              </Text>
+
+              <Text
+                size="sm"
+                fw={700}
+              >
+                {selectedRecord.weight ?? "-"}
+              </Text>
+            </div>
+
+
+            <div>
+              <Text
+                size="xs"
+                c="dimmed"
+                mb={4}
+              >
+                السعة
+              </Text>
+
+              <Text
+                size="sm"
+                fw={700}
+              >
+                {selectedRecord.capacity ?? "-"}
+              </Text>
+            </div>
+
+          </SimpleGrid>
+        </Card>
+
+      </div>
+
+
+      {/* ===================================================== */}
+      {/* Audit Information */}
+      {/* ===================================================== */}
+
+      <div>
+
+        <Group gap="xs" mb="sm">
+          <IconHistory size={18} />
+
+          <Text fw={700} size="sm">
+            سجل الإجراءات
+          </Text>
+        </Group>
+
+        <Card
+          withBorder
+          radius="lg"
+          padding="lg"
+        >
+
+          <Stack gap="md">
+
+            {/* Created */}
 
             <Group
-            dir="ltr"
               justify="space-between"
               align="center"
+              wrap="nowrap"
             >
-              <Text
-                size="xs"
-                c="dimmed"
+
+              <Group
+                gap="sm"
+                wrap="nowrap"
               >
-               
-                {
-                  selectedRecord.created_by ||
-                  "-"
-                } : أنشأ بواسطة
-              </Text>
+                <ThemeIcon
+                  size={34}
+                  radius="xl"
+                  variant="light"
+                  color="green"
+                >
+                  <IconLogin size={17} />
+                </ThemeIcon>
+
+                <div>
+                  <Text
+                    size="sm"
+                    fw={600}
+                  >
+                    إدخال المركبة
+                  </Text>
+
+                  <Text
+                    size="xs"
+                    c="dimmed"
+                  >
+                    بواسطة{" "}
+                    <Text
+                      component="span"
+                      fw={600}
+                    >
+                      {selectedRecord.created_by ||
+                        "-"}
+                    </Text>
+                  </Text>
+                </div>
+              </Group>
 
               <Text
                 size="xs"
                 c="dimmed"
+                ta="left"
               >
-               
                 {formatDateTime(
                   selectedRecord.created_at
-                )} : تاريخ الإنشاء:{" "}
+                )}
               </Text>
+
             </Group>
 
-            {/* Delete */}
 
             <Divider />
 
-            <Button
-              fullWidth
-              color="red"
-              variant="light"
-              leftSection={
-                <IconTrash
-                  size={17}
-                />
-              }
-              loading={
-                deletingId ===
-                selectedRecord.id
-              }
-              disabled={
-                deletingId !== null
-              }
-              onClick={() =>
-                deleteRecord(
-                  selectedRecord
-                )
-              }
+
+            {/* Updated */}
+
+            <Group
+              justify="space-between"
+              align="center"
+              wrap="nowrap"
             >
-              حذف سجل الصيانة
-            </Button>
+
+              <Group
+                gap="sm"
+                wrap="nowrap"
+              >
+                <ThemeIcon
+                  size={34}
+                  radius="xl"
+                  variant="light"
+                  color="red"
+                >
+                  <IconLogout size={17} />
+                </ThemeIcon>
+
+                <div>
+                  <Text
+                    size="sm"
+                    fw={600}
+                  >
+                    إخراج المركبة
+                  </Text>
+
+                  <Text
+                    size="xs"
+                    c="dimmed"
+                  >
+                    بواسطة{" "}
+                    <Text
+                      component="span"
+                      fw={600}
+                    >
+                      {selectedRecord.updated_by ||
+                        "-"}
+                    </Text>
+                  </Text>
+                </div>
+              </Group>
+
+              <Text
+                size="xs"
+                c="dimmed"
+                ta="left"
+              >
+                {selectedRecord.updated_at
+                  ? formatDateTime(
+                      selectedRecord.updated_at
+                    )
+                  : "-"}
+              </Text>
+
+            </Group>
+
           </Stack>
-        )}
-      </Modal>
+
+        </Card>
+
+      </div>
+
+
+      {/* ===================================================== */}
+      {/* Delete */}
+      {/* ===================================================== */}
+
+      <Divider />
+
+      <Button
+        fullWidth
+        size="md"
+        radius="md"
+        color="red"
+        variant="light"
+        leftSection={
+          <IconTrash size={18} />
+        }
+        loading={
+          deletingId === selectedRecord.id
+        }
+        disabled={
+          deletingId !== null
+        }
+        onClick={() =>
+          deleteRecord(selectedRecord)
+        }
+      >
+        حذف سجل الصيانة
+      </Button>
+
+    </Stack>
+  )}
+</Modal>
     </Container>
   );
 }

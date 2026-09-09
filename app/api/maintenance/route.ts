@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
 
     if (date) {
       values.push(date);
+
       conditions.push(`
         DATE(
           mr.entry_at AT TIME ZONE 'Asia/Amman'
@@ -46,13 +47,19 @@ export async function GET(request: NextRequest) {
         mr.vehicle_id,
         mr.kpi_id,
         mr.sub_kpi_id,
+
         mr.entry_at,
         mr.exit_at,
+
         mr.description,
         mr.notes,
+
+        -- Created information
         mr.created_by,
-        mr.updated_by,
         mr.created_at,
+
+        -- Updated information
+        mr.updated_by,
         mr.updated_at,
 
         v.vehicle_number,
@@ -98,7 +105,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || "Failed to load maintenance records",
+        error:
+          error?.message ||
+          "Failed to load maintenance records",
       },
       { status: 500 }
     );
@@ -172,14 +181,13 @@ export async function POST(request: NextRequest) {
     }
 
     /*
-      مهم:
+      entry_at يأتي من Frontend كـ ISO UTC.
 
-      لا نقارن التاريخ القادم من المستخدم مباشرة
-      مع توقيت السيرفر المحلي.
+      مثال:
+      2026-09-09T05:00:00.000Z
 
-      entry_at أصبح ISO UTC من الواجهة،
-      وبالتالي new Date() و Date.now()
-      يقارنان نفس الـ instant.
+      لذلك نستخدم Date لمقارنة الـ instant
+      مع وقت السيرفر الحالي.
     */
 
     if (entryDate.getTime() > Date.now()) {
@@ -207,7 +215,6 @@ export async function POST(request: NextRequest) {
       SELECT
         id,
         plate_number
-        
       FROM vehicles
       WHERE id = $1
       LIMIT 1
@@ -251,7 +258,8 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: "Vehicle is already in maintenance",
-          maintenance_id: openMaintenanceResult.rows[0].id,
+          maintenance_id:
+            openMaintenanceResult.rows[0].id,
         },
         { status: 409 }
       );
@@ -263,7 +271,9 @@ export async function POST(request: NextRequest) {
 
     const kpiResult = await client.query(
       `
-      SELECT id, name
+      SELECT
+        id,
+        name
       FROM maintenance_kpis
       WHERE id = $1
       LIMIT 1
@@ -311,7 +321,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error: "Sub KPI does not belong to selected KPI",
+            error:
+              "Sub KPI does not belong to selected KPI",
           },
           { status: 400 }
         );
@@ -320,6 +331,20 @@ export async function POST(request: NextRequest) {
 
     // =========================
     // Insert
+    // =========================
+    //
+    // created_at:
+    //     يتم تحديده من Database
+    //
+    // updated_at:
+    //     يتم تحديده من Database
+    //
+    // created_by:
+    //     يأتي من المستخدم الحالي
+    //
+    // updated_by:
+    //     يبقى NULL عند الإنشاء
+    //
     // =========================
 
     const insertResult = await client.query(
@@ -351,22 +376,28 @@ export async function POST(request: NextRequest) {
         exit_at,
         description,
         notes,
+
         created_by,
-        updated_by,
         created_at,
+
+        updated_by,
         updated_at
       `,
       [
         Number(vehicle_id),
         Number(kpi_id),
-        sub_kpi_id ? Number(sub_kpi_id) : null,
+        sub_kpi_id
+          ? Number(sub_kpi_id)
+          : null,
 
-        // entry_at أصبح ISO UTC
+        // entry_at من Frontend كـ ISO UTC
         entryDate.toISOString(),
 
         description?.trim() || null,
         notes?.trim() || null,
-        created_by || null,
+
+        // المستخدم الذي أنشأ السجل
+        created_by?.trim() || null,
       ]
     );
 
@@ -375,7 +406,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: "Maintenance record created successfully",
+        message:
+          "Maintenance record created successfully",
+
         data: insertResult.rows[0],
       },
       { status: 201 }
@@ -385,7 +418,10 @@ export async function POST(request: NextRequest) {
       await client.query("ROLLBACK");
     } catch {}
 
-    console.error("POST /api/maintenance error:", error);
+    console.error(
+      "POST /api/maintenance error:",
+      error
+    );
 
     // Duplicate
     if (error?.code === "23505") {
@@ -401,7 +437,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || "Failed to create maintenance record",
+        error:
+          error?.message ||
+          "Failed to create maintenance record",
       },
       { status: 500 }
     );
