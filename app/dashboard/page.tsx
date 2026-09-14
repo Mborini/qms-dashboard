@@ -35,6 +35,7 @@ import {
   IconRefresh,
   IconShield,
   IconLock,
+  IconArrowsExchange,
 } from "@tabler/icons-react";
 
 import { bungee } from "../layout";
@@ -426,6 +427,7 @@ const operationsPermissions = [
   "bins",
   "collection_areas",
   "bin_export",
+  
 ];
 
 const maintenancePermissions = [
@@ -439,6 +441,7 @@ const adminPermissions = [
   "users",
   "roles",
   "permissions",
+   "vehicle_movements_history",
 ];
 
 /* =======================================================
@@ -655,18 +658,43 @@ const adminCount = adminPermissions.filter(can).length;
               }}
               spacing="lg"
             >
-              {/* STATISTICS */}
+          
 
-              {can("statistics") && (
-                <ModuleCard
-                  href="/failures/stats"
-                  title="Violations Statistics"
-                  description="Analyze violations, KPIs, areas and operational performance."
-                  footer="Open Statistics"
-                  icon={<IconChartBar size={28} />}
-                  color="#228be6"
-                />
-              )}
+{/* STATISTICS */}
+
+{can("statistics") && (
+  <ModuleCard
+    href="/failures/stats"
+    title="Violations Statistics"
+    description="Analyze violations, KPIs, areas and operational performance."
+    footer="Open Statistics"
+    icon={<IconChartBar size={28} />}
+color="#2563EB"  />
+)}
+{can("vehicle_movements_history") && (
+  <ModuleCard
+    href="/vehicle-movements/history"
+    title="Vehicle Movements History"
+    description="Review and analyze historical vehicle movement records and operational activity."
+    footer="Open Movement History"
+    icon={<IconHistory size={28} />}
+    color="#7C3AED"
+  />
+)}
+{/* VEHICLE MOVEMENTS */}
+
+{can("statistics") && (
+  <ModuleCard
+    href="/vehicle-movements"
+    title="Vehicle Movements"
+    description="Monitor vehicle movements, daily activity and operational movement records."
+    footer="Open Vehicle Movements"
+    icon={<IconArrowsExchange size={28} />}
+    color="#DB2777"
+  />
+)}
+
+
 
               {/* MAP */}
 
@@ -677,7 +705,7 @@ const adminCount = adminPermissions.filter(can).length;
                   description="Explore violations geographically using the interactive map."
                   footer="Open Map"
                   icon={<IconMap size={28} />}
-                  color="#f08c00"
+                 color="#DC2626"
                 />
               )}
 
@@ -690,7 +718,7 @@ const adminCount = adminPermissions.filter(can).length;
                   description="Create, review and manage route notes and field observations."
                   footer="Open Route Notes"
                   icon={<IconRoute size={28} />}
-                  color="#7950f2"
+                  color="#EA580C"
                 />
               )}
 
@@ -703,7 +731,7 @@ const adminCount = adminPermissions.filter(can).length;
                   description="View and manage bin locations directly on the map."
                   footer="Open Collection Map"
                   icon={<IconMapPin size={28} />}
-                  color="#12b886"
+                  color="#D97706"
                 />
               )}
 
@@ -716,7 +744,7 @@ const adminCount = adminPermissions.filter(can).length;
                   description="Manage collection areas, zones and operational boundaries."
                   footer="Manage Areas"
                   icon={<IconMap2 size={28} />}
-                  color="#0ca678"
+                  color="#CA8A04"
                 />
               )}
 
@@ -729,7 +757,7 @@ const adminCount = adminPermissions.filter(can).length;
                   description="Export bin data and collection information for reporting."
                   footer="Export Data"
                   icon={<IconFileTypeXls size={28} />}
-                  color="#2f9e44"
+                  color="#65A30D"
                 />
               )}
             </SimpleGrid>
@@ -789,7 +817,7 @@ const adminCount = adminPermissions.filter(can).length;
                     description="Manage maintenance tasks, work orders and operational actions."
                     footer="Open Management"
                     icon={<IconTool size={28} />}
-                    color="#228be6"
+                   color="#16A34A"
                   />
                 )}
 
@@ -802,7 +830,7 @@ const adminCount = adminPermissions.filter(can).length;
                     description="Review previous maintenance operations and service records."
                     footer="Open History"
                     icon={<IconHistory size={28} />}
-                    color="#7950f2"
+                    color="#059669"
                   />
                 )}
 
@@ -815,7 +843,7 @@ const adminCount = adminPermissions.filter(can).length;
                     description="Configure maintenance types and service categories."
                     footer="Open Configuration"
                     icon={<IconSettings size={28} />}
-                    color="#12b886"
+                  color="#0D9488" 
                   />
                 )}
 
@@ -828,7 +856,7 @@ const adminCount = adminPermissions.filter(can).length;
                     description="Manage vehicles and their maintenance information."
                     footer="Open Vehicles"
                     icon={<IconTruck size={28} />}
-                    color="#f08c00"
+                    color="#0891B2"
                   />
                 )}
               </SimpleGrid>
@@ -883,7 +911,7 @@ const adminCount = adminPermissions.filter(can).length;
           description="Create, edit and manage system users and their roles."
           footer="Manage Users"
           icon={<IconUsers size={28} />}
-          color="#4c6ef5"
+         color="#0284C7"
         />
       )}
 
@@ -896,7 +924,7 @@ const adminCount = adminPermissions.filter(can).length;
           description="Create, edit and manage system roles and access levels."
           footer="Manage Roles"
           icon={<IconShield size={28} />}
-          color="#7950f2"
+          color="#4F46E5"
         />
       )}
 
@@ -909,7 +937,7 @@ const adminCount = adminPermissions.filter(can).length;
           description="Assign permissions to roles and control system access."
           footer="Manage Permissions"
           icon={<IconLock size={28} />}
-          color="#12b886"
+         color="#9333EA" 
         />
       )}
     </SimpleGrid>
