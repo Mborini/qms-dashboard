@@ -429,7 +429,8 @@ export async function GET(request) {
 
               userName:
                 finalUser,
-
+complaintSource:
+    item.complaintSource ?? null,
               resolutionUser:
                 resolutionActivity?.userName ||
                 null,
@@ -455,7 +456,8 @@ export async function GET(request) {
 
               blockName:
                 item.blockName,
-
+complaintSource:
+    item.complaintSource ?? null,
               status:
                 item.status,
 
