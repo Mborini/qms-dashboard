@@ -5,403 +5,736 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   ActionIcon,
-  Alert,
   Badge,
+  Box,
   Button,
   Card,
   Container,
   Divider,
+  Grid,
   Group,
+  Loader,
   Modal,
   NumberInput,
-  Pagination,
   Paper,
   Select,
   SimpleGrid,
-  Skeleton,
   Stack,
   Table,
   Text,
   TextInput,
-  ThemeIcon,
   Title,
   Tooltip,
 } from "@mantine/core";
 
 import {
-  IconAlertCircle,
+  IconActivity,
+  IconCar,
   IconCheck,
+  IconCircleCheck,
+  IconCircleX,
   IconEdit,
+  IconGauge,
+  IconId,
   IconPlus,
   IconRefresh,
   IconSearch,
+  IconShieldCheck,
+  IconSteeringWheel,
   IconTrash,
   IconTruck,
+  IconUser,
+  IconUsers,
   IconX,
-  IconMapPin,
-  IconCalendar,
-  IconGauge,
-  IconWeight,
-  IconDatabase,
 } from "@tabler/icons-react";
 
-import { useDisclosure } from "@mantine/hooks";
+/* =========================================================
+   TYPES
+========================================================= */
+
+type Area = {
+  id: number;
+  name: string;
+};
 
 type Vehicle = {
   id: number;
-  plate_number: string | null;
+  plate_number: string;
   weight: number | null;
   capacity: number | null;
   manufacture_year: number | null;
   model: string | null;
-  area: string | null;
   type: string | null;
+
+  area_id: number | null;
+  area: string | null;
+
+  is_active: boolean;
+
+  driver_1: string | null;
+  driver_2: string | null;
+  driver_3: string | null;
+
+  fuel_card_status: string | null;
+  tracking_device_status: string | null;
+
+  created_at?: string;
+  updated_at?: string;
 };
 
 type VehicleForm = {
   plate_number: string;
+
   weight: number | string;
   capacity: number | string;
   manufacture_year: number | string;
+
   model: string;
-  area: string | null;
-  type: string | null;
+  type: string;
+
+  area_id: string;
+
+  driver_1: string;
+  driver_2: string;
+  driver_3: string;
+
+  fuel_card_status: string;
+  tracking_device_status: string;
+
+  is_active: boolean;
 };
 
-const PAGE_SIZE = 10;
+type ApiResult<T> = {
+  success?: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+};
 
-const AREAS = [
-  "طارق",
-  "الجبيهة",
-  "أبو نصير",
-  "النصر",
-  "ماركا",
-  "أحد",
-  "شفا بدران",
-  "تلاع العلي",
-  "خلدا",
-  "أم السماق",
-];
-
-const AREA_OPTIONS = AREAS.map((area) => ({
-  value: area,
-  label: area,
-}));
+/* =========================================================
+   CONSTANTS
+========================================================= */
 
 const EMPTY_FORM: VehicleForm = {
   plate_number: "",
+
   weight: "",
   capacity: "",
   manufacture_year: "",
+
   model: "",
-  area: null,
   type: "",
+
+  area_id: "",
+
+  driver_1: "",
+  driver_2: "",
+  driver_3: "",
+
+  fuel_card_status: "active",
+tracking_device_status: "active",
+  is_active: true,
 };
 
-export default function MaintenanceVehiclesPage() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+const FUEL_CARD_OPTIONS = [
+  { value: "active", label: "فعالة" },
+  { value: "suspended", label: "موقوفة" },
+  { value: "missing", label: "غير موجودة" },
+  { value: "expired", label: "منتهية" },
+];
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+const TRACKING_OPTIONS = [
+  { value: "active", label: "فعال" },
+  { value: "inactive", label: "متوقف" },
+  { value: "missing", label: "غير موجود" },
+  { value: "maintenance", label: "صيانة" },
+];
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+/* =========================================================
+   HELPERS
+========================================================= */
 
-  const [search, setSearch] = useState("");
-  const [areaFilter, setAreaFilter] = useState<string | null>(null);
+function getFuelCardColor(status: string | null) {
+  switch (status) {
+    case "active":
+      return "green";
 
-  const [page, setPage] = useState(1);
+    case "suspended":
+      return "red";
 
-  const [formOpened, formHandlers] = useDisclosure(false);
-  const [deleteOpened, deleteHandlers] = useDisclosure(false);
+    case "missing":
+      return "orange";
+
+    case "expired":
+      return "yellow";
+
+    default:
+      return "gray";
+  }
+}
+
+function getFuelCardLabel(status: string | null) {
+  switch (status) {
+    case "active":
+      return "فعالة";
+
+    case "suspended":
+      return "موقوفة";
+
+    case "missing":
+      return "غير موجودة";
+
+    case "expired":
+      return "منتهية";
+
+    default:
+      return "غير محددة";
+  }
+}
+
+function getTrackingColor(status: string | null) {
+  switch (status) {
+    case "active":
+      return "green";
+
+    case "inactive":
+      return "red";
+
+    case "missing":
+      return "orange";
+
+    case "maintenance":
+      return "yellow";
+
+    default:
+      return "gray";
+  }
+}
+
+function getTrackingLabel(status: string | null) {
+  switch (status) {
+    case "active":
+      return "فعال";
+
+    case "inactive":
+      return "متوقف";
+
+    case "missing":
+      return "غير موجود";
+
+    case "maintenance":
+      return "صيانة";
+
+    default:
+      return "غير محدد";
+  }
+}
+
+
+
+function formatNumber(
+  value: number | null | undefined,
+) {
+  if (
+    value === null ||
+    value === undefined 
+  ) {
+    return "—";
+  }
+
+  return Number(value).toLocaleString("en-US");
+}
+
+/* =========================================================
+   PAGE
+========================================================= */
+
+export default function VehiclesPage() {
+  /* =======================================================
+     DATA
+  ======================================================= */
+
+  const [vehicles, setVehicles] = useState<
+    Vehicle[]
+  >([]);
+
+  const [areas, setAreas] = useState<Area[]>(
+    [],
+  );
+
+  /* =======================================================
+     LOADING
+  ======================================================= */
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  /* =======================================================
+     FILTERS
+  ======================================================= */
+
+  const [search, setSearch] =
+    useState("");
+
+  const [areaFilter, setAreaFilter] =
+    useState<string | null>(null);
+
+  const [statusFilter, setStatusFilter] =
+    useState<string | null>("active");
+
+  const [fuelFilter, setFuelFilter] =
+    useState<string | null>(null);
+
+  const [trackingFilter, setTrackingFilter] =
+    useState<string | null>(null);
+
+  /* =======================================================
+     MODALS
+  ======================================================= */
+
+  const [modalOpened, setModalOpened] =
+    useState(false);
 
   const [editingVehicle, setEditingVehicle] =
     useState<Vehicle | null>(null);
 
+  const [
+    deleteModalOpened,
+    setDeleteModalOpened,
+  ] = useState(false);
+
   const [vehicleToDelete, setVehicleToDelete] =
     useState<Vehicle | null>(null);
 
-  const [form, setForm] = useState<VehicleForm>(EMPTY_FORM);
+  /* =======================================================
+     FORM
+  ======================================================= */
 
-  // =========================================================
-  // LOAD
-  // =========================================================
+  const [form, setForm] =
+    useState<VehicleForm>({
+      ...EMPTY_FORM,
+    });
 
-  const loadVehicles = async () => {
+  const [error, setError] =
+    useState("");
+
+  /* =======================================================
+     FETCH VEHICLES
+     + BUILD AREAS FROM VEHICLES
+  ======================================================= */
+
+  async function loadVehicles() {
     try {
       setLoading(true);
       setError("");
 
-      const response = await fetch("/api/maintenance/vehicles", {
-        method: "GET",
-        cache: "no-store",
-      });
+      const response = await fetch(
+        "/api/maintenance/vehicles",
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
 
-      const result = await response.json();
+      const result: ApiResult<Vehicle[]> =
+        await response.json();
 
-      if (!response.ok || !result.success) {
+      if (!response.ok) {
         throw new Error(
-          result.error || "Failed to load vehicles"
+          result.message ||
+            result.error ||
+            "تعذر تحميل الآليات",
         );
       }
 
-      setVehicles(
-        Array.isArray(result.data) ? result.data : []
+      const vehicleData =
+        result.data || [];
+
+      setVehicles(vehicleData);
+
+      /* =================================================
+         BUILD UNIQUE AREAS
+         
+         نعتمد على:
+         area_id
+         area_name
+      ================================================= */
+
+      const areaMap = new Map<
+        number,
+        Area
+      >();
+
+      vehicleData.forEach((vehicle) => {
+        if (
+          vehicle.area_id === null ||
+          vehicle.area_id === undefined
+        ) {
+          return;
+        }
+
+        const areaName =
+          vehicle.area?.trim();
+
+        areaMap.set(vehicle.area_id, {
+          id: vehicle.area_id,
+          name:
+            areaName ||
+            `منطقة ${vehicle.area_id}`,
+        });
+      });
+
+      const uniqueAreas =
+        Array.from(
+          areaMap.values(),
+        ).sort((a, b) =>
+          a.name.localeCompare(
+            b.name,
+            "ar",
+          ),
+        );
+
+      setAreas(uniqueAreas);
+
+      console.log(
+        "Vehicles:",
+        vehicleData,
+      );
+
+      console.log(
+        "Areas:",
+        uniqueAreas,
       );
     } catch (err) {
-      console.error(err);
-      setError("حدث خطأ أثناء تحميل مركبات الصيانة");
+      console.error(
+        "Failed to load vehicles:",
+        err,
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "حدث خطأ أثناء تحميل الآليات",
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  /* =======================================================
+     INITIAL LOAD
+  ======================================================= */
 
   useEffect(() => {
     loadVehicles();
   }, []);
 
-  // =========================================================
-  // FILTER
-  // =========================================================
+  /* =======================================================
+     AREA OPTIONS
+  ======================================================= */
 
-  const filteredVehicles = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return vehicles.filter((vehicle) => {
-      const matchesSearch =
-        !query ||
-        String(vehicle.plate_number ?? "")
-          .toLowerCase()
-          .includes(query) ||
-        String(vehicle.model ?? "")
-          .toLowerCase()
-          .includes(query) ||
-        String(vehicle.type ?? "")
-          .toLowerCase()
-          .includes(query) ||
-        String(vehicle.area ?? "")
-          .toLowerCase()
-          .includes(query) ||
-        String(vehicle.manufacture_year ?? "")
-          .toLowerCase()
-          .includes(query);
-
-      const matchesArea =
-        !areaFilter || vehicle.area === areaFilter;
-
-      return matchesSearch && matchesArea;
-    });
-  }, [vehicles, search, areaFilter]);
-
-  // =========================================================
-  // PAGINATION
-  // =========================================================
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredVehicles.length / PAGE_SIZE)
+  const areaOptions = useMemo(
+    () =>
+      areas.map((area) => ({
+        value: String(area.id),
+        label: area.name,
+      })),
+    [areas],
   );
 
-  const paginatedVehicles = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
+  /* =======================================================
+     FILTERED VEHICLES
+  ======================================================= */
 
-    return filteredVehicles.slice(
-      start,
-      start + PAGE_SIZE
-    );
-  }, [filteredVehicles, page]);
+  const filteredVehicles = useMemo(() => {
+    const query = search
+      .trim()
+      .toLowerCase();
 
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
+    return vehicles.filter((vehicle) => {
+      /* SEARCH */
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, areaFilter]);
+      const matchesSearch =
+        !query ||
+        [
+          vehicle.plate_number,
+          vehicle.model,
+          vehicle.type,
+          vehicle.area,
+          vehicle.driver_1,
+          vehicle.driver_2,
+          vehicle.driver_3,
+          vehicle.fuel_card_status,
+          vehicle.tracking_device_status,
+        ].some((value) =>
+          String(value ?? "")
+            .toLowerCase()
+            .includes(query),
+        );
 
-  // =========================================================
-  // STATS
-  // =========================================================
+      /* AREA */
 
-  const stats = useMemo(() => {
-    const total = vehicles.length;
+      const matchesArea =
+        !areaFilter ||
+        String(
+          vehicle.area_id ?? "",
+        ) === areaFilter;
 
-    const withArea = vehicles.filter((vehicle) =>
-      Boolean(vehicle.area?.trim())
-    ).length;
+      /* ACTIVE */
 
-    const totalCapacity = vehicles.reduce(
-      (sum, vehicle) =>
-        sum + Number(vehicle.capacity || 0),
-      0
-    );
+      const matchesStatus =
+        !statusFilter ||
+        statusFilter === "all" ||
+        (statusFilter === "active" &&
+          vehicle.is_active) ||
+        (statusFilter === "inactive" &&
+          !vehicle.is_active);
 
-    const totalWeight = vehicles.reduce(
-      (sum, vehicle) =>
-        sum + Number(vehicle.weight || 0),
-      0
-    );
+      /* FUEL */
 
-    return {
-      total,
-      withArea,
-      totalCapacity,
-      totalWeight,
-    };
-  }, [vehicles]);
+      const matchesFuel =
+        !fuelFilter ||
+        vehicle.fuel_card_status ===
+          fuelFilter;
 
-  // =========================================================
-  // FORM
-  // =========================================================
+      /* TRACKING */
 
-  const handleAdd = () => {
+      const matchesTracking =
+        !trackingFilter ||
+        vehicle.tracking_device_status ===
+          trackingFilter;
+
+      return (
+        matchesSearch &&
+        matchesArea &&
+        matchesStatus &&
+        matchesFuel &&
+        matchesTracking
+      );
+    });
+  }, [
+    vehicles,
+    search,
+    areaFilter,
+    statusFilter,
+    fuelFilter,
+    trackingFilter,
+  ]);
+
+  /* =======================================================
+     RESET FILTERS
+  ======================================================= */
+
+  function resetFilters() {
+    setSearch("");
+    setAreaFilter(null);
+    setStatusFilter("active");
+    setFuelFilter(null);
+    setTrackingFilter(null);
+  }
+
+  /* =======================================================
+     OPEN ADD
+  ======================================================= */
+
+  function openAddModal() {
     setEditingVehicle(null);
-    setForm({ ...EMPTY_FORM });
-    setError("");
-    setSuccess("");
-    formHandlers.open();
-  };
-
-  const handleEdit = (vehicle: Vehicle) => {
-    setEditingVehicle(vehicle);
 
     setForm({
-      plate_number: vehicle.plate_number ?? "",
-      weight: vehicle.weight ?? "",
-      capacity: vehicle.capacity ?? "",
-      manufacture_year:
-        vehicle.manufacture_year ?? "",
-      model: vehicle.model ?? "",
-      type: vehicle.type ?? "",
-      area: AREAS.includes(vehicle.area ?? "")
-        ? vehicle.area
-        : null,
+      ...EMPTY_FORM,
     });
 
     setError("");
-    setSuccess("");
+    setModalOpened(true);
+  }
 
-    formHandlers.open();
-  };
+  /* =======================================================
+     OPEN EDIT
+  ======================================================= */
 
-  const updateForm = <K extends keyof VehicleForm>(
-    key: K,
-    value: VehicleForm[K]
-  ) => {
-    setForm((previous) => ({
-      ...previous,
-      [key]: value,
+ function openEditModal(vehicle: Vehicle) {
+  setEditingVehicle(vehicle);
+
+  setForm({
+    plate_number: vehicle.plate_number || "",
+    weight: vehicle.weight ?? "",
+    capacity: vehicle.capacity ?? "",
+    manufacture_year: vehicle.manufacture_year ?? "",
+    model: vehicle.model || "",
+    type: vehicle.type || "",
+
+    area_id:
+      vehicle.area_id !== null &&
+      vehicle.area_id !== undefined
+        ? String(vehicle.area_id)
+        : "",
+
+    driver_1: vehicle.driver_1 || "",
+    driver_2: vehicle.driver_2 || "",
+    driver_3: vehicle.driver_3 || "",
+
+    fuel_card_status:
+      vehicle.fuel_card_status &&
+      ["active", "suspended", "missing", "expired"].includes(
+        vehicle.fuel_card_status,
+      )
+        ? vehicle.fuel_card_status
+        : "active",
+
+    tracking_device_status:
+      vehicle.tracking_device_status &&
+      ["active", "inactive", "missing", "maintenance"].includes(
+        vehicle.tracking_device_status,
+      )
+        ? vehicle.tracking_device_status
+        : "active",
+
+    is_active: vehicle.is_active,
+  });
+
+  setError("");
+  setModalOpened(true);
+}
+  /* =======================================================
+     FORM UPDATE
+  ======================================================= */
+
+  function updateForm<
+    K extends keyof VehicleForm,
+  >(
+    field: K,
+    value: VehicleForm[K],
+  ) {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
     }));
-  };
+  }
 
-  // =========================================================
-  // SAVE
-  // =========================================================
+  /* =======================================================
+     SUBMIT
+  ======================================================= */
 
-  const handleSubmit = async () => {
+  async function handleSubmit() {
     try {
       setSaving(true);
       setError("");
-      setSuccess("");
 
-      if (!form.plate_number.trim()) {
-        setError("يرجى إدخال رقم الآلية");
+      /* VALIDATION */
+
+      if (
+        !form.plate_number.trim()
+      ) {
+        setError(
+          "يرجى إدخال رقم الآلية",
+        );
         return;
       }
 
+      if (!form.area_id) {
+        setError(
+          "يرجى اختيار المنطقة",
+        );
+        return;
+      }
+
+      /* PAYLOAD */
+
       const payload = {
-        plate_number: form.plate_number.trim(),
+        plate_number:
+          form.plate_number.trim(),
 
         weight:
-          form.weight === ""
+          form.weight === "" ||
+          form.weight === null
             ? null
             : Number(form.weight),
 
         capacity:
-          form.capacity === ""
+          form.capacity === "" ||
+          form.capacity === null
             ? null
             : Number(form.capacity),
 
         manufacture_year:
-          form.manufacture_year === ""
+          form.manufacture_year === "" ||
+          form.manufacture_year === null
             ? null
-            : Number(form.manufacture_year),
+            : Number(
+                form.manufacture_year,
+              ),
 
-        model: form.model.trim() || null,
+        model:
+          form.model.trim() || null,
 
-        type: form.type?.trim() || null,
+        type:
+          form.type.trim() || null,
 
-        area: form.area || null,
+        area_id: Number(
+          form.area_id,
+        ),
+
+        driver_1:
+          form.driver_1.trim() ||
+          null,
+
+        driver_2:
+          form.driver_2.trim() ||
+          null,
+
+        driver_3:
+          form.driver_3.trim() ||
+          null,
+
+       fuel_card_status: form.fuel_card_status || "active",
+tracking_device_status: form.tracking_device_status || "active",
+
+        is_active:
+          form.is_active,
       };
 
-      if (
-        payload.weight !== null &&
-        Number.isNaN(payload.weight)
-      ) {
-        setError("الوزن غير صحيح");
-        return;
-      }
+      const url = editingVehicle
+        ? `/api/maintenance/vehicles/${editingVehicle.id}`
+        : "/api/maintenance/vehicles";
 
-      if (
-        payload.capacity !== null &&
-        Number.isNaN(payload.capacity)
-      ) {
-        setError("السعة غير صحيحة");
-        return;
-      }
-
-      if (
-        payload.manufacture_year !== null &&
-        Number.isNaN(payload.manufacture_year)
-      ) {
-        setError("سنة الصنع غير صحيحة");
-        return;
-      }
-
-      const isEdit = Boolean(editingVehicle);
+      const method = editingVehicle
+        ? "PATCH"
+        : "POST";
 
       const response = await fetch(
-        "/api/maintenance/vehicles",
+        url,
         {
-          method: isEdit ? "PATCH" : "POST",
-
+          method,
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
-
           body: JSON.stringify(
-            isEdit
-              ? {
-                  id: editingVehicle!.id,
-                  ...payload,
-                }
-              : payload
+            payload,
           ),
-        }
+        },
       );
 
-      const result = await response.json();
+      const result: ApiResult<Vehicle> =
+        await response.json();
 
-      if (!response.ok || !result.success) {
+      if (!response.ok) {
         throw new Error(
-          result.error ||
-            "حدث خطأ أثناء حفظ المركبة"
+          result.message ||
+            result.error ||
+            "تعذر حفظ بيانات الآلية",
         );
       }
 
-      formHandlers.close();
-
+      setModalOpened(false);
       setEditingVehicle(null);
-      setForm({ ...EMPTY_FORM });
 
-      setSuccess(
-        isEdit
-          ? "تم تعديل المركبة بنجاح"
-          : "تمت إضافة المركبة بنجاح"
-      );
+      setForm({
+        ...EMPTY_FORM,
+      });
 
       await loadVehicles();
     } catch (err) {
@@ -410,50 +743,53 @@ export default function MaintenanceVehiclesPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "حدث خطأ أثناء حفظ البيانات"
+          : "حدث خطأ أثناء حفظ البيانات",
       );
     } finally {
       setSaving(false);
     }
-  };
+  }
 
-  // =========================================================
-  // DELETE
-  // =========================================================
+  /* =======================================================
+     DELETE
+  ======================================================= */
 
-  const openDelete = (vehicle: Vehicle) => {
+  function openDeleteModal(
+    vehicle: Vehicle,
+  ) {
     setVehicleToDelete(vehicle);
-    deleteHandlers.open();
-  };
+    setDeleteModalOpened(true);
+  }
 
-  const handleDelete = async () => {
-    if (!vehicleToDelete) return;
+  async function handleDelete() {
+    if (!vehicleToDelete) {
+      return;
+    }
 
     try {
-      setDeleting(true);
+      setSaving(true);
       setError("");
-      setSuccess("");
 
       const response = await fetch(
-        `/api/maintenance/vehicles?id=${vehicleToDelete.id}`,
+        `/api/maintenance/vehicles/${vehicleToDelete.id}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
-      const result = await response.json();
+      const result: ApiResult<Vehicle> =
+        await response.json();
 
-      if (!response.ok || !result.success) {
+      if (!response.ok) {
         throw new Error(
-          result.error ||
-            "Failed to delete vehicle"
+          result.message ||
+            result.error ||
+            "تعذر حذف الآلية",
         );
       }
 
-      deleteHandlers.close();
+      setDeleteModalOpened(false);
       setVehicleToDelete(null);
-
-      setSuccess("تم حذف المركبة بنجاح");
 
       await loadVehicles();
     } catch (err) {
@@ -462,821 +798,1551 @@ export default function MaintenanceVehiclesPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "حدث خطأ أثناء حذف المركبة"
+          : "حدث خطأ أثناء حذف الآلية",
       );
     } finally {
-      setDeleting(false);
+      setSaving(false);
     }
-  };
+  }
 
-  // =========================================================
-  // FILTER RESET
-  // =========================================================
+  /* =======================================================
+     STATISTICS
+  ======================================================= */
 
-  const clearFilters = () => {
-    setSearch("");
-    setAreaFilter(null);
-    setPage(1);
-  };
+  const activeVehicles =
+    vehicles.filter(
+      (vehicle) =>
+        vehicle.is_active,
+    ).length;
 
-  // =========================================================
-  // UI
-  // =========================================================
+  const vehiclesWithFuelCard =
+    vehicles.filter(
+      (vehicle) =>
+        vehicle.fuel_card_status ===
+        "active",
+    ).length;
+
+  const vehiclesWithTracking =
+    vehicles.filter(
+      (vehicle) =>
+        vehicle.tracking_device_status ===
+        "active",
+    ).length;
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
 
   return (
-    <Container
-      size="xl"
-      py={{ base: "md", md: "xl" }}
+    <Box
       dir="rtl"
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg, #f4f8ff 0%, #eef4ff 45%, #f8fbff 100%)",
+        padding:
+          "20px 0 50px",
+      }}
     >
-      <Stack gap="xl">
-
-        {/* =================================================
-            HEADER
-        ================================================= */}
+      <Container size="xl">
+        {/* HEADER */}
 
         <Card
           radius="xl"
-         
-          withBorder
+          p="lg"
+          mb="lg"
           style={{
             background:
-              "linear-gradient(135deg, var(--mantine-color-blue-0), var(--mantine-color-body))",
+              "linear-gradient(135deg, #0f4c81 0%, #1769aa 55%, #2687d8 100%)",
+            border: "none",
+            boxShadow:
+              "0 18px 45px rgba(15, 76, 129, 0.18)",
           }}
         >
           <Group
             justify="space-between"
             align="center"
             wrap="wrap"
+            gap="md"
           >
             <Group gap="md">
-              <ThemeIcon
-                size={58}
-                radius="xl"
-                variant="gradient"
-                gradient={{
-                  from: "blue",
-                  to: "cyan",
-                  deg: 135,
+              <Box
+                style={{
+                  width: 54,
+                  height: 54,
+                  borderRadius: 16,
+                  display: "flex",
+                  alignItems:
+                    "center",
+                  justifyContent:
+                    "center",
+                  background:
+                    "rgba(255,255,255,0.15)",
+                  border:
+                    "1px solid rgba(255,255,255,0.20)",
                 }}
               >
-                <IconTruck size={29} />
-              </ThemeIcon>
+                <IconTruck
+                  size={29}
+                  color="white"
+                />
+              </Box>
 
-              <div>
+              <Box>
                 <Title
                   order={2}
-                  fw={900}
-                  style={{
-                    letterSpacing: "-0.5px",
-                  }}
+                  c="white"
+                  fw={800}
                 >
-ادارة المركبات                </Title>
+                  إدارة الآليات
+                </Title>
 
                 <Text
+                  c="rgba(255,255,255,0.78)"
                   size="sm"
-                  c="dimmed"
-                  mt={4}
+                  mt={3}
                 >
-                  إدارة ومتابعة بيانات مركبات وآليات الاسطول
+                  إدارة الآليات والسائقين
+                  وبطاقات الوقود وأجهزة التتبع
                 </Text>
-              </div>
+              </Box>
             </Group>
 
             <Group gap="sm">
               <Tooltip label="تحديث البيانات">
                 <ActionIcon
-                  variant="default"
-                  size="xl"
+                  variant="light"
+                  color="white"
+                  size="lg"
                   radius="md"
-                  onClick={loadVehicles}
-                  loading={loading}
+                  onClick={
+                    loadVehicles
+                  }
+                  disabled={loading}
                 >
-                  <IconRefresh size={20} />
+                  <IconRefresh
+                    size={19}
+                  />
                 </ActionIcon>
               </Tooltip>
 
               <Button
-                size="md"
-                radius="md"
                 leftSection={
-                  <IconPlus size={19} />
+                  <IconPlus
+                    size={18}
+                  />
                 }
-                onClick={handleAdd}
+                onClick={
+                  openAddModal
+                }
+                radius="md"
+                color="white"
+                variant="white"
+                c="#1769aa"
+                fw={700}
               >
-                إضافة مركبة
+                إضافة آلية
               </Button>
             </Group>
           </Group>
         </Card>
 
-        {/* =================================================
-            ALERTS
-        ================================================= */}
+        {/* ERROR */}
 
         {error && (
-          <Alert
+          <Paper
+            mb="lg"
+            p="md"
             radius="lg"
-            color="red"
-            variant="light"
-            icon={<IconAlertCircle size={20} />}
-            title="حدث خطأ"
-            withCloseButton
-            onClose={() => setError("")}
+            withBorder
+            style={{
+              borderColor:
+                "#ffc9c9",
+              background:
+                "#fff5f5",
+            }}
           >
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert
-            radius="lg"
-            color="green"
-            variant="light"
-            icon={<IconCheck size={20} />}
-            title="تمت العملية بنجاح"
-            withCloseButton
-            onClose={() => setSuccess("")}
-          >
-            {success}
-          </Alert>
-        )}
-
-        {/* =================================================
-            FILTERS
-        ================================================= */}
-
-        <Card
-          radius="xl"
-          padding="lg"
-          withBorder
-        >
-          <Stack gap="lg">
-
-            <Group justify="space-between">
+            <Group
+              justify="space-between"
+            >
               <Group gap="sm">
-                <ThemeIcon
-                  size={38}
-                  radius="md"
-                  variant="light"
-                  color="blue"
+                <IconCircleX
+                  size={22}
+                  color="#e03131"
+                />
+
+                <Text
+                  c="red.7"
+                  fw={600}
+                  size="sm"
                 >
-                  <IconSearch size={19} />
-                </ThemeIcon>
-
-                <div>
-                  <Text fw={800}>
-                    البحث والتصفية
-                  </Text>
-
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                    mt={2}
-                  >
-                    ابحث عن المركبات باستخدام البيانات المتاحة
-                  </Text>
-                </div>
+                  {error}
+                </Text>
               </Group>
 
-              {(search || areaFilter) && (
-                <Button
-                  variant="subtle"
-                  color="red"
-                  size="xs"
-                  leftSection={<IconX size={15} />}
-                  onClick={clearFilters}
-                >
-                  مسح الفلاتر
-                </Button>
-              )}
+              <ActionIcon
+                variant="subtle"
+                color="red"
+                onClick={() =>
+                  setError("")
+                }
+              >
+                <IconX
+                  size={18}
+                />
+              </ActionIcon>
             </Group>
+          </Paper>
+        )}
 
-            <SimpleGrid
-              cols={{
-                base: 1,
-                sm: 2,
-              }}
-            >
-              <TextInput
-                label="بحث"
-                placeholder="رقم الآلية، النوع، الموديل، المنطقة..."
-                leftSection={
-                  <IconSearch size={17} />
-                }
-                radius="md"
-                value={search}
-                onChange={(event) =>
-                  setSearch(
-                    event.currentTarget.value
-                  )
-                }
+        {/* STATS */}
+
+        <SimpleGrid
+          cols={{
+            base: 2,
+            sm: 2,
+            md: 4,
+          }}
+          spacing="md"
+          mb="lg"
+        >
+          <StatCard
+            label="إجمالي الآليات"
+            value={vehicles.length}
+            icon={
+              <IconTruck
+                size={22}
               />
+            }
+            iconBackground="#e8f3ff"
+            iconColor="#1971c2"
+          />
 
-              <Select
-                label="المنطقة"
-                placeholder="كل المناطق"
-                clearable
-                searchable
-                radius="md"
-                data={AREA_OPTIONS}
-                value={areaFilter}
-                onChange={setAreaFilter}
+          <StatCard
+            label="آليات فعالة"
+            value={activeVehicles}
+            icon={
+              <IconCircleCheck
+                size={22}
               />
-            </SimpleGrid>
+            }
+            iconBackground="#e9f9ef"
+            iconColor="#2f9e44"
+          />
 
-          </Stack>
-        </Card>
+          <StatCard
+            label="بطاقات وقود فعالة"
+            value={
+              vehiclesWithFuelCard
+            }
+            icon={
+              <IconGauge
+                size={22}
+              />
+            }
+            iconBackground="#fff4e6"
+            iconColor="#f08c00"
+          />
 
-        {/* =================================================
-            TABLE
-        ================================================= */}
+          <StatCard
+            label="أجهزة تتبع فعالة"
+            value={
+              vehiclesWithTracking
+            }
+            icon={
+              <IconActivity
+                size={22}
+              />
+            }
+            iconBackground="#e7f5ff"
+            iconColor="#1971c2"
+          />
+        </SimpleGrid>
+
+        {/* FILTERS */}
 
         <Card
           radius="xl"
-          padding={0}
-          withBorder
+          p="md"
+          mb="lg"
           style={{
-            overflow: "hidden",
+            background:
+              "rgba(255,255,255,0.92)",
+            border:
+              "1px solid #e4ecf7",
+            boxShadow:
+              "0 8px 28px rgba(20, 70, 120, 0.06)",
           }}
         >
           <Group
             justify="space-between"
-            px={{ base: "md", md: "xl" }}
-            py="lg"
+            mb="md"
           >
             <Group gap="sm">
-              <ThemeIcon
-                size={40}
-                radius="md"
-                variant="light"
-                color="blue"
+              <Box
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  display: "flex",
+                  alignItems:
+                    "center",
+                  justifyContent:
+                    "center",
+                  background:
+                    "#eaf3ff",
+                }}
               >
-                <IconDatabase size={20} />
-              </ThemeIcon>
+                <IconSearch
+                  size={18}
+                  color="#1769aa"
+                />
+              </Box>
 
-              <div>
-                <Text fw={850}>
-                  قائمة المركبات
+              <Box>
+                <Text fw={800}>
+                  الفلاتر والبحث
                 </Text>
 
                 <Text
                   size="xs"
                   c="dimmed"
-                  mt={2}
                 >
-                  {filteredVehicles.length} مركبة مطابقة
+                  استخدم الفلاتر للوصول إلى الآليات المطلوبة
                 </Text>
-              </div>
+              </Box>
             </Group>
 
-            <Badge
-              size="lg"
-              radius="md"
-              variant="light"
-              color="blue"
+            <Button
+              variant="subtle"
+              color="gray"
+              size="xs"
+              onClick={
+                resetFilters
+              }
             >
-              {filteredVehicles.length}
-            </Badge>
+              إعادة ضبط الفلاتر
+            </Button>
           </Group>
 
-          <Divider />
-
-          {loading ? (
-            <Stack p="xl" gap="sm">
-              {Array.from({ length: 8 }).map(
-                (_, index) => (
-                  <Skeleton
-                    key={index}
-                    height={54}
-                    radius="md"
-                  />
-                )
-              )}
-            </Stack>
-          ) : filteredVehicles.length === 0 ? (
-            <Paper
-              p="xl"
-              radius={0}
-              ta="center"
+          <Grid>
+            <Grid.Col
+              span={{
+                base: 12,
+                sm: 6,
+                md: 4,
+              }}
             >
-              <ThemeIcon
-                size={70}
-                radius="xl"
-                variant="light"
-                color="gray"
-                mx="auto"
-              >
-                <IconTruck size={32} />
-              </ThemeIcon>
+              <TextInput
+                label="بحث"
+                placeholder="رقم الآلية، السائق، النوع، الموديل..."
+                value={search}
+                onChange={(event) =>
+                  setSearch(
+                    event.target.value,
+                  )
+                }
+                leftSection={
+                  <IconSearch
+                    size={17}
+                  />
+                }
+                radius="md"
+              />
+            </Grid.Col>
 
-              <Text
-                fw={800}
-                mt="lg"
-              >
-                لا توجد مركبات
-              </Text>
+            <Grid.Col
+              span={{
+                base: 12,
+                sm: 6,
+                md: 2,
+              }}
+            >
+              <Select
+                label="المنطقة"
+                placeholder="كل المناطق"
+                value={areaFilter}
+                onChange={
+                  setAreaFilter
+                }
+                data={
+                  areaOptions
+                }
+                searchable
+                clearable
+                radius="md"
+                nothingFoundMessage="لا توجد مناطق"
+              />
+            </Grid.Col>
 
+            <Grid.Col
+              span={{
+                base: 12,
+                sm: 6,
+                md: 2,
+              }}
+            >
+              <Select
+                label="حالة الآلية"
+                placeholder="كل الحالات"
+                value={
+                  statusFilter
+                }
+                onChange={
+                  setStatusFilter
+                }
+                data={[
+                  {
+                    value:
+                      "active",
+                    label:
+                      "فعالة فقط",
+                  },
+                  {
+                    value:
+                      "inactive",
+                    label:
+                      "غير فعالة",
+                  },
+                  {
+                    value:
+                      "all",
+                    label:
+                      "جميع الآليات",
+                  },
+                ]}
+                radius="md"
+              />
+            </Grid.Col>
+
+            <Grid.Col
+              span={{
+                base: 12,
+                sm: 6,
+                md: 2,
+              }}
+            >
+              <Select
+                label="بطاقة الوقود"
+                placeholder="كل الحالات"
+                value={fuelFilter}
+                onChange={
+                  setFuelFilter
+                }
+                data={
+                  FUEL_CARD_OPTIONS
+                }
+                clearable
+                radius="md"
+              />
+            </Grid.Col>
+
+            <Grid.Col
+              span={{
+                base: 12,
+                sm: 6,
+                md: 2,
+              }}
+            >
+              <Select
+                label="جهاز التتبع"
+                placeholder="كل الحالات"
+                value={
+                  trackingFilter
+                }
+                onChange={
+                  setTrackingFilter
+                }
+                data={
+                  TRACKING_OPTIONS
+                }
+                clearable
+                radius="md"
+              />
+            </Grid.Col>
+          </Grid>
+
+          <Divider my="md" />
+
+          <Group
+            justify="space-between"
+          >
+            <Group gap="xs">
               <Text
                 size="sm"
                 c="dimmed"
-                mt={5}
               >
-                لم يتم العثور على مركبات مطابقة لمعايير البحث
+                النتائج:
               </Text>
 
-              {(search || areaFilter) && (
-                <Button
-                  mt="lg"
-                  variant="light"
-                  radius="md"
-                  onClick={clearFilters}
-                >
-                  مسح الفلاتر
-                </Button>
-              )}
-            </Paper>
+              <Badge
+                size="lg"
+                radius="md"
+                variant="light"
+                color="blue"
+              >
+                {
+                  filteredVehicles.length
+                }
+              </Badge>
+            </Group>
+
+            <Text
+              size="xs"
+              c="dimmed"
+            >
+              من أصل{" "}
+              {vehicles.length} آلية
+            </Text>
+          </Group>
+        </Card>
+
+        {/* DESKTOP */}
+
+        <Card
+          radius="xl"
+          p={0}
+          visibleFrom="md"
+          style={{
+            background:
+              "rgba(255,255,255,0.94)",
+            border:
+              "1px solid #e3ebf6",
+            boxShadow:
+              "0 10px 35px rgba(20, 70, 120, 0.07)",
+            overflow: "hidden",
+          }}
+        >
+          <Box
+            px="lg"
+            py="md"
+            style={{
+              borderBottom:
+                "1px solid #edf1f7",
+              background:
+                "linear-gradient(90deg, #f8fbff, #ffffff)",
+            }}
+          >
+            <Group
+              justify="space-between"
+            >
+              <Group gap="sm">
+                <IconCar
+                  size={21}
+                  color="#1769aa"
+                />
+
+                <Text fw={800}>
+                  قائمة الآليات
+                </Text>
+              </Group>
+
+              <Badge
+                variant="light"
+                color="blue"
+              >
+                {
+                  filteredVehicles.length
+                } آلية
+              </Badge>
+            </Group>
+          </Box>
+
+          {loading ? (
+            <LoadingState />
+          ) : filteredVehicles.length ===
+            0 ? (
+            <EmptyState />
           ) : (
-            <>
-              <Table.ScrollContainer minWidth={1100}>
-                <Table
-                  verticalSpacing="md"
-                  horizontalSpacing="lg"
-                  highlightOnHover
-                  striped
-                >
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>#</Table.Th>
-                      <Table.Th>رقم الآلية</Table.Th>
-                      <Table.Th>النوع</Table.Th>
-                      <Table.Th>الموديل</Table.Th>
-                      <Table.Th>الوزن</Table.Th>
-                      <Table.Th>السعة</Table.Th>
-                      <Table.Th>سنة الصنع</Table.Th>
-                      <Table.Th>المنطقة</Table.Th>
-                      <Table.Th ta="center">
-                        الإجراءات
-                      </Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-
-                  <Table.Tbody>
-                    {paginatedVehicles.map(
-                      (vehicle, index) => {
-                        const rowNumber =
-                          (page - 1) *
-                            PAGE_SIZE +
-                          index +
-                          1;
-
-                        return (
-                          <Table.Tr
-                            key={vehicle.id}
-                          >
-                            <Table.Td>
-                              <Text
-                                size="sm"
-                                fw={700}
-                                c="dimmed"
-                              >
-                                {rowNumber}
-                              </Text>
-                            </Table.Td>
-
-                            {/* PLATE */}
-
-                            <Table.Td>
-                              <Group gap="sm">
-                                <ThemeIcon
-                                  size={38}
-                                  radius="md"
-                                  variant="light"
-                                  color="blue"
-                                >
-                                  <IconTruck
-                                    size={19}
-                                  />
-                                </ThemeIcon>
-
-                                <div>
-                                  <Text
-                                    fw={800}
-                                    size="sm"
-                                  >
-                                    {vehicle.plate_number ||
-                                      "—"}
-                                  </Text>
-
-                                  
-                                </div>
-                              </Group>
-                            </Table.Td>
-
-                            {/* TYPE */}
-
-                            <Table.Td>
-                              {vehicle.type ? (
-                                <Badge
-                                  variant="light"
-                                  color="cyan"
-                                  radius="xl"
-                                >
-                                  {vehicle.type}
-                                </Badge>
-                              ) : (
-                                <Text
-                                  size="sm"
-                                  c="dimmed"
-                                >
-                                  —
-                                </Text>
-                              )}
-                            </Table.Td>
-
-                            {/* MODEL */}
-
-                            <Table.Td>
-                              <Text size="sm" fw={600}>
-                                {vehicle.model || "—"}
-                              </Text>
-                            </Table.Td>
-
-                            {/* WEIGHT */}
-
-                            <Table.Td>
-                              {vehicle.weight !== null &&
-                              vehicle.weight !==
-                                undefined ? (
-                                <Badge
-                                  variant="light"
-                                  color="violet"
-                                  radius="xl"
-                                >
-                                  {Number(
-                                    vehicle.weight
-                                  ).toLocaleString()}
-                                </Badge>
-                              ) : (
-                                <Text
-                                  size="sm"
-                                  c="dimmed"
-                                >
-                                 غير محدد
-                                </Text>
-                              )}
-                            </Table.Td>
-
-                            {/* CAPACITY */}
-
-                            <Table.Td>
-                              {vehicle.capacity !== null &&
-                              vehicle.capacity !==
-                                undefined ? (
-                                <Badge
-                                  variant="light"
-                                  color="orange"
-                                  radius="xl"
-                                >
-                                  {Number(
-                                    vehicle.capacity
-                                  ).toLocaleString()}
-                                </Badge>
-                              ) : (
-                                <Text
-                                  size="sm"
-                                  c="dimmed"
-                                >
-                                  غير محدد
-                                </Text>
-                              )}
-                            </Table.Td>
-
-                            {/* YEAR */}
-
-                            <Table.Td>
-                              {vehicle.manufacture_year ? (
-                                <Group gap={6}>
-                                  <IconCalendar
-                                    size={16}
-                                    style={{
-                                      opacity: 0.6,
-                                    }}
-                                  />
-
-                                  <Text
-                                    size="sm"
-                                    fw={700}
-                                  >
-                                    {
-                                      vehicle.manufacture_year
-                                    }
-                                  </Text>
-                                </Group>
-                              ) : (
-                                <Text
-                                  size="sm"
-                                  c="dimmed"
-                                >
-                                  غير محدد
-                                </Text>
-                              )}
-                            </Table.Td>
-
-                            {/* AREA */}
-
-                            <Table.Td>
-                              {vehicle.area ? (
-                                <Badge
-                                  variant="light"
-                                  color="green"
-                                  radius="xl"
-                                  leftSection={
-                                    <IconMapPin
-                                      size={13}
-                                    />
-                                  }
-                                >
-                                  {vehicle.area}
-                                </Badge>
-                              ) : (
-                                <Badge
-                                  variant="light"
-                                  color="gray"
-                                  radius="xl"
-                                >
-                                  غير محدد
-                                </Badge>
-                              )}
-                            </Table.Td>
-
-                            {/* ACTIONS */}
-
-                            <Table.Td>
-                              <Group
-                                justify="center"
-                                gap={6}
-                              >
-                                <Tooltip label="تعديل المركبة">
-                                  <ActionIcon
-                                    variant="light"
-                                    color="blue"
-                                    size="lg"
-                                    radius="md"
-                                    onClick={() =>
-                                      handleEdit(
-                                        vehicle
-                                      )
-                                    }
-                                  >
-                                    <IconEdit
-                                      size={17}
-                                    />
-                                  </ActionIcon>
-                                </Tooltip>
-
-                                <Tooltip label="حذف المركبة">
-                                  <ActionIcon
-                                  disabled={true}
-                                    variant="light"
-                                    color="red"
-                                    size="lg"
-                                    radius="md"
-                                    onClick={() =>
-                                      openDelete(
-                                        vehicle
-                                      )
-                                    }
-                                  >
-                                    <IconTrash
-                                      size={17}
-                                    />
-                                  </ActionIcon>
-                                </Tooltip>
-                              </Group>
-                            </Table.Td>
-                          </Table.Tr>
-                        );
-                      }
-                    )}
-                  </Table.Tbody>
-                </Table>
-              </Table.ScrollContainer>
-
-              {totalPages > 1 && (
-                <>
-                  <Divider />
-
-                  <Group
-                    justify="center"
-                    py="lg"
+            <Box
+              style={{
+                overflow: "hidden",
+              }}
+            >
+              <Table
+                striped
+                highlightOnHover
+                verticalSpacing="xs"
+                horizontalSpacing="xs"
+                withTableBorder={false}
+                style={{
+                  tableLayout:
+                    "fixed",
+                  width: "100%",
+                  fontSize: 12,
+                }}
+              >
+                <Table.Thead>
+                  <Table.Tr
+                    style={{
+                      background:
+                        "#f7faff",
+                    }}
                   >
-                    <Pagination
-                      total={totalPages}
-                      value={page}
-                      onChange={setPage}
-                      radius="md"
-                    />
-                  </Group>
-                </>
-              )}
-            </>
+                    <Table.Th
+                      style={{
+                        width: "11%",
+                      }}
+                    >
+                      الآلية
+                    </Table.Th>
+
+                    <Table.Th
+                      style={{
+                        width: "9%",
+                      }}
+                    >
+                      المنطقة
+                    </Table.Th>
+
+                    <Table.Th
+                      style={{
+                        width: "8%",
+                      }}
+                    >
+                      النوع
+                    </Table.Th>
+
+                    <Table.Th
+                      style={{
+                        width: "18%",
+                      }}
+                    >
+                      السائقون
+                    </Table.Th>
+
+                    <Table.Th
+                      style={{
+                        width: "7%",
+                      }}
+                    >
+                      الوزن
+                    </Table.Th>
+
+                    <Table.Th
+                      style={{
+                        width: "7%",
+                      }}
+                    >
+                      الحمولة
+                    </Table.Th>
+
+                    <Table.Th
+                      style={{
+                        width: "7%",
+                      }}
+                    >
+                      السنة
+                    </Table.Th>
+
+                    <Table.Th
+                      style={{
+                        width: "10%",
+                      }}
+                    >
+                      بطاقة الوقود
+                    </Table.Th>
+
+                    <Table.Th
+                      style={{
+                        width: "10%",
+                      }}
+                    >
+                      جهاز التتبع
+                    </Table.Th>
+
+                    <Table.Th
+                      style={{
+                        width: "6%",
+                      }}
+                    >
+                      الحالة
+                    </Table.Th>
+
+                    <Table.Th
+                      style={{
+                        width: "7%",
+                        textAlign:
+                          "center",
+                      }}
+                    >
+                      إجراء
+                    </Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+
+                <Table.Tbody>
+                  {filteredVehicles.map(
+                    (vehicle) => (
+                      <Table.Tr
+                        key={
+                          vehicle.id
+                        }
+                      >
+                        <Table.Td>
+                          <Box
+                            style={{
+                              minWidth: 0,
+                            }}
+                          >
+                            <Text
+                              fw={800}
+                              size="xs"
+                              truncate
+                            >
+                              {
+                                vehicle.plate_number
+                              }
+                            </Text>
+
+                            <Text
+                              size="10px"
+                              c="dimmed"
+                              truncate
+                            >
+                              {
+                                vehicle.model ||
+                                "—"
+                              }
+                            </Text>
+                          </Box>
+                        </Table.Td>
+
+                        <Table.Td>
+                          <Badge
+                            variant="light"
+                            color="blue"
+                            radius="sm"
+                            size="sm"
+                          >
+                            <Text
+                              size="10px"
+                              truncate
+                            >
+                              {vehicle.area ||
+                                "غير محددة"}
+                            </Text>
+                          </Badge>
+                        </Table.Td>
+
+                        <Table.Td>
+                          <Text
+                            size="xs"
+                            truncate
+                          >
+                            {vehicle.type ||
+                              "—"}
+                          </Text>
+                        </Table.Td>
+
+                        <Table.Td>
+                          <Stack
+                            gap={2}
+                          >
+                            {vehicle.driver_1 && (
+                              <DriverLine
+                                name={
+                                  vehicle.driver_1
+                                }
+                              />
+                            )}
+
+                            {vehicle.driver_2 && (
+                              <DriverLine
+                                name={
+                                  vehicle.driver_2
+                                }
+                              />
+                            )}
+
+                            {vehicle.driver_3 && (
+                              <DriverLine
+                                name={
+                                  vehicle.driver_3
+                                }
+                              />
+                            )}
+
+                            {!vehicle.driver_1 &&
+                              !vehicle.driver_2 &&
+                              !vehicle.driver_3 && (
+                                <Text
+                                  size="10px"
+                                  c="dimmed"
+                                >
+                                  لا يوجد
+                                </Text>
+                              )}
+                          </Stack>
+                        </Table.Td>
+
+                        <Table.Td>
+                          <Text size="xs">
+                            {formatNumber(
+                              vehicle.weight,
+                            )}
+                          </Text>
+                        </Table.Td>
+
+                        <Table.Td>
+                          <Text size="xs">
+                            {formatNumber(
+                              vehicle.capacity,
+                            )}
+                          </Text>
+                        </Table.Td>
+
+                        <Table.Td>
+                          <Text size="xs">
+                            {
+                              vehicle.manufacture_year ||
+                              "—"
+                            }
+                          </Text>
+                        </Table.Td>
+
+                        <Table.Td>
+                          <Badge
+                            variant="light"
+                            color={getFuelCardColor(
+                              vehicle.fuel_card_status,
+                            )}
+                            radius="sm"
+                            size="sm"
+                          >
+                            {
+                              vehicle.fuel_card_status ||
+                              "غير محددة"
+                            }
+                          </Badge>
+                        </Table.Td>
+
+                        <Table.Td>
+                          <Badge
+                            variant="light"
+                            color={getTrackingColor(
+                              vehicle.tracking_device_status,
+                            )}
+                            radius="sm"
+                            size="sm"
+                          >
+                            {
+                              vehicle.tracking_device_status ||
+                              "غير محدد"
+                            }
+                          </Badge>
+                        </Table.Td>
+
+                        <Table.Td>
+                          <Badge
+                            color={
+                              vehicle.is_active
+                                ? "green"
+                                : "gray"
+                            }
+                            variant="light"
+                            radius="sm"
+                            size="sm"
+                          >
+                            {vehicle.is_active
+                              ? "فعالة"
+                              : "غير فعالة"}
+                          </Badge>
+                        </Table.Td>
+
+                        <Table.Td>
+                          <Group
+                            justify="center"
+                            gap={3}
+                            wrap="nowrap"
+                          >
+                            <Tooltip label="تعديل">
+                              <ActionIcon
+                                variant="light"
+                                color="blue"
+                                size="sm"
+                                radius="md"
+                                onClick={() =>
+                                  openEditModal(
+                                    vehicle,
+                                  )
+                                }
+                              >
+                                <IconEdit
+                                  size={15}
+                                />
+                              </ActionIcon>
+                            </Tooltip>
+
+                            <Tooltip label="حذف">
+                              <ActionIcon
+                                variant="light"
+                                color="red"
+                                size="sm"
+                                radius="md"
+                                onClick={() =>
+                                  openDeleteModal(
+                                    vehicle,
+                                  )
+                                }
+                              >
+                                <IconTrash
+                                  size={15}
+                                />
+                              </ActionIcon>
+                            </Tooltip>
+                          </Group>
+                        </Table.Td>
+                      </Table.Tr>
+                    ),
+                  )}
+                </Table.Tbody>
+              </Table>
+            </Box>
           )}
         </Card>
-      </Stack>
 
-      {/* =================================================
+        {/* MOBILE */}
+
+        <Stack
+          hiddenFrom="md"
+          gap="sm"
+        >
+          {loading ? (
+            <Card
+              radius="xl"
+              p="xl"
+            >
+              <LoadingState />
+            </Card>
+          ) : filteredVehicles.length ===
+            0 ? (
+            <Card
+              radius="xl"
+              p="xl"
+            >
+              <EmptyState />
+            </Card>
+          ) : (
+            filteredVehicles.map(
+              (vehicle) => (
+                <MobileVehicleCard
+                  key={vehicle.id}
+                  vehicle={vehicle}
+                  onEdit={() =>
+                    openEditModal(
+                      vehicle,
+                    )
+                  }
+                  onDelete={() =>
+                    openDeleteModal(
+                      vehicle,
+                    )
+                  }
+                />
+              ),
+            )
+          )}
+        </Stack>
+      </Container>
+
+      {/* ===================================================
           ADD / EDIT MODAL
-      ================================================= */}
+      =================================================== */}
 
       <Modal
-        dir="rtl"
-        opened={formOpened}
-        onClose={formHandlers.close}
-        centered
-        size="lg"
-        radius="xl"
-        overlayProps={{
-          backgroundOpacity: 0.55,
-          blur: 3,
+        opened={modalOpened}
+        onClose={() => {
+          if (!saving) {
+            setModalOpened(false);
+          }
         }}
         title={
           <Group gap="sm">
-            <ThemeIcon
-              size={40}
-              radius="md"
-              variant="light"
-              color="blue"
+            <Box
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 11,
+                display: "flex",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "center",
+                background:
+                  "linear-gradient(135deg, #e8f3ff, #dcecff)",
+              }}
             >
               {editingVehicle ? (
-                <IconEdit size={20} />
+                <IconEdit
+                  size={20}
+                  color="#1769aa"
+                />
               ) : (
-                <IconPlus size={20} />
+                <IconPlus
+                  size={20}
+                  color="#1769aa"
+                />
               )}
-            </ThemeIcon>
+            </Box>
 
-            <div>
-              <Text fw={850}>
+            <Box>
+              <Text fw={800}>
                 {editingVehicle
-                  ? "تعديل بيانات المركبة"
-                  : "إضافة مركبة جديدة"}
+                  ? "تعديل بيانات الآلية"
+                  : "إضافة آلية جديدة"}
               </Text>
 
               <Text
                 size="xs"
                 c="dimmed"
-                mt={2}
               >
-                {editingVehicle
-                  ? "قم بتعديل بيانات المركبة ثم احفظ التغييرات"
-                  : "أدخل بيانات مركبة الصيانة الجديدة"}
+                بيانات الآلية والسائقين والتجهيزات
               </Text>
-            </div>
+            </Box>
           </Group>
         }
+        centered
+        size="xl"
+        radius="xl"
+        closeOnClickOutside={!saving}
+        closeOnEscape={!saving}
       >
         <Stack gap="lg">
+          {/* BASIC */}
 
-          <SimpleGrid
-            cols={{
-              base: 1,
-              sm: 2,
+          <Box>
+            <Group
+              gap="xs"
+              mb="sm"
+            >
+              <IconTruck
+                size={18}
+                color="#1769aa"
+              />
+
+              <Text
+                fw={800}
+                size="sm"
+              >
+                بيانات الآلية
+              </Text>
+            </Group>
+
+            <Divider mb="md" />
+
+            <Grid>
+              <Grid.Col
+                span={{
+                  base: 12,
+                  sm: 6,
+                  md: 4,
+                }}
+              >
+                <TextInput
+                  label="رقم الآلية"
+                  placeholder="مثال: 60-60746"
+                  value={
+                    form.plate_number
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    updateForm(
+                      "plate_number",
+                      event.target
+                        .value,
+                    )
+                  }
+                  required
+                  radius="md"
+                  leftSection={
+                    <IconId
+                      size={17}
+                    />
+                  }
+                />
+              </Grid.Col>
+
+              <Grid.Col
+                span={{
+                  base: 12,
+                  sm: 6,
+                  md: 4,
+                }}
+              >
+                <Select
+                  label="المنطقة"
+                  placeholder="اختر المنطقة"
+                  value={
+                    form.area_id ||
+                    null
+                  }
+                  onChange={(
+                    value,
+                  ) =>
+                    updateForm(
+                      "area_id",
+                      value || "",
+                    )
+                  }
+                  data={
+                    areaOptions
+                  }
+                  searchable
+                  clearable
+                  required
+                  radius="md"
+                  nothingFoundMessage="لا توجد مناطق"
+                />
+              </Grid.Col>
+
+              <Grid.Col
+                span={{
+                  base: 12,
+                  sm: 6,
+                  md: 4,
+                }}
+              >
+                <TextInput
+                  label="نوع الآلية"
+                  placeholder="مثال: Compactor"
+                  value={form.type}
+                  onChange={(
+                    event,
+                  ) =>
+                    updateForm(
+                      "type",
+                      event.target
+                        .value,
+                    )
+                  }
+                  radius="md"
+                />
+              </Grid.Col>
+
+              <Grid.Col
+                span={{
+                  base: 12,
+                  sm: 6,
+                  md: 4,
+                }}
+              >
+                <TextInput
+                  label="الموديل"
+                  placeholder="مثال: MAN"
+                  value={
+                    form.model
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    updateForm(
+                      "model",
+                      event.target
+                        .value,
+                    )
+                  }
+                  radius="md"
+                />
+              </Grid.Col>
+
+              <Grid.Col
+                span={{
+                  base: 12,
+                  sm: 6,
+                  md: 4,
+                }}
+              >
+                <NumberInput
+                  label="سنة الصنع"
+                  placeholder="مثال: 2015"
+                  value={
+                    form.manufacture_year
+                  }
+                  onChange={(
+                    value,
+                  ) =>
+                    updateForm(
+                      "manufacture_year",
+                      value,
+                    )
+                  }
+                  min={1900}
+                  max={2100}
+                  hideControls
+                  radius="md"
+                />
+              </Grid.Col>
+
+              <Grid.Col
+                span={{
+                  base: 12,
+                  sm: 6,
+                  md: 4,
+                }}
+              >
+                <NumberInput
+                  label="الوزن"
+                  placeholder="الوزن"
+                  value={
+                    form.weight
+                  }
+                  onChange={(
+                    value,
+                  ) =>
+                    updateForm(
+                      "weight",
+                      value,
+                    )
+                  }
+                  min={0}
+                  hideControls
+                  radius="md"
+                />
+              </Grid.Col>
+
+              <Grid.Col
+                span={{
+                  base: 12,
+                  sm: 6,
+                  md: 4,
+                }}
+              >
+                <NumberInput
+                  label="الحمولة"
+                  placeholder="الحمولة"
+                  value={
+                    form.capacity
+                  }
+                  onChange={(
+                    value,
+                  ) =>
+                    updateForm(
+                      "capacity",
+                      value,
+                    )
+                  }
+                  min={0}
+                  hideControls
+                  radius="md"
+                />
+              </Grid.Col>
+            </Grid>
+          </Box>
+
+          {/* DRIVERS */}
+
+          <Box>
+            <Group
+              gap="xs"
+              mb="sm"
+            >
+              <IconUsers
+                size={18}
+                color="#1769aa"
+              />
+
+              <Text
+                fw={800}
+                size="sm"
+              >
+                السائقون
+              </Text>
+            </Group>
+
+            <Divider mb="md" />
+
+            <Grid>
+              {[
+                [
+                  "driver_1",
+                  "السائق الأول",
+                ],
+                [
+                  "driver_2",
+                  "السائق الثاني",
+                ],
+                [
+                  "driver_3",
+                  "السائق الثالث",
+                ],
+              ].map(
+                ([field, label]) => (
+                  <Grid.Col
+                    key={field}
+                    span={{
+                      base: 12,
+                      md: 4,
+                    }}
+                  >
+                    <TextInput
+                      label={label}
+                      placeholder={
+                        "اسم " +
+                        label
+                      }
+                      value={
+                        form[
+                          field as keyof VehicleForm
+                        ] as string
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        updateForm(
+                          field as keyof VehicleForm,
+                          event.target
+                            .value as never,
+                        )
+                      }
+                      leftSection={
+                        <IconSteeringWheel
+                          size={17}
+                        />
+                      }
+                      radius="md"
+                    />
+                  </Grid.Col>
+                ),
+              )}
+            </Grid>
+          </Box>
+
+          {/* FUEL / TRACKING */}
+
+          <Box>
+            <Group
+              gap="xs"
+              mb="sm"
+            >
+              <IconShieldCheck
+                size={18}
+                color="#1769aa"
+              />
+
+              <Text
+                fw={800}
+                size="sm"
+              >
+                البطاقات والأجهزة
+              </Text>
+            </Group>
+
+            <Divider mb="md" />
+
+            <Grid>
+              <Grid.Col
+                span={{
+                  base: 12,
+                  md: 6,
+                }}
+              >
+                <Select
+                  label="حالة بطاقة الوقود"
+                  placeholder="اختر الحالة"
+                  value={
+                    form.fuel_card_status
+                  }
+                  onChange={(
+                    value,
+                  ) =>
+                    updateForm(
+                      "fuel_card_status",
+                      value ||
+                        "غير محددة",
+                    )
+                  }
+                  data={
+                    FUEL_CARD_OPTIONS
+                  }
+                  allowDeselect={
+                    false
+                  }
+                  radius="md"
+                  leftSection={
+                    <IconGauge
+                      size={17}
+                    />
+                  }
+                />
+              </Grid.Col>
+
+              <Grid.Col
+                span={{
+                  base: 12,
+                  md: 6,
+                }}
+              >
+                <Select
+                  label="حالة جهاز التتبع"
+                  placeholder="اختر الحالة"
+                  value={
+                    form.tracking_device_status
+                  }
+                  onChange={(
+                    value,
+                  ) =>
+                    updateForm(
+                      "tracking_device_status",
+                      value ||
+                        "غير محدد",
+                    )
+                  }
+                  data={
+                    TRACKING_OPTIONS
+                  }
+                  allowDeselect={
+                    false
+                  }
+                  radius="md"
+                  leftSection={
+                    <IconActivity
+                      size={17}
+                    />
+                  }
+                />
+              </Grid.Col>
+            </Grid>
+          </Box>
+
+          {/* ACTIVE */}
+
+          <Box
+            p="md"
+            style={{
+              borderRadius: 14,
+              background:
+                "#f7faff",
+              border:
+                "1px solid #e5edf7",
             }}
           >
-            <TextInput
-              label="رقم الآلية"
-              placeholder="مثال: 5-21529"
-              required
+            <Group
+              justify="space-between"
+            >
+              <Group gap="sm">
+                {form.is_active ? (
+                  <IconCircleCheck
+                    size={21}
+                    color="#2f9e44"
+                  />
+                ) : (
+                  <IconCircleX
+                    size={21}
+                    color="#868e96"
+                  />
+                )}
+
+                <Box>
+                  <Text
+                    fw={700}
+                    size="sm"
+                  >
+                    حالة الآلية
+                  </Text>
+
+                  <Text
+                    size="xs"
+                    c="dimmed"
+                  >
+                    تحديد ما إذا كانت الآلية فعالة
+                  </Text>
+                </Box>
+              </Group>
+
+              <Button
+                variant="light"
+                color={
+                  form.is_active
+                    ? "green"
+                    : "gray"
+                }
+                radius="md"
+                onClick={() =>
+                  updateForm(
+                    "is_active",
+                    !form.is_active,
+                  )
+                }
+              >
+                {form.is_active
+                  ? "فعالة"
+                  : "غير فعالة"}
+              </Button>
+            </Group>
+          </Box>
+
+          {/* MODAL ERROR */}
+
+          {error && (
+            <Paper
+              p="sm"
               radius="md"
-              value={form.plate_number}
-              onChange={(event) =>
-                updateForm(
-                  "plate_number",
-                  event.currentTarget.value
-                )
-              }
-            />
+              style={{
+                background:
+                  "#fff5f5",
+                border:
+                  "1px solid #ffc9c9",
+              }}
+            >
+              <Group gap="xs">
+                <IconCircleX
+                  size={18}
+                  color="#e03131"
+                />
 
-            <Select
-              label="النوع"
-              placeholder="اختر نوع الآلية"
-              searchable
-              clearable
-              radius="md"
-              data={[
-                "Compactor",
-                "sweeper",
-                "loader",
-                "skip loader",
-                "Dyna",
-                "VAN",
-                "Taxi",
-                "Water Truck",
-                "Tripper Truck",
-              ]}
-              value={form.type}
-              onChange={(value) =>
-                updateForm("type", value)
-              }
-            />
+                <Text
+                  size="sm"
+                  c="red.7"
+                >
+                  {error}
+                </Text>
+              </Group>
+            </Paper>
+          )}
 
-            <TextInput
-              label="الموديل"
-              placeholder="مثال: MAN"
-              radius="md"
-              value={form.model}
-              onChange={(event) =>
-                updateForm(
-                  "model",
-                  event.currentTarget.value
-                )
-              }
-            />
+          {/* ACTIONS */}
 
-            <Select
-              label="المنطقة"
-              placeholder="اختر المنطقة"
-              data={AREA_OPTIONS}
-              value={form.area}
-              onChange={(value) =>
-                updateForm("area", value)
-              }
-              searchable
-              clearable
-              radius="md"
-            />
-
-            <NumberInput
-              label="الوزن"
-              placeholder="أدخل الوزن"
-              min={0}
-              thousandSeparator=","
-              radius="md"
-              value={form.weight}
-              onChange={(value) =>
-                updateForm("weight", value)
-              }
-            />
-
-            <NumberInput
-              label="السعة"
-              placeholder="أدخل السعة"
-              min={0}
-              thousandSeparator=","
-              radius="md"
-              value={form.capacity}
-              onChange={(value) =>
-                updateForm("capacity", value)
-              }
-            />
-
-            <NumberInput
-              label="سنة الصنع"
-              placeholder="مثال: 2022"
-              min={1900}
-              max={new Date().getFullYear() + 1}
-              radius="md"
-              value={form.manufacture_year}
-              onChange={(value) =>
-                updateForm(
-                  "manufacture_year",
-                  value
-                )
-              }
-            />
-          </SimpleGrid>
-
-          <Divider />
-
-          <Group
-            justify="flex-start"
-            gap="sm"
-          >
+          <Group>
             <Button
-              size="md"
-              radius="md"
-              onClick={handleSubmit}
+              onClick={
+                handleSubmit
+              }
               loading={saving}
               leftSection={
-                editingVehicle ? (
-                  <IconCheck size={18} />
-                ) : (
-                  <IconPlus size={18} />
-                )
+                !saving ? (
+                  editingVehicle ? (
+                    <IconCheck
+                      size={18}
+                    />
+                  ) : (
+                    <IconPlus
+                      size={18}
+                    />
+                  )
+                ) : undefined
               }
+              radius="md"
+              size="md"
+              color="blue"
             >
               {editingVehicle
                 ? "حفظ التعديلات"
-                : "إضافة المركبة"}
+                : "إضافة الآلية"}
             </Button>
 
             <Button
-              size="md"
-              radius="md"
               variant="light"
               color="gray"
-              onClick={formHandlers.close}
+              radius="md"
+              size="md"
               disabled={saving}
+              onClick={() =>
+                setModalOpened(
+                  false,
+                )
+              }
             >
               إلغاء
             </Button>
@@ -1284,185 +2350,604 @@ export default function MaintenanceVehiclesPage() {
         </Stack>
       </Modal>
 
-      {/* =================================================
-          DELETE MODAL
-      ================================================= */}
+      {/* DELETE MODAL */}
 
       <Modal
-        dir="rtl"
-        opened={deleteOpened}
-        onClose={deleteHandlers.close}
+        opened={
+          deleteModalOpened
+        }
+        onClose={() => {
+          if (!saving) {
+            setDeleteModalOpened(
+              false,
+            );
+          }
+        }}
         centered
         size="sm"
         radius="xl"
-        overlayProps={{
-          backgroundOpacity: 0.55,
-          blur: 3,
-        }}
         title={
           <Group gap="sm">
-            <ThemeIcon
-              size={40}
-              radius="md"
-              color="red"
-              variant="light"
+            <Box
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 11,
+                display: "flex",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "center",
+                background:
+                  "#fff1f1",
+              }}
             >
-              <IconTrash size={20} />
-            </ThemeIcon>
+              <IconTrash
+                size={20}
+                color="#e03131"
+              />
+            </Box>
 
-            <Text fw={850}>
-              حذف المركبة
+            <Text fw={800}>
+              حذف الآلية
             </Text>
           </Group>
         }
       >
-        <Stack gap="lg">
-
-          <Paper
-            p="md"
-            radius="lg"
-            withBorder
-          >
-            <Text size="sm" c="dimmed">
-              أنت على وشك حذف المركبة:
-            </Text>
-
+        <Stack gap="md">
+          <Text size="sm">
+            هل أنت متأكد من حذف الآلية
             <Text
-              fw={900}
-              size="xl"
-              mt={4}
+              component="span"
+              fw={800}
+              mx={5}
             >
-              {vehicleToDelete?.plate_number}
+              {
+                vehicleToDelete?.plate_number
+              }
             </Text>
-          </Paper>
+            ؟
+          </Text>
 
-          <Alert
-            color="red"
-            variant="light"
-            radius="lg"
-            icon={
-              <IconAlertCircle size={18} />
-            }
+          <Text
+            size="xs"
+            c="dimmed"
           >
-            لا يمكن التراجع عن عملية الحذف بعد تنفيذها.
-          </Alert>
+            سيتم حذف بيانات الآلية من قائمة الآليات.
+          </Text>
 
           <Group>
             <Button
               color="red"
               radius="md"
-              loading={deleting}
+              loading={saving}
               leftSection={
-                <IconTrash size={17} />
+                !saving ? (
+                  <IconTrash
+                    size={17}
+                  />
+                ) : undefined
               }
-              onClick={handleDelete}
+              onClick={
+                handleDelete
+              }
             >
-              حذف المركبة
+              حذف الآلية
             </Button>
 
             <Button
               variant="light"
               color="gray"
               radius="md"
-              onClick={deleteHandlers.close}
-              disabled={deleting}
+              disabled={saving}
+              onClick={() =>
+                setDeleteModalOpened(
+                  false,
+                )
+              }
             >
               إلغاء
             </Button>
           </Group>
         </Stack>
       </Modal>
-    </Container>
+    </Box>
   );
 }
 
-// =========================================================
-// KPI CARD
-// =========================================================
+/* =========================================================
+   STAT CARD
+========================================================= */
 
-type KpiCardProps = {
-  title: string;
-  value: number;
-  suffix?: string;
-  icon: React.ReactNode;
-  color: string;
-};
-
-function KpiCard({
-  title,
+function StatCard({
+  label,
   value,
-  suffix,
   icon,
-  color,
-}: KpiCardProps) {
+  iconBackground,
+  iconColor,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  iconBackground: string;
+  iconColor: string;
+}) {
   return (
     <Card
-      radius="xl"
-      padding="lg"
-      withBorder
+      radius="lg"
+      p="md"
       style={{
-        transition:
-          "transform 150ms ease, box-shadow 150ms ease",
-      }}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.transform =
-          "translateY(-2px)";
-        event.currentTarget.style.boxShadow =
-          "var(--mantine-shadow-md)";
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.transform =
-          "translateY(0)";
-        event.currentTarget.style.boxShadow =
-          "none";
+        background:
+          "rgba(255,255,255,0.88)",
+        border:
+          "1px solid #e7eef8",
+        boxShadow:
+          "0 8px 25px rgba(20, 70, 120, 0.06)",
       }}
     >
-      <Group justify="space-between" align="flex-start">
-        <div>
+      <Group
+        justify="space-between"
+      >
+        <Box>
           <Text
             size="xs"
             c="dimmed"
-            fw={700}
+            fw={600}
           >
-            {title}
+            {label}
           </Text>
 
-          <Group
-            gap={5}
-            align="baseline"
-            mt={8}
+          <Text
+            size="xl"
+            fw={800}
+            c="#145b96"
+            mt={4}
+          >
+            {value}
+          </Text>
+        </Box>
+
+        <Box
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 13,
+            display: "flex",
+            alignItems:
+              "center",
+            justifyContent:
+              "center",
+            background:
+              iconBackground,
+            color: iconColor,
+          }}
+        >
+          {icon}
+        </Box>
+      </Group>
+    </Card>
+  );
+}
+
+/* =========================================================
+   DRIVER LINE
+========================================================= */
+
+function DriverLine({
+  name,
+}: {
+  name: string;
+}) {
+  return (
+    <Group
+      gap={4}
+      wrap="nowrap"
+      style={{
+        minWidth: 0,
+      }}
+    >
+      <IconUser
+        size={12}
+        color="#1971c2"
+        style={{
+          flexShrink: 0,
+        }}
+      />
+
+      <Text
+        size="10px"
+        fw={600}
+        truncate
+      >
+        {name}
+      </Text>
+    </Group>
+  );
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+function LoadingState() {
+  return (
+    <Box
+      py={70}
+      style={{
+        display: "flex",
+        justifyContent:
+          "center",
+      }}
+    >
+      <Stack
+        align="center"
+        gap="sm"
+      >
+        <Loader
+          size="md"
+          color="blue"
+        />
+
+        <Text
+          size="sm"
+          c="dimmed"
+        >
+          جاري تحميل الآليات...
+        </Text>
+      </Stack>
+    </Box>
+  );
+}
+
+/* =========================================================
+   EMPTY
+========================================================= */
+
+function EmptyState() {
+  return (
+    <Box
+      py={60}
+      style={{
+        display: "flex",
+        justifyContent:
+          "center",
+      }}
+    >
+      <Stack
+        align="center"
+        gap="sm"
+      >
+        <Box
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: 18,
+            background:
+              "#eef5ff",
+            display: "flex",
+            alignItems:
+              "center",
+            justifyContent:
+              "center",
+          }}
+        >
+          <IconTruck
+            size={30}
+            color="#6c8ebf"
+          />
+        </Box>
+
+        <Text fw={700}>
+          لا توجد آليات
+        </Text>
+
+        <Text
+          size="sm"
+          c="dimmed"
+        >
+          لم يتم العثور على نتائج مطابقة للفلاتر
+        </Text>
+      </Stack>
+    </Box>
+  );
+}
+
+/* =========================================================
+   MOBILE VEHICLE CARD
+========================================================= */
+
+function MobileVehicleCard({
+  vehicle,
+  onEdit,
+  onDelete,
+}: {
+  vehicle: Vehicle;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <Card
+      radius="xl"
+      p="md"
+      style={{
+        background:
+          "rgba(255,255,255,0.95)",
+        border:
+          "1px solid #e3ebf6",
+        boxShadow:
+          "0 8px 25px rgba(20, 70, 120, 0.06)",
+      }}
+    >
+      <Group
+        justify="space-between"
+        align="flex-start"
+        wrap="nowrap"
+      >
+        <Group
+          gap="sm"
+          wrap="nowrap"
+        >
+          <Box
+            style={{
+              width: 44,
+              height: 44,
+              minWidth: 44,
+              borderRadius: 13,
+              background:
+                "linear-gradient(135deg, #e8f3ff, #dcecff)",
+              display: "flex",
+              alignItems:
+                "center",
+              justifyContent:
+                "center",
+            }}
+          >
+            <IconTruck
+              size={21}
+              color="#1769aa"
+            />
+          </Box>
+
+          <Box
+            style={{
+              minWidth: 0,
+            }}
           >
             <Text
-              fw={900}
-              size="xl"
-              style={{
-                fontSize: 26,
-              }}
+              fw={800}
+              size="sm"
+              truncate
             >
-              {Number(value).toLocaleString()}
+              {
+                vehicle.plate_number
+              }
             </Text>
 
-            {suffix && (
+            <Text
+              size="xs"
+              c="dimmed"
+              truncate
+            >
+              {vehicle.type ||
+                "نوع غير محدد"}
+              {" • "}
+              {vehicle.model ||
+                "موديل غير محدد"}
+            </Text>
+          </Box>
+        </Group>
+
+        <Badge
+          color={
+            vehicle.is_active
+              ? "green"
+              : "gray"
+          }
+          variant="light"
+          radius="sm"
+        >
+          {vehicle.is_active
+            ? "فعالة"
+            : "غير فعالة"}
+        </Badge>
+      </Group>
+
+      <Divider my="md" />
+
+      <SimpleGrid
+        cols={2}
+        spacing="sm"
+      >
+        <MobileInfo
+          label="المنطقة"
+          value={
+            vehicle.area ||
+            "غير محددة"
+          }
+        />
+
+        <MobileInfo
+          label="سنة الصنع"
+          value={
+            vehicle.manufacture_year
+              ? String(
+                  vehicle.manufacture_year,
+                )
+              : "—"
+          }
+        />
+
+        <MobileInfo
+          label="الوزن"
+          value={formatNumber(
+            vehicle.weight,
+          )}
+        />
+
+        <MobileInfo
+          label="الحمولة"
+          value={formatNumber(
+            vehicle.capacity,
+          )}
+        />
+      </SimpleGrid>
+
+      <Box mt="md">
+        <Text
+          size="xs"
+          fw={700}
+          c="dimmed"
+          mb={7}
+        >
+          السائقون
+        </Text>
+
+        <Stack gap={5}>
+          {vehicle.driver_1 && (
+            <DriverLine
+              name={
+                vehicle.driver_1
+              }
+            />
+          )}
+
+          {vehicle.driver_2 && (
+            <DriverLine
+              name={
+                vehicle.driver_2
+              }
+            />
+          )}
+
+          {vehicle.driver_3 && (
+            <DriverLine
+              name={
+                vehicle.driver_3
+              }
+            />
+          )}
+
+          {!vehicle.driver_1 &&
+            !vehicle.driver_2 &&
+            !vehicle.driver_3 && (
               <Text
                 size="xs"
                 c="dimmed"
               >
-                {suffix}
+                لا يوجد سائقون
               </Text>
             )}
-          </Group>
-        </div>
+        </Stack>
+      </Box>
 
-        <ThemeIcon
-          size={44}
-          radius="md"
+      <SimpleGrid
+        cols={2}
+        spacing="xs"
+        mt="md"
+      >
+        <Box>
+          <Text
+            size="xs"
+            c="dimmed"
+            mb={5}
+          >
+            بطاقة الوقود
+          </Text>
+
+          <Badge
+  variant="light"
+  color={getFuelCardColor(vehicle.fuel_card_status)}
+  radius="sm"
+  size="sm"
+>
+  {getFuelCardLabel(vehicle.fuel_card_status)}
+</Badge>
+        </Box>
+
+        <Box>
+          <Text
+            size="xs"
+            c="dimmed"
+            mb={5}
+          >
+            جهاز التتبع
+          </Text>
+
+          <Badge
+  variant="light"
+  color={getTrackingColor(vehicle.tracking_device_status)}
+  radius="sm"
+  size="sm"
+>
+  {getTrackingLabel(vehicle.tracking_device_status)}
+</Badge>
+        </Box>
+      </SimpleGrid>
+
+      <Group
+        grow
+        mt="md"
+      >
+        <Button
           variant="light"
-          color={color}
+          color="blue"
+          radius="md"
+          leftSection={
+            <IconEdit
+              size={16}
+            />
+          }
+          onClick={onEdit}
         >
-          {icon}
-        </ThemeIcon>
+          تعديل
+        </Button>
+
+        <Button
+          variant="light"
+          color="red"
+          radius="md"
+          leftSection={
+            <IconTrash
+              size={16}
+            />
+          }
+          onClick={onDelete}
+        >
+          حذف
+        </Button>
       </Group>
     </Card>
+  );
+}
+
+/* =========================================================
+   MOBILE INFO
+========================================================= */
+
+function MobileInfo({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <Box>
+      <Text
+        size="10px"
+        c="dimmed"
+      >
+        {label}
+      </Text>
+
+      <Text
+        size="xs"
+        fw={600}
+        mt={2}
+      >
+        {value}
+      </Text>
+    </Box>
   );
 }
 

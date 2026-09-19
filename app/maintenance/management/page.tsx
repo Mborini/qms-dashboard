@@ -1014,7 +1014,7 @@ const vehicleOptions = useMemo(() => {
       vehicle.capacity !== null &&
       String(vehicle.capacity).trim() !== ""
         ? String(vehicle.capacity)
-        : "غير محددة";
+        : "-السعة غير محددة-";
 
     // المنطقة
     const area =
