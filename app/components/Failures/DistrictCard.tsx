@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { motion } from "motion/react";
 
 import {
   Card,
@@ -27,6 +26,7 @@ import {
   IconDownload,
   IconMapPin,
   IconUser,
+  IconChartBar,
 } from "@tabler/icons-react";
 
 import { toPng } from "html-to-image";
@@ -79,9 +79,7 @@ const isStatusKey = (
   );
 };
 
-const getStatusConfig = (
-  status: string
-) => {
+const getStatusConfig = (status: string) => {
   if (!isStatusKey(status)) {
     return undefined;
   }
@@ -89,51 +87,312 @@ const getStatusConfig = (
   return statusConfig[status];
 };
 
-const getUserCount = (
-  userData: UserData
-) => {
-  if (
-    typeof userData.count === "number"
-  ) {
+const getUserCount = (userData: UserData) => {
+  if (typeof userData.count === "number") {
     return userData.count;
   }
 
-  if (
-    typeof userData.total === "number"
-  ) {
+  if (typeof userData.total === "number") {
     return userData.total;
   }
 
   return userData.ids?.length ?? 0;
 };
 
-const getStatusColor = (
-  status: string
-) => {
-  return (
-    getStatusConfig(status)?.color ??
-    "gray"
-  );
+const getStatusColor = (status: string) => {
+  return getStatusConfig(status)?.color ?? "gray";
 };
 
-const getStatusLabel = (
-  status: string
-) => {
+const getStatusLabel = (status: string) => {
   return (
     getStatusConfig(status)?.label ??
-    (status === "Unknown"
-      ? "غير محدد"
-      : status)
+    (status === "Unknown" ? "غير محدد" : status)
   );
 };
 
-const getStatusIcon = (
+const getStatusIcon = (status: string) => {
+  return getStatusConfig(status)?.icon ?? null;
+};
+
+/* =========================================================
+   ACHIEVEMENT STATUSES
+========================================================= */
+
+const ACHIEVEMENT_STATUSES = [
+  "PendingFieldMonitorVerification",
+  "Resolved",
+  "PendingSupervisorReview",
+  "Rejected",
+] as const;
+
+const isAchievementStatus = (
   status: string
 ) => {
-  return (
-    getStatusConfig(status)?.icon ??
-    null
+  return ACHIEVEMENT_STATUSES.includes(
+    status as (typeof ACHIEVEMENT_STATUSES)[number]
   );
+};
+
+/* =========================================================
+   BLOCK / KPI HELPERS
+========================================================= */
+
+const isKpiBlock = (blockName: string) => {
+  return /^KPI:/i.test(
+    String(blockName).trim()
+  );
+};
+
+const getBlockDisplayName = (
+  blockName: string
+) => {
+  const value = String(blockName ?? "").trim();
+
+  if (isKpiBlock(value)) {
+    return value
+      .replace(/^KPI:\s*/i, "")
+      .trim();
+  }
+
+  return value;
+};
+
+const normalizeBlockName = (
+  blockName: string
+) => {
+  return getBlockDisplayName(blockName)
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+};
+
+/* =========================================================
+   KPI NORMALIZER
+========================================================= */
+
+const normalizeKpiGroups = (data: any) => {
+  const result: Record<string, any> = {};
+
+  const addKpi = (
+    name: string,
+    value: any
+  ) => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value)
+    ) {
+      return;
+    }
+
+    const statuses = value?.statuses;
+
+    if (
+      !statuses ||
+      typeof statuses !== "object" ||
+      Array.isArray(statuses)
+    ) {
+      return;
+    }
+
+    const calculatedTotal =
+      Object.values(statuses).reduce(
+        (
+          sum: number,
+          statusData: any
+        ) =>
+          sum +
+          Number(
+            statusData?.total ?? 0
+          ),
+        0
+      );
+
+    const rawTotal = Number(
+      value?.total
+    );
+
+    const total =
+      Number.isFinite(rawTotal) &&
+      value?.total !== undefined &&
+      value?.total !== null
+        ? rawTotal
+        : calculatedTotal;
+
+    const cleanName = String(
+      name ||
+        value?.kpiNameAr ||
+        value?.kpiName ||
+        value?.nameAr ||
+        value?.name ||
+        value?.title ||
+        "مخالفات حسب مؤشرات الأداء"
+    )
+      .replace(/^KPI:\s*/i, "")
+      .trim();
+
+    if (!cleanName) {
+      return;
+    }
+
+    result[`KPI:${cleanName}`] = {
+      ...value,
+      total,
+      statuses,
+    };
+  };
+
+  const consumeKpiSource = (
+    source: any
+  ) => {
+    if (!source) {
+      return;
+    }
+
+    if (Array.isArray(source)) {
+      source.forEach(
+        (
+          item: any,
+          index: number
+        ) => {
+          if (
+            item?.groups &&
+            (
+              Array.isArray(
+                item.groups
+              ) ||
+              typeof item.groups ===
+                "object"
+            )
+          ) {
+            consumeKpiSource(
+              item.groups
+            );
+
+            return;
+          }
+
+          const name =
+            item?.kpiNameAr ??
+            item?.kpiName ??
+            item?.nameAr ??
+            item?.name ??
+            item?.title ??
+            `مؤشر الأداء ${
+              index + 1
+            }`;
+
+          addKpi(
+            name,
+            item
+          );
+        }
+      );
+
+      return;
+    }
+
+    if (
+      typeof source !== "object"
+    ) {
+      return;
+    }
+
+    if (source?.statuses) {
+      const name =
+        source?.kpiNameAr ??
+        source?.kpiName ??
+        source?.nameAr ??
+        source?.name ??
+        source?.title ??
+        "مخالفات حسب مؤشرات الأداء";
+
+      addKpi(
+        name,
+        source
+      );
+
+      return;
+    }
+
+    if (source?.groups) {
+      consumeKpiSource(
+        source.groups
+      );
+    }
+
+    Object.entries(source).forEach(
+      ([name, value]) => {
+        if (name === "groups") {
+          return;
+        }
+
+        if (
+          value &&
+          typeof value ===
+            "object" &&
+          !Array.isArray(value)
+        ) {
+          if (
+            (value as any)?.statuses
+          ) {
+            const displayName =
+              (value as any)
+                ?.kpiNameAr ??
+              (value as any)
+                ?.kpiName ??
+              (value as any)
+                ?.nameAr ??
+              (value as any)
+                ?.name ??
+              (value as any)
+                ?.title ??
+              name;
+
+            addKpi(
+              displayName,
+              value
+            );
+          }
+        }
+      }
+    );
+  };
+
+  consumeKpiSource(data?.kpis);
+  consumeKpiSource(
+    data?.performanceIndicators
+  );
+  consumeKpiSource(data?.kpiGroups);
+  consumeKpiSource(data?.kpi);
+  consumeKpiSource(data?.kpiData);
+  consumeKpiSource(
+    data?.kpiGroupsData
+  );
+
+  if (
+    data?.statuses &&
+    typeof data.statuses ===
+      "object" &&
+    (
+      data?.kpiNameAr ||
+      data?.kpiName ||
+      data?.isKpi ||
+      data?.type === "kpi"
+    )
+  ) {
+    const name =
+      data?.kpiNameAr ??
+      data?.kpiName ??
+      "مخالفات حسب مؤشرات الأداء";
+
+    addKpi(
+      name,
+      data
+    );
+  }
+
+  return result;
 };
 
 /* =========================================================
@@ -147,10 +406,6 @@ export default function DistrictCard({
   district: string;
   data: any;
 }) {
-  /* =======================================================
-     STATE
-  ======================================================= */
-
   const [
     failureModalOpened,
     setFailureModalOpened,
@@ -179,10 +434,9 @@ export default function DistrictCard({
   const [
     selectedUser,
     setSelectedUser,
-  ] =
-    useState<SelectedUser | null>(
-      null
-    );
+  ] = useState<SelectedUser | null>(
+    null
+  );
 
   const [
     summaryModalOpened,
@@ -290,6 +544,79 @@ export default function DistrictCard({
     };
 
   /* =======================================================
+     NORMALIZED BLOCKS
+  ======================================================= */
+
+  const normalizedBlocks =
+    useMemo(() => {
+      const blocks: Record<
+        string,
+        any
+      > = {
+        ...(data?.blocks || {}),
+      };
+
+      const kpiGroups =
+        normalizeKpiGroups(data);
+
+      Object.entries(
+        kpiGroups
+      ).forEach(
+        ([key, value]) => {
+          const existingKey =
+            Object.keys(
+              blocks
+            ).find(
+              (blockKey) =>
+                normalizeBlockName(
+                  blockKey
+                ) ===
+                normalizeBlockName(
+                  key
+                )
+            );
+
+          if (existingKey) {
+            return;
+          }
+
+          blocks[key] = value;
+        }
+      );
+
+      return blocks;
+    }, [data]);
+
+  /* =======================================================
+     METRIC BLOCKS
+  ======================================================= */
+
+  const metricBlocks =
+    useMemo(() => {
+      const entries =
+        Object.entries(
+          normalizedBlocks
+        );
+
+      const normalBlocks =
+        entries.filter(
+          ([blockName]) =>
+            !isKpiBlock(
+              blockName
+            )
+        );
+
+      const source =
+        normalBlocks.length
+          ? normalBlocks
+          : entries;
+
+      return Object.fromEntries(
+        source
+      );
+    }, [normalizedBlocks]);
+
+  /* =======================================================
      DISTRICT STATUS TOTALS
   ======================================================= */
 
@@ -307,37 +634,43 @@ export default function DistrictCard({
       });
 
       Object.values(
-        data?.blocks || {}
-      ).forEach((block: any) => {
-        Object.entries(
-          block?.statuses || {}
-        ).forEach(
-          ([
-            status,
-            statusData,
-          ]) => {
-            if (
-              result[status] ===
-              undefined
-            ) {
-              result[status] = 0;
-            }
+        metricBlocks
+      ).forEach(
+        (block: any) => {
+          Object.entries(
+            block?.statuses || {}
+          ).forEach(
+            ([status, statusData]) => {
+              if (
+                result[status] ===
+                undefined
+              ) {
+                result[status] = 0;
+              }
 
-            result[status] +=
-              Number(
-                (statusData as any)
-                  ?.total ?? 0
-              );
-          }
-        );
-      });
+              result[status] +=
+                Number(
+                  (
+                    statusData as any
+                  )?.total ?? 0
+                );
+            }
+          );
+        }
+      );
 
       return result;
-    }, [data?.blocks]);
+    }, [metricBlocks]);
 
   /* =======================================================
      USER ACHIEVEMENT
-     Resolved + PendingFieldMonitorVerification
+     
+     الإنجاز يعتمد على:
+     
+     PendingFieldMonitorVerification
+     + Resolved
+     + PendingSupervisorReview
+     + Rejected
   ======================================================= */
 
   const rankedUsers =
@@ -348,94 +681,128 @@ export default function DistrictCard({
           name: string;
           resolved: number;
           field: number;
+          review: number;
+          rejected: number;
           total: number;
-          ids: (string | number)[];
+          ids: (
+            | string
+            | number
+          )[];
         }
       > = {};
 
-      Object.values(
-        data?.blocks || {}
-      ).forEach((block: any) => {
-        Object.entries(
-          block?.statuses || {}
-        ).forEach(
-          ([
-            status,
-            statusData,
-          ]) => {
-            if (
-              status !==
-                "Resolved" &&
-              status !==
-                "PendingFieldMonitorVerification"
-            ) {
-              return;
-            }
-
-            Object.entries(
-              (statusData as any)
-                ?.users || {}
-            ).forEach(
-              ([
-                user,
-                rawUserData,
-              ]) => {
-                const userData =
-                  rawUserData as UserData;
-
-                const count =
-                  getUserCount(
-                    userData
-                  );
-
-                if (!users[user]) {
-                  users[user] = {
-                    name: user,
-                    resolved: 0,
-                    field: 0,
-                    total: 0,
-                    ids: [],
-                  };
-                }
-
-                if (
-                  status ===
-                  "Resolved"
-                ) {
-                  users[
-                    user
-                  ].resolved += count;
-                }
-
-                if (
-                  status ===
-                  "PendingFieldMonitorVerification"
-                ) {
-                  users[
-                    user
-                  ].field += count;
-                }
-
-                users[
-                  user
-                ].ids.push(
-                  ...(userData.ids ||
-                    [])
-                );
+      Object.entries(
+        metricBlocks
+      ).forEach(
+        ([blockName, block]) => {
+          Object.entries(
+            block?.statuses || {}
+          ).forEach(
+            ([status, statusData]) => {
+              if (
+                !isAchievementStatus(
+                  status
+                )
+              ) {
+                return;
               }
-            );
-          }
-        );
-      });
+
+              Object.entries(
+                (
+                  statusData as any
+                )?.users || {}
+              ).forEach(
+                ([
+                  user,
+                  rawUserData,
+                ]) => {
+                  const userData =
+                    rawUserData as UserData;
+
+                  const count =
+                    getUserCount(
+                      userData
+                    );
+
+                  if (
+                    !users[user]
+                  ) {
+                    users[user] = {
+                      name: user,
+                      resolved: 0,
+                      field: 0,
+                      review: 0,
+                      rejected: 0,
+                      total: 0,
+                      ids: [],
+                    };
+                  }
+
+                  if (
+                    status ===
+                    "Resolved"
+                  ) {
+                    users[
+                      user
+                    ].resolved +=
+                      count;
+                  }
+
+                  if (
+                    status ===
+                    "PendingFieldMonitorVerification"
+                  ) {
+                    users[
+                      user
+                    ].field +=
+                      count;
+                  }
+
+                  if (
+                    status ===
+                    "PendingSupervisorReview"
+                  ) {
+                    users[
+                      user
+                    ].review +=
+                      count;
+                  }
+
+                  if (
+                    status ===
+                    "Rejected"
+                  ) {
+                    users[
+                      user
+                    ].rejected +=
+                      count;
+                  }
+
+                  users[
+                    user
+                  ].ids.push(
+                    ...(userData.ids ||
+                      [])
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
 
       return Object.values(
         users
       )
         .map((user) => ({
           ...user,
+
           total:
             user.resolved +
-            user.field,
+            user.field +
+            user.review +
+            user.rejected,
+
           ids: [
             ...new Set(
               user.ids
@@ -444,16 +811,46 @@ export default function DistrictCard({
         }))
         .sort(
           (a, b) =>
-            b.total - a.total
+            b.total -
+            a.total
         );
-    }, [data?.blocks]);
+    }, [metricBlocks]);
 
   /* =======================================================
-     KPI
+     TOTALS
   ======================================================= */
 
+  const calculatedTotal =
+    useMemo(() => {
+      return Object.values(
+        metricBlocks
+      ).reduce(
+        (
+          sum: number,
+          block: any
+        ) =>
+          sum +
+          Number(
+            block?.total || 0
+          ),
+        0
+      );
+    }, [metricBlocks]);
+
   const districtTotal =
-    Number(data?.total || 0);
+    Number(data?.total || 0) ||
+    calculatedTotal;
+
+  /* =======================================================
+     ACHIEVEMENT
+     
+     الإنجاز يعتمد على:
+     
+     PendingFieldMonitorVerification
+     + Resolved
+     + PendingSupervisorReview
+     + Rejected
+  ======================================================= */
 
   const fieldCount =
     districtStatuses[
@@ -465,60 +862,57 @@ export default function DistrictCard({
       "Resolved"
     ] || 0;
 
-  const fieldPercentage =
-    districtTotal
-      ? Number(
-          (
-            (fieldCount /
-              districtTotal) *
-            100
-          ).toFixed(1)
-        )
-      : 0;
+  const reviewCount =
+    districtStatuses[
+      "PendingSupervisorReview"
+    ] || 0;
 
-  const resolvedPercentage =
-    districtTotal
-      ? Number(
-          (
-            (resolvedCount /
-              districtTotal) *
-            100
-          ).toFixed(1)
-        )
-      : 0;
+  const rejectedCount =
+    districtStatuses[
+      "Rejected"
+    ] || 0;
+
+  const achievementCount =
+    fieldCount +
+    resolvedCount +
+    reviewCount +
+    rejectedCount;
 
   const achievement =
-    Number(
-      (
-        fieldPercentage +
-        resolvedPercentage
-      ).toFixed(1)
-    );
+    districtTotal
+      ? Number(
+          (
+            (achievementCount /
+              districtTotal) *
+            100
+          ).toFixed(1)
+        )
+      : 0;
 
   /* =======================================================
-     OPEN STATUS MODAL
+     OPEN STATUS FAILURES
   ======================================================= */
 
   const openStatusFailures = (
     status: string
   ) => {
-    const failures: FailureItem[] =
-      [];
-
-    const seen = new Set<
-      string | number
-    >();
+    const failureMap =
+      new Map<
+        string | number,
+        FailureItem
+      >();
 
     Object.entries(
-      data?.blocks || {}
+      metricBlocks
     ).forEach(
       ([
         blockName,
         blockData,
       ]) => {
         const statusData =
-          (blockData as any)
-            ?.statuses?.[
+          (
+            blockData as any
+          )?.statuses?.[
             status
           ];
 
@@ -527,7 +921,8 @@ export default function DistrictCard({
         }
 
         Object.entries(
-          statusData.users || {}
+          statusData.users ||
+            {}
         ).forEach(
           ([
             user,
@@ -537,149 +932,57 @@ export default function DistrictCard({
               rawUserData as UserData;
 
             (
-              userData.ids || []
+              userData.ids ||
+              []
             ).forEach(
               (id) => {
                 if (
-                  seen.has(id)
+                  failureMap.has(
+                    id
+                  )
                 ) {
                   return;
                 }
 
-                seen.add(id);
-
-                failures.push({
+                failureMap.set(
                   id,
-                  district,
-                  districtName:
+                  {
+                    id,
                     district,
-                  block:
-                    blockName,
-                  blockName:
-                    blockName,
-                  status,
-                  userName: user,
-                });
+                    districtName:
+                      district,
+                    block:
+                      blockName,
+                    blockName:
+                      blockName,
+                    status,
+                    userName:
+                      user,
+                  }
+                );
               }
             );
           }
         );
-      }
-    );
 
-    failures.sort((a, b) => {
-      const blockA =
-        String(
-          a.blockName ??
-            a.block ??
-            ""
-        );
-
-      const blockB =
-        String(
-          b.blockName ??
-            b.block ??
-            ""
-        );
-
-      const blockCompare =
-        blockA.localeCompare(
-          blockB,
-          "ar",
-          {
-            sensitivity:
-              "base",
-          }
-        );
-
-      if (
-        blockCompare !== 0
-      ) {
-        return blockCompare;
-      }
-
-      return String(
-        a.id
-      ).localeCompare(
-        String(b.id),
-        "ar"
-      );
-    });
-
-    setSelectedFailures(
-      failures
-    );
-
-    setSelectedStatus(
-      getStatusLabel(status)
-    );
-
-    setSelectedStatusKey(
-      status
-    );
-
-    setFailureModalOpened(
-      true
-    );
-  };
-
-  /* =======================================================
-     OPEN USER UNDER SPECIFIC STATUS
-  ======================================================= */
-
-  const openUserStatusFailures =
-    (
-      user: string,
-      status: string
-    ) => {
-      const failures: FailureItem[] =
-        [];
-
-      const seen = new Set<
-        string | number
-      >();
-
-      Object.entries(
-        data?.blocks || {}
-      ).forEach(
-        ([
-          blockName,
-          blockData,
-        ]) => {
-          const currentStatus =
-            (blockData as any)
-              ?.statuses?.[
-              status
-            ];
-
-          if (!currentStatus) {
-            return;
-          }
-
-          const currentUser =
-            currentStatus.users?.[
-              user
-            ] as
-              | UserData
-              | undefined;
-
-          if (!currentUser) {
-            return;
-          }
-
+        (
+          statusData.ids ||
+          []
+        ).forEach(
           (
-            currentUser.ids || []
-          ).forEach(
-            (id) => {
-              if (
-                seen.has(id)
-              ) {
-                return;
-              }
+            id: string | number
+          ) => {
+            if (
+              failureMap.has(
+                id
+              )
+            ) {
+              return;
+            }
 
-              seen.add(id);
-
-              failures.push({
+            failureMap.set(
+              id,
+              {
                 id,
                 district,
                 districtName:
@@ -689,14 +992,20 @@ export default function DistrictCard({
                 blockName:
                   blockName,
                 status,
-                userName: user,
-              });
-            }
-          );
-        }
+              }
+            );
+          }
+        );
+      }
+    );
+
+    const failures =
+      Array.from(
+        failureMap.values()
       );
 
-      failures.sort((a, b) => {
+    failures.sort(
+      (a, b) => {
         const blockA =
           String(
             a.blockName ??
@@ -722,7 +1031,8 @@ export default function DistrictCard({
           );
 
         if (
-          blockCompare !== 0
+          blockCompare !==
+          0
         ) {
           return blockCompare;
         }
@@ -733,76 +1043,203 @@ export default function DistrictCard({
           String(b.id),
           "ar"
         );
-      });
+      }
+    );
 
+    setSelectedFailures(
+      failures
+    );
+
+    setSelectedStatus(
+      getStatusLabel(
+        status
+      )
+    );
+
+    setSelectedStatusKey(
+      status
+    );
+
+    setFailureModalOpened(
+      true
+    );
+  };
+
+  /* =======================================================
+     OPEN USER STATUS FAILURES
+  ======================================================= */
+
+  const openUserStatusFailures = (
+    user: string,
+    status: string,
+    selectedBlockName: string
+  ) => {
+    const failureMap =
+      new Map<
+        string | number,
+        FailureItem
+      >();
+
+    const blockData =
+      normalizedBlocks[
+        selectedBlockName
+      ] ??
+      metricBlocks[
+        selectedBlockName
+      ];
+
+    if (!blockData) {
       setSelectedUser({
         name: user,
-        failures,
+        failures: [],
       });
 
       setOpened(true);
-    };
+
+      return;
+    }
+
+    const currentStatus =
+      blockData?.statuses?.[
+        status
+      ];
+
+    if (!currentStatus) {
+      setSelectedUser({
+        name: user,
+        failures: [],
+      });
+
+      setOpened(true);
+
+      return;
+    }
+
+    const currentUser =
+      currentStatus?.users?.[
+        user
+      ] as
+        | UserData
+        | undefined;
+
+    if (currentUser) {
+      (
+        currentUser.ids ||
+        []
+      ).forEach(
+        (id) => {
+          if (
+            failureMap.has(id)
+          ) {
+            return;
+          }
+
+          failureMap.set(
+            id,
+            {
+              id,
+              district,
+              districtName:
+                district,
+              block:
+                selectedBlockName,
+              blockName:
+                selectedBlockName,
+              status,
+              userName:
+                user,
+            }
+          );
+        }
+      );
+    }
+
+    const failures =
+      Array.from(
+        failureMap.values()
+      );
+
+    failures.sort(
+      (a, b) =>
+        String(a.id).localeCompare(
+          String(b.id),
+          "ar"
+        )
+    );
+
+    setSelectedUser({
+      name: user,
+      failures,
+    });
+
+    setOpened(true);
+  };
 
   /* =======================================================
      OPEN ACHIEVEMENT USER
   ======================================================= */
 
-  const openAchievementUser =
-    (userName: string) => {
-      const failures: FailureItem[] =
-        [];
-
-      const seen = new Set<
-        string | number
+  const openAchievementUser = (
+    userName: string
+  ) => {
+    const failureMap =
+      new Map<
+        string | number,
+        FailureItem
       >();
 
-      Object.entries(
-        data?.blocks || {}
-      ).forEach(
-        ([
-          blockName,
-          blockData,
-        ]) => {
-          Object.entries(
-            (blockData as any)
-              ?.statuses || {}
-          ).forEach(
-            ([
-              status,
-              statusData,
-            ]) => {
-              if (
-                status !==
-                  "Resolved" &&
-                status !==
-                  "PendingFieldMonitorVerification"
-              ) {
-                return;
-              }
+    Object.entries(
+      metricBlocks
+    ).forEach(
+      ([
+        blockName,
+        blockData,
+      ]) => {
+        Object.entries(
+          blockData?.statuses ||
+            {}
+        ).forEach(
+          ([
+            status,
+            statusData,
+          ]) => {
+            if (
+              !isAchievementStatus(
+                status
+              )
+            ) {
+              return;
+            }
 
-              const userData =
-                (statusData as any)
-                  ?.users?.[
-                  userName
-                ] as UserData;
-
-              if (!userData) {
-                return;
-              }
-
+            const userData =
               (
-                userData.ids || []
-              ).forEach(
-                (id) => {
-                  if (
-                    seen.has(id)
-                  ) {
-                    return;
-                  }
+                statusData as any
+              )?.users?.[
+                userName
+              ] as
+                | UserData
+                | undefined;
 
-                  seen.add(id);
+            if (!userData) {
+              return;
+            }
 
-                  failures.push({
+            (
+              userData.ids ||
+              []
+            ).forEach(
+              (id) => {
+                if (
+                  failureMap.has(
+                    id
+                  )
+                ) {
+                  return;
+                }
+
+                failureMap.set(
+                  id,
+                  {
                     id,
                     district,
                     districtName:
@@ -812,55 +1249,130 @@ export default function DistrictCard({
                     blockName:
                       blockName,
                     status,
-                    userName:
-                      userName,
-                  });
-                }
-              );
-            }
-          );
-        }
+                    userName,
+                  }
+                );
+              }
+            );
+          }
+        );
+      }
+    );
+
+    const failures =
+      Array.from(
+        failureMap.values()
       );
 
-      setSelectedUser({
-        name: userName,
-        failures,
-      });
+    failures.sort(
+      (a, b) => {
+        const blockA =
+          String(
+            a.blockName ??
+              a.block ??
+              ""
+          );
 
-      setOpened(true);
-    };
+        const blockB =
+          String(
+            b.blockName ??
+              b.block ??
+              ""
+          );
+
+        const blockCompare =
+          blockA.localeCompare(
+            blockB,
+            "ar",
+            {
+              sensitivity:
+                "base",
+            }
+          );
+
+        if (
+          blockCompare !==
+          0
+        ) {
+          return blockCompare;
+        }
+
+        return String(
+          a.id
+        ).localeCompare(
+          String(b.id),
+          "ar"
+        );
+      }
+    );
+
+    setSelectedUser({
+      name: userName,
+      failures,
+    });
+
+    setOpened(true);
+  };
 
   /* =======================================================
      EXPORT EXCEL
+     
+     نفس معادلة الإنجاز:
+     
+     Field Verification
+     + Resolved
+     + AVTR Review
+     + Rejected
   ======================================================= */
 
   const exportDistrictExcel =
     () => {
-      const rows: any[] =
-        [];
+      const rows: any[] = [];
 
       Object.entries(
-        data?.blocks || {}
+        normalizedBlocks
       ).forEach(
         ([
           block,
           blockData,
         ]) => {
+          const isKpiGroup =
+            isKpiBlock(
+              block
+            );
+
+          const displayName =
+            getBlockDisplayName(
+              block
+            );
+
           const row: any = {
             المنطقة: district,
-            الحي: block,
+
+            الحي: isKpiGroup
+              ? `مؤشر الأداء: ${displayName}`
+              : displayName,
+
             "إجمالي المخالفات":
               Number(
-                (blockData as any)
-                  ?.total || 0
+                (
+                  blockData as any
+                )?.total || 0
               ),
+
             "في انتظار القبول": 0,
+
             "قيد التنفيذ": 0,
+
             "قيد مراجعة AVTR": 0,
-            "انتظار التحقق الميداني": 0,
+
+            "في انتظار التحقق الميداني": 0,
+
             "تم الحل": 0,
-            "تم رفض الحل": 0,
-            مرفوض: 0,
+
+            "AVTR قبلت الرفض": 0,
+
+            "مرفوض": 0,
           };
 
           const statusMap: Record<
@@ -877,28 +1389,31 @@ export default function DistrictCard({
               "قيد مراجعة AVTR",
 
             PendingFieldMonitorVerification:
-              "انتظار التحقق الميداني",
+              "في انتظار التحقق الميداني",
 
             Resolved:
               "تم الحل",
 
             ResolutionRejected:
-              "تم رفض الحل",
+              "AVTR قبلت الرفض",
 
             Rejected:
               "مرفوض",
           };
 
           Object.entries(
-            (blockData as any)
-              ?.statuses || {}
+            (
+              blockData as any
+            )?.statuses || {}
           ).forEach(
             ([
               status,
               statusData,
             ]) => {
               const key =
-                statusMap[status];
+                statusMap[
+                  status
+                ];
 
               if (key) {
                 row[key] =
@@ -914,7 +1429,7 @@ export default function DistrictCard({
           const field =
             Number(
               row[
-                "انتظار التحقق الميداني"
+                "في انتظار التحقق الميداني"
               ] || 0
             );
 
@@ -925,6 +1440,20 @@ export default function DistrictCard({
               ] || 0
             );
 
+          const review =
+            Number(
+              row[
+                "قيد مراجعة AVTR"
+              ] || 0
+            );
+
+          const rejected =
+            Number(
+              row[
+                "مرفوض"
+              ] || 0
+            );
+
           const total =
             Number(
               row[
@@ -932,15 +1461,18 @@ export default function DistrictCard({
               ] || 0
             );
 
-          row["نسبة الإنجاز"] =
-            total
-              ? `${(
-                  ((field +
-                    resolved) /
-                    total) *
-                  100
-                ).toFixed(1)}%`
-              : "0%";
+          row[
+            "نسبة الإنجاز"
+          ] = total
+            ? `${(
+                ((field +
+                  resolved +
+                  review +
+                  rejected) /
+                  total) *
+                100
+              ).toFixed(1)}%`
+            : "0%";
 
           rows.push(row);
         }
@@ -952,46 +1484,52 @@ export default function DistrictCard({
 
       const total: any = {
         المنطقة: "",
+
         الحي: "المجموع",
+
+        "إجمالي المخالفات":
+          districtTotal,
+
+        "في انتظار القبول":
+          districtStatuses[
+            "PendingSpValidation"
+          ] || 0,
+
+        "قيد التنفيذ":
+          districtStatuses[
+            "InProgress"
+          ] || 0,
+
+        "قيد مراجعة AVTR":
+          reviewCount,
+
+        "في انتظار التحقق الميداني":
+          fieldCount,
+
+        "تم الحل":
+          resolvedCount,
+
+        "AVTR قبلت الرفض":
+          districtStatuses[
+            "ResolutionRejected"
+          ] || 0,
+
+        "مرفوض":
+          rejectedCount,
       };
-
-      Object.keys(
-        rows[0]
-      ).forEach((key) => {
-        if (
-          key === "المنطقة" ||
-          key === "الحي" ||
-          key ===
-            "نسبة الإنجاز"
-        ) {
-          return;
-        }
-
-        total[key] =
-          rows.reduce(
-            (
-              sum,
-              row
-            ) =>
-              sum +
-              Number(
-                row[key] || 0
-              ),
-            0
-          );
-      });
 
       total[
         "نسبة الإنجاز"
-      ] =
-        districtTotal
-          ? `${(
-              ((fieldCount +
-                resolvedCount) /
-                districtTotal) *
-              100
-            ).toFixed(1)}%`
-          : "0%";
+      ] = districtTotal
+        ? `${(
+            ((fieldCount +
+              resolvedCount +
+              reviewCount +
+              rejectedCount) /
+              districtTotal) *
+            100
+          ).toFixed(1)}%`
+        : "0%";
 
       rows.push(total);
 
@@ -1008,12 +1546,13 @@ export default function DistrictCard({
 
       sheet["!cols"] = [
         { wch: 24 },
-        { wch: 34 },
+        { wch: 42 },
         { wch: 18 },
         { wch: 20 },
-        { wch: 16 },
-        { wch: 22 },
+        { wch: 20 },
         { wch: 24 },
+        { wch: 18 },
+        { wch: 20 },
         { wch: 18 },
         { wch: 18 },
         { wch: 18 },
@@ -1090,18 +1629,12 @@ export default function DistrictCard({
       shadow="xs"
       dir="rtl"
       style={{
-        background:
-          "#ffffff",
+        background: "#ffffff",
         border:
           "1px solid #edf0f2",
-        overflow:
-          "hidden",
+        overflow: "hidden",
       }}
     >
-      {/* ===================================================
-          HEADER
-      =================================================== */}
-
       <Group
         justify="space-between"
         align="center"
@@ -1172,9 +1705,9 @@ export default function DistrictCard({
 
       <Divider mb="sm" />
 
-      {/* ===================================================
+      {/* =====================================================
           PERFORMANCE
-      =================================================== */}
+      ===================================================== */}
 
       <Card
         radius="md"
@@ -1238,6 +1771,8 @@ export default function DistrictCard({
         <Group
           justify="space-between"
           mt={6}
+          wrap="wrap"
+          gap={4}
         >
           <Text
             size="10px"
@@ -1262,12 +1797,36 @@ export default function DistrictCard({
               )}
             </b>
           </Text>
+
+          <Text
+            size="10px"
+            c="dimmed"
+          >
+            قيد مراجعة AVTR:{" "}
+            <b>
+              {reviewCount.toLocaleString(
+                "en-US"
+              )}
+            </b>
+          </Text>
+
+          <Text
+            size="10px"
+            c="dimmed"
+          >
+            مرفوض:{" "}
+            <b>
+              {rejectedCount.toLocaleString(
+                "en-US"
+              )}
+            </b>
+          </Text>
         </Group>
       </Card>
 
-      {/* ===================================================
+      {/* =====================================================
           STATUS SUMMARY
-      =================================================== */}
+      ===================================================== */}
 
       <Group
         justify="space-between"
@@ -1387,9 +1946,9 @@ export default function DistrictCard({
         )}
       </SimpleGrid>
 
-      {/* ===================================================
-          BLOCKS
-      =================================================== */}
+      {/* =====================================================
+          BLOCKS + KPI
+      ===================================================== */}
 
       <SimpleGrid
         cols={{
@@ -1402,7 +1961,7 @@ export default function DistrictCard({
         spacing={7}
       >
         {Object.entries(
-          data?.blocks || {}
+          normalizedBlocks
         )
           .sort(
             ([, a], [, b]) =>
@@ -1421,17 +1980,14 @@ export default function DistrictCard({
               blockData,
             ]) => {
               const isKpiGroup =
-                block.startsWith(
-                  "KPI:"
+                isKpiBlock(
+                  block
                 );
 
               const displayName =
-                isKpiGroup
-                  ? block.replace(
-                      "KPI:",
-                      ""
-                    )
-                  : block;
+                getBlockDisplayName(
+                  block
+                );
 
               return (
                 <Card
@@ -1441,13 +1997,16 @@ export default function DistrictCard({
                   withBorder
                   style={{
                     background:
-                      "#fbfcfd",
+                      isKpiGroup
+                        ? "#F3FBFC"
+                        : "#fbfcfd",
+
                     border:
-                      "1px solid #edf0f2",
+                      isKpiGroup
+                        ? "1px solid #BDEEF2"
+                        : "1px solid #edf0f2",
                   }}
                 >
-                  {/* BLOCK HEADER */}
-
                   <Group
                     justify="space-between"
                     align="center"
@@ -1465,13 +2024,17 @@ export default function DistrictCard({
                         radius="xl"
                         color={
                           isKpiGroup
-                            ? "violet"
+                            ? "cyan"
                             : "blue"
                         }
                         variant="light"
                       >
                         {isKpiGroup ? (
-                          "K"
+                          <IconChartBar
+                            size={
+                              13
+                            }
+                          />
                         ) : (
                           <IconMapPin
                             size={
@@ -1481,53 +2044,78 @@ export default function DistrictCard({
                         )}
                       </Avatar>
 
-                      <Text
-                        fw={800}
-                        size="xs"
-                        truncate
+                      <Box
+                        style={{
+                          minWidth: 0,
+                        }}
                       >
-                        {isKpiGroup
-                          ? displayName
-                          : `حي ${displayName}`}
-                      </Text>
+                        <Text
+                          fw={800}
+                          size="xs"
+                          truncate
+                        >
+                          {isKpiGroup
+                            ? displayName
+                            : `حي ${displayName}`}
+                        </Text>
+
+                        {isKpiGroup && (
+                          <Text
+                            size="8px"
+                            c="cyan.8"
+                            fw={700}
+                          >
+                            مؤشر الأداء
+                          </Text>
+                        )}
+                      </Box>
                     </Group>
 
                     <Badge
                       size="xs"
                       radius="xl"
                       variant="light"
-                      color="gray"
+                      color={
+                        isKpiGroup
+                          ? "cyan"
+                          : "gray"
+                      }
                     >
                       {Number(
-                        (blockData as any)
-                          ?.total || 0
+                        (
+                          blockData as any
+                        )?.total || 0
                       ).toLocaleString(
                         "en-US"
                       )}
                     </Badge>
                   </Group>
 
-                  <Divider
-                    mb={5}
-                  />
-
-                  {/* STATUS CARDS */}
+                  <Divider mb={5} />
 
                   <Stack gap={4}>
                     {Object.entries(
-                      (blockData as any)
-                        ?.statuses ||
+                      (
+                        blockData as any
+                      )?.statuses ||
                         {}
                     )
                       .sort(
-                        ([, a], [, b]) =>
+                        (
+                          [, a],
+                          [, b]
+                        ) =>
                           Number(
-                            (b as any)
+                            (
+                              b as any
+                            )
                               ?.total ||
                               0
                           ) -
                           Number(
-                            (a as any)
+                            (
+                              a as any
+                            )
                               ?.total ||
                               0
                           )
@@ -1557,8 +2145,6 @@ export default function DistrictCard({
                                   "1px solid #f0f2f4",
                               }}
                             >
-                              {/* STATUS HEADER */}
-
                               <Group
                                 justify="space-between"
                                 align="center"
@@ -1585,9 +2171,7 @@ export default function DistrictCard({
 
                                   <Text
                                     size="10px"
-                                    fw={
-                                      700
-                                    }
+                                    fw={700}
                                     truncate
                                   >
                                     {getStatusLabel(
@@ -1615,32 +2199,24 @@ export default function DistrictCard({
                                 </Badge>
                               </Group>
 
-                              {/* USERS */}
-
                               {!summaryOnlyStatuses.includes(
                                 status
                               ) &&
                                 Object.keys(
                                   (
                                     statusData as any
-                                  )
-                                    ?.users ||
+                                  )?.users ||
                                     {}
                                 ).length >
                                   0 && (
                                   <Stack
-                                    mt={
-                                      5
-                                    }
-                                    gap={
-                                      3
-                                    }
+                                    mt={5}
+                                    gap={3}
                                   >
                                     {Object.entries(
                                       (
                                         statusData as any
-                                      )
-                                        ?.users ||
+                                      )?.users ||
                                         {}
                                     )
                                       .sort(
@@ -1681,27 +2257,20 @@ export default function DistrictCard({
                                               }
                                               justify="space-between"
                                               align="center"
-                                              gap={
-                                                5
-                                              }
-                                              px={
-                                                5
-                                              }
-                                              py={
-                                                3
-                                              }
+                                              gap={5}
+                                              px={5}
+                                              py={3}
                                               onClick={() =>
                                                 openUserStatusFailures(
                                                   user,
-                                                  status
+                                                  status,
+                                                  block
                                                 )
                                               }
                                               style={{
                                                 cursor:
                                                   "pointer",
                                                 borderRadius: 7,
-                                                transition:
-                                                  "background .15s ease, transform .15s ease",
                                               }}
                                               onMouseEnter={(
                                                 e
@@ -1723,9 +2292,7 @@ export default function DistrictCard({
                                               }}
                                             >
                                               <Group
-                                                gap={
-                                                  5
-                                                }
+                                                gap={5}
                                                 wrap="nowrap"
                                                 style={{
                                                   minWidth: 0,
@@ -1733,9 +2300,7 @@ export default function DistrictCard({
                                                 }}
                                               >
                                                 <Avatar
-                                                  size={
-                                                    22
-                                                  }
+                                                  size={22}
                                                   radius="xl"
                                                   color={
                                                     statusColor
@@ -1751,14 +2316,8 @@ export default function DistrictCard({
 
                                                 <Text
                                                   size="10px"
-                                                  fw={
-                                                    700
-                                                  }
+                                                  fw={700}
                                                   truncate
-                                                  style={{
-                                                    cursor:
-                                                      "pointer",
-                                                  }}
                                                 >
                                                   {
                                                     user
@@ -1795,9 +2354,9 @@ export default function DistrictCard({
           )}
       </SimpleGrid>
 
-      {/* ===================================================
+      {/* =====================================================
           USER STATUS MODAL
-      =================================================== */}
+      ===================================================== */}
 
       <Modal
         dir="rtl"
@@ -1830,8 +2389,9 @@ export default function DistrictCard({
                 fw={900}
                 size="lg"
               >
-                {selectedUser?.failures?.length ||
-                  0}
+                {selectedUser
+                  ?.failures
+                  ?.length || 0}
               </Text>
             </Box>
 
@@ -1853,9 +2413,23 @@ export default function DistrictCard({
                     .map(
                       (item) =>
                         `${item.id} - ${
-                          item.blockName ??
-                          item.block ??
-                          ""
+                          isKpiBlock(
+                            String(
+                              item.blockName ??
+                                item.block ??
+                                ""
+                            )
+                          )
+                            ? `مؤشر الأداء: ${getBlockDisplayName(
+                                String(
+                                  item.blockName ??
+                                    item.block ??
+                                    ""
+                                )
+                              )}`
+                            : item.blockName ??
+                              item.block ??
+                              ""
                         }`
                     )
                     .join("\n");
@@ -1880,73 +2454,85 @@ export default function DistrictCard({
                 (
                   item,
                   index
-                ) => (
-                  <Card
-                    key={`${item.id}-${index}`}
-                    radius="sm"
-                    p="xs"
-                    withBorder
-                    style={{
-                      background:
-                        "#fff",
-                    }}
-                  >
-                    <Group
-                      justify="space-between"
-                      align="center"
+                ) => {
+                  const blockName =
+                    String(
+                      item.blockName ??
+                        item.block ??
+                        ""
+                    );
+
+                  const isKpi =
+                    isKpiBlock(
+                      blockName
+                    );
+
+                  const displayBlock =
+                    getBlockDisplayName(
+                      blockName
+                    );
+
+                  return (
+                    <Card
+                      key={`${item.id}-${index}`}
+                      radius="sm"
+                      p="xs"
+                      withBorder
                     >
                       <Group
-                        gap="xs"
+                        justify="space-between"
+                        align="center"
                       >
+                        <Group gap="xs">
+                          <Badge
+                            size="sm"
+                            radius="xl"
+                            variant="light"
+                            color={getStatusColor(
+                              item.status ||
+                                ""
+                            )}
+                          >
+                            {item.id}
+                          </Badge>
+
+                          <Box>
+                            <Text
+                              size="9px"
+                              c="dimmed"
+                            >
+                              {isKpi
+                                ? "مؤشر الأداء"
+                                : "الحي"}
+                            </Text>
+
+                            <Text
+                              size="xs"
+                              fw={800}
+                            >
+                              {displayBlock ||
+                                "غير محدد"}
+                            </Text>
+                          </Box>
+                        </Group>
+
                         <Badge
-                          size="sm"
-                          radius="xl"
+                          size="xs"
                           variant="light"
                           color={getStatusColor(
                             item.status ||
                               ""
                           )}
                         >
-                          {
-                            item.id
-                          }
+                          {getStatusLabel(
+                            item.status ||
+                              ""
+                          )}
                         </Badge>
-
-                        <Box>
-                          <Text
-                            size="9px"
-                            c="dimmed"
-                          >
-                            الحي
-                          </Text>
-
-                          <Text
-                            size="xs"
-                            fw={800}
-                          >
-                            {item.blockName ??
-                              item.block ??
-                              "غير محدد"}
-                          </Text>
-                        </Box>
                       </Group>
-
-                      <Badge
-                        size="xs"
-                        variant="light"
-                        color={getStatusColor(
-                          item.status ||
-                            ""
-                        )}
-                      >
-                        {getStatusLabel(
-                          item.status ||
-                            ""
-                        )}
-                      </Badge>
-                    </Group>
-                  </Card>
-                )
+                    </Card>
+                  );
+                }
               )}
 
               {!selectedUser
@@ -1971,9 +2557,9 @@ export default function DistrictCard({
         </Stack>
       </Modal>
 
-      {/* ===================================================
+      {/* =====================================================
           SUMMARY MODAL
-      =================================================== */}
+      ===================================================== */}
 
       <Modal
         dir="rtl"
@@ -2054,9 +2640,9 @@ export default function DistrictCard({
         </SimpleGrid>
       </Modal>
 
-      {/* ===================================================
+      {/* =====================================================
           USERS ACHIEVEMENT MODAL
-      =================================================== */}
+      ===================================================== */}
 
       <Modal
         dir="rtl"
@@ -2094,8 +2680,6 @@ export default function DistrictCard({
         <Box
           ref={usersModalRef}
         >
-          {/* TOP USERS */}
-
           <SimpleGrid
             cols={{
               base: 1,
@@ -2144,14 +2728,10 @@ export default function DistrictCard({
                             : "#ffa94d",
                     }}
                   >
-                    <Text
-                      size="22px"
-                    >
-                      {index ===
-                      0
+                    <Text size="22px">
+                      {index === 0
                         ? "🥇"
-                        : index ===
-                            1
+                        : index === 1
                           ? "🥈"
                           : "🥉"}
                     </Text>
@@ -2162,9 +2742,7 @@ export default function DistrictCard({
                       mt={4}
                       truncate
                     >
-                      {
-                        user.name
-                      }
+                      {user.name}
                     </Text>
 
                     <Badge
@@ -2173,9 +2751,7 @@ export default function DistrictCard({
                       variant="light"
                       color="blue"
                     >
-                      {
-                        user.total
-                      }
+                      {user.total}
                     </Badge>
                   </Card>
                 )
@@ -2205,6 +2781,14 @@ export default function DistrictCard({
 
                 <Table.Th>
                   انتظار التحقق
+                </Table.Th>
+
+                <Table.Th>
+                  قيد مراجعة AVTR
+                </Table.Th>
+
+                <Table.Th>
+                  مرفوض
                 </Table.Th>
 
                 <Table.Th>
@@ -2239,8 +2823,7 @@ export default function DistrictCard({
                         variant="light"
                         color="gray"
                       >
-                        {index +
-                          1}
+                        {index + 1}
                       </Badge>
                     </Table.Td>
 
@@ -2265,9 +2848,7 @@ export default function DistrictCard({
                           fw={700}
                           truncate
                         >
-                          {
-                            user.name
-                          }
+                          {user.name}
                         </Text>
                       </Group>
                     </Table.Td>
@@ -2290,9 +2871,27 @@ export default function DistrictCard({
                         color="blue"
                         variant="light"
                       >
-                        {
-                          user.field
-                        }
+                        {user.field}
+                      </Badge>
+                    </Table.Td>
+
+                    <Table.Td>
+                      <Badge
+                        size="xs"
+                        color="orange"
+                        variant="light"
+                      >
+                        {user.review}
+                      </Badge>
+                    </Table.Td>
+
+                    <Table.Td>
+                      <Badge
+                        size="xs"
+                        color="red"
+                        variant="light"
+                      >
+                        {user.rejected}
                       </Badge>
                     </Table.Td>
 
@@ -2302,9 +2901,7 @@ export default function DistrictCard({
                         color="gray"
                         variant="light"
                       >
-                        {
-                          user.total
-                        }
+                        {user.total}
                       </Badge>
                     </Table.Td>
                   </Table.Tr>
@@ -2315,9 +2912,9 @@ export default function DistrictCard({
         </Box>
       </Modal>
 
-      {/* ===================================================
+      {/* =====================================================
           FAILURE LIST MODAL
-      =================================================== */}
+      ===================================================== */}
 
       <FailureListModal
         opened={

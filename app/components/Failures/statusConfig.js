@@ -93,18 +93,19 @@ export const statusConfig = {
     icon:<IconClock size={18}/>
   },
  
-  Rejected:{
-    label:"AVTR قبلت الرفض",
-    color:"red",
-    bg:"#ffeaea",
-    icon:<IconClock size={18}/>
-  },
- ResolutionRejected:{
-    label:"AVTR رفضت الحل",
-    color:"red",
-    bg:"#ffeaea",
-    icon:<IconX size={18}/>
-  },
+ Rejected: {
+  label: "مرفوض",
+  color: "red",
+  bg: "#ffeaea",
+  icon: <IconClock size={18} />,
+},
+
+ResolutionRejected: {
+  label: "تم رفض الحل",
+  color: "red",
+  bg: "#ffeaea",
+  icon: <IconX size={18} />,
+}
 
 
 

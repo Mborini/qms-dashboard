@@ -301,36 +301,47 @@ export default function FailureStats({
     return result;
   }, [filteredItems]);
 
-  /* =========================================================
-     KPIs
-  ========================================================= */
+/* =========================================================
+   KPIs
+========================================================= */
 
-  const kpis = useMemo(() => {
-    const total = filteredItems.length;
+const kpis = useMemo(() => {
+  const total = filteredItems.length;
 
-    const field =
-      totalStatuses.PendingFieldMonitorVerification || 0;
+  const field =
+    totalStatuses.PendingFieldMonitorVerification || 0;
 
-    const resolved = totalStatuses.Resolved || 0;
+  const resolved =
+    totalStatuses.Resolved || 0;
 
-    return {
-      total,
+  const supervisorReview =
+    totalStatuses.PendingSupervisorReview || 0;
 
-      fieldPercentage: total
-        ? ((field / total) * 100).toFixed(1)
-        : "0.0",
+  const rejected =
+    totalStatuses.Rejected || 0;
 
-      resolvedPercentage: total
-        ? ((resolved / total) * 100).toFixed(1)
-        : "0.0",
-    };
-  }, [filteredItems, totalStatuses]);
+  const achievementCount =
+    field +
+    resolved +
+    supervisorReview +
+    rejected;
 
-  const achievement = (
-    Number(kpis.fieldPercentage) +
-    Number(kpis.resolvedPercentage)
-  ).toFixed(1);
+  const achievementPercentage = total
+    ? ((achievementCount / total) * 100).toFixed(1)
+    : "0.0";
 
+  return {
+    total,
+    field,
+    resolved,
+    supervisorReview,
+    rejected,
+    achievementCount,
+    achievementPercentage,
+  };
+}, [filteredItems, totalStatuses]);
+
+const achievement = kpis.achievementPercentage;
   /* =========================================================
      ACTIVE SOURCE
   ========================================================= */
@@ -425,22 +436,22 @@ export default function FailureStats({
       }
     };
 
-    const getAchievement = (
-      data: ReturnType<typeof createEmptyStats>
-    ) => {
-      if (!data.total) return "0.0";
+const getAchievement = (
+  data: ReturnType<typeof createEmptyStats>
+) => {
+  if (!data.total) return "0.0";
 
-      return (
-        (
-          ((data.fieldVerification +
-            data.resolved +
-            data.avtrRejectedSolution) /
-            data.total) *
-          100
-        ).toFixed(1)
-      );
-    };
-
+  return (
+    (
+      ((data.fieldVerification +
+        data.resolved +
+        data.avtrReview +
+        data.avtrRejectedSolution) /
+        data.total) *
+      100
+    ).toFixed(1)
+  );
+};
     const getReportDate = () => {
       const firstItem = filteredItems.find(
         (item) =>
