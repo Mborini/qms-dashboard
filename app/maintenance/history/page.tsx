@@ -26,16 +26,19 @@ import {
   IconCar,
   IconCircleCheck,
   IconClock,
+  IconEye,
   IconFileDescription,
   IconHistory,
   IconInfoCircle,
   IconLogin,
   IconLogout,
   IconNotes,
+  IconReportMoney,
   IconTimeline,
   IconTool,
   IconTrash,
 } from "@tabler/icons-react";
+
 import { exportMaintenanceExcel } from "@/utils/maintenanceExcel";
 
 type MaintenanceRecord = {
@@ -62,6 +65,8 @@ type MaintenanceRecord = {
 
   description: string | null;
   notes: string | null;
+
+  cost: number | null;
 
   created_by: string | null;
   updated_by: string | null;
@@ -103,34 +108,39 @@ export default function MaintenanceHistoryPage() {
     MaintenanceRecord[]
   >([]);
 
-  const [vehicles, setVehicles] = useState<Vehicle[]>(
-    []
-  );
+  const [vehicles, setVehicles] =
+    useState<Vehicle[]>([]);
 
   const [kpis, setKpis] = useState<KPI[]>([]);
 
   const [loading, setLoading] =
     useState(true);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
   /**
-   * الوقت الحالي
-   * يستخدم لتحديث مدة الصيانة المفتوحة Live
+   * ========================================
+   * Current Time
+   * ========================================
    */
   const [now, setNow] = useState(() =>
     Date.now()
   );
 
   /**
+   * ========================================
    * Pagination
+   * ========================================
    */
   const [page, setPage] = useState(1);
 
   const limit = 10;
 
   /**
+   * ========================================
    * Filters
+   * ========================================
    */
   const [search, setSearch] =
     useState("");
@@ -151,7 +161,9 @@ export default function MaintenanceHistoryPage() {
     useState("");
 
   /**
+   * ========================================
    * Details Modal
+   * ========================================
    */
   const [selectedRecord, setSelectedRecord] =
     useState<MaintenanceRecord | null>(
@@ -162,7 +174,30 @@ export default function MaintenanceHistoryPage() {
     useState(false);
 
   /**
+   * ========================================
+   * Cost Modal
+   * ========================================
+   */
+  const [costOpened, setCostOpened] =
+    useState(false);
+
+  const [
+    selectedCostRecord,
+    setSelectedCostRecord,
+  ] = useState<MaintenanceRecord | null>(
+    null
+  );
+
+  const [costValue, setCostValue] =
+    useState("");
+
+  const [savingCost, setSavingCost] =
+    useState(false);
+
+  /**
+   * ========================================
    * Delete
+   * ========================================
    */
   const [deletingId, setDeletingId] =
     useState<number | null>(null);
@@ -222,172 +257,191 @@ export default function MaintenanceHistoryPage() {
       kpiMap.values()
     );
   };
-const handleExportExcel = async () => {
-  try {
-    setError("");
 
-    if (filteredRecords.length === 0) {
-      setError(
-        "لا توجد سجلات مطابقة للفلاتر لتصديرها"
-      );
-      return;
-    }
+  /**
+   * ========================================
+   * Export Excel
+   * ========================================
+   */
+  const handleExportExcel =
+    async () => {
+      try {
+        setError("");
 
-    const selectedVehicle = vehicles.find(
-      (vehicle) =>
-        String(vehicle.id) === vehicleId
-    );
+        if (
+          filteredRecords.length === 0
+        ) {
+          setError(
+            "لا توجد سجلات مطابقة للفلاتر لتصديرها"
+          );
 
-    const selectedKpi = kpis.find(
-      (kpi) =>
-        String(kpi.id) === kpiId
-    );
+          return;
+        }
 
-    const selectedSubKpi =
-      selectedKpi?.sub_kpis.find(
-        (subKpi) =>
-          String(subKpi.id) === subKpiId
-      );
+        const selectedVehicle =
+          vehicles.find(
+            (vehicle) =>
+              String(vehicle.id) ===
+              vehicleId
+          );
 
-    await exportMaintenanceExcel({
-      records: filteredRecords,
+        const selectedKpi =
+          kpis.find(
+            (kpi) =>
+              String(kpi.id) ===
+              kpiId
+          );
 
-      filters: {
-        search,
-        date,
+        const selectedSubKpi =
+          selectedKpi?.sub_kpis.find(
+            (subKpi) =>
+              String(subKpi.id) ===
+              subKpiId
+          );
 
-        vehicle:
-          selectedVehicle?.plate_number,
+        await exportMaintenanceExcel({
+          records: filteredRecords,
 
-        kpi:
-          selectedKpi?.name,
+          filters: {
+            search,
+            date,
 
-        subKpi:
-          selectedSubKpi?.name,
+            vehicle:
+              selectedVehicle?.plate_number,
 
-        status:
-          status === "open"
-            ? "مفتوحة"
-            : status === "closed"
-            ? "مغلقة"
-            : undefined,
-      },
-    });
-  } catch (error) {
-    console.error(
-      "Excel export error:",
-      error
-    );
+            kpi:
+              selectedKpi?.name,
 
-    setError(
-      error instanceof Error
-        ? error.message
-        : "حدث خطأ أثناء تصدير ملف Excel"
-    );
-  }
-};
+            subKpi:
+              selectedSubKpi?.name,
+
+            status:
+              status === "open"
+                ? "داخل الصيانة"
+                : status === "closed"
+                ? "خارج الصيانة"
+                : undefined,
+          },
+        });
+      } catch (error) {
+        console.error(
+          "Excel export error:",
+          error
+        );
+
+        setError(
+          error instanceof Error
+            ? error.message
+            : "حدث خطأ أثناء تصدير ملف Excel"
+        );
+      }
+    };
+
   /**
    * ========================================
    * Load Filter Data
    * ========================================
    */
-  const loadFilterData = async () => {
-    try {
-      const [
-        vehiclesResponse,
-        kpisResponse,
-      ] = await Promise.all([
-        fetch(
-          "/api/maintenance/vehicles",
-          {
-            cache: "no-store",
-          }
-        ),
+  const loadFilterData =
+    async () => {
+      try {
+        const [
+          vehiclesResponse,
+          kpisResponse,
+        ] = await Promise.all([
+          fetch(
+            "/api/maintenance/vehicles",
+            {
+              cache: "no-store",
+            }
+          ),
 
-        fetch(
-          "/api/maintenance/kpis",
-          {
-            cache: "no-store",
-          }
-        ),
-      ]);
+          fetch(
+            "/api/maintenance/kpis",
+            {
+              cache: "no-store",
+            }
+          ),
+        ]);
 
-      if (!vehiclesResponse.ok) {
-        throw new Error(
-          "Failed to load vehicles"
+        if (!vehiclesResponse.ok) {
+          throw new Error(
+            "Failed to load vehicles"
+          );
+        }
+
+        if (!kpisResponse.ok) {
+          throw new Error(
+            "Failed to load KPIs"
+          );
+        }
+
+        const vehiclesData =
+          await vehiclesResponse.json();
+
+        const kpisData =
+          await kpisResponse.json();
+
+        setVehicles(
+          vehiclesData.data ?? []
+        );
+
+        const rows: KPIApiRow[] =
+          kpisData.data ?? [];
+
+        setKpis(
+          normalizeKpis(rows)
+        );
+      } catch (err) {
+        console.error(err);
+
+        setError(
+          "حدث خطأ أثناء تحميل بيانات الفلاتر"
         );
       }
-
-      if (!kpisResponse.ok) {
-        throw new Error(
-          "Failed to load KPIs"
-        );
-      }
-
-      const vehiclesData =
-        await vehiclesResponse.json();
-
-      const kpisData =
-        await kpisResponse.json();
-
-      setVehicles(
-        vehiclesData.data ?? []
-      );
-
-      const rows: KPIApiRow[] =
-        kpisData.data ?? [];
-
-      setKpis(
-        normalizeKpis(rows)
-      );
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        "حدث خطأ أثناء تحميل بيانات الفلاتر"
-      );
-    }
-  };
+    };
 
   /**
    * ========================================
    * Load Maintenance History
    * ========================================
    */
-  const loadHistory = async () => {
-    try {
-      setLoading(true);
-      setError("");
+  const loadHistory =
+    async () => {
+      try {
+        setLoading(true);
+        setError("");
 
-      const response = await fetch(
-        "/api/maintenance/history",
-        {
-          cache: "no-store",
+        const response =
+          await fetch(
+            "/api/maintenance/history",
+            {
+              cache: "no-store",
+            }
+          );
+
+        if (!response.ok) {
+          throw new Error(
+            "Failed to load maintenance history"
+          );
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(
-          "Failed to load maintenance history"
+        const data =
+          await response.json();
+
+        setRecords(
+          data.data ?? []
         );
+      } catch (err) {
+        console.error(err);
+
+        setError(
+          "حدث خطأ أثناء تحميل سجل الصيانة"
+        );
+      } finally {
+        setLoading(false);
       }
-
-      const data =
-        await response.json();
-
-      setRecords(
-        data.data ?? []
-      );
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        "حدث خطأ أثناء تحميل سجل الصيانة"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   /**
    * ========================================
@@ -404,156 +458,210 @@ const handleExportExcel = async () => {
    * Delete Maintenance Record
    * ========================================
    */
-  const deleteRecord = async (
-    record: MaintenanceRecord
-  ) => {
-    const confirmed =
-      window.confirm(
-        `هل أنت متأكد من حذف سجل الصيانة للمركبة ${record.plate_number}؟\n\nهذا الإجراء لا يمكن التراجع عنه.`
-      );
+  const deleteRecord =
+    async (
+      record: MaintenanceRecord
+    ) => {
+      const confirmed =
+        window.confirm(
+          `هل أنت متأكد من حذف سجل الصيانة للمركبة ${record.plate_number}؟\n\nهذا الإجراء لا يمكن التراجع عنه.`
+        );
 
-    if (!confirmed) {
-      return;
-    }
+      if (!confirmed) {
+        return;
+      }
 
-    try {
-      setDeletingId(record.id);
-      setError("");
+      try {
+        setDeletingId(
+          record.id
+        );
 
-      const response = await fetch(
-        `/api/maintenance/history/${record.id}`,
-        {
-          method: "DELETE",
+        setError("");
+
+        const response =
+          await fetch(
+            `/api/maintenance/history/${record.id}`,
+            {
+              method: "DELETE",
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.error ||
+              "Failed to delete maintenance record"
+          );
         }
-      );
 
-      const data =
-        await response.json();
+        /**
+         * إزالة السجل من الجدول
+         */
+        setRecords(
+          (currentRecords) =>
+            currentRecords.filter(
+              (item) =>
+                item.id !==
+                record.id
+            )
+        );
 
-      if (
-        !response.ok ||
-        !data.success
-      ) {
-        throw new Error(
-          data.error ||
-            "Failed to delete maintenance record"
+        /**
+         * إغلاق Details Modal
+         */
+        if (
+          selectedRecord?.id ===
+          record.id
+        ) {
+          setDetailsOpened(
+            false
+          );
+
+          setSelectedRecord(
+            null
+          );
+        }
+
+        /**
+         * إغلاق Cost Modal
+         */
+        if (
+          selectedCostRecord?.id ===
+          record.id
+        ) {
+          setCostOpened(
+            false
+          );
+
+          setSelectedCostRecord(
+            null
+          );
+
+          setCostValue("");
+        }
+      } catch (err) {
+        console.error(err);
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "حدث خطأ أثناء حذف سجل الصيانة"
+        );
+      } finally {
+        setDeletingId(
+          null
         );
       }
-
-      /**
-       * إزالة السجل من الجدول
-       */
-      setRecords(
-        (currentRecords) =>
-          currentRecords.filter(
-            (item) =>
-              item.id !== record.id
-          )
-      );
-
-      /**
-       * إغلاق Modal إذا كان مفتوح
-       */
-      if (
-        selectedRecord?.id ===
-        record.id
-      ) {
-        setDetailsOpened(false);
-        setSelectedRecord(null);
-      }
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "حدث خطأ أثناء حذف سجل الصيانة"
-      );
-    } finally {
-      setDeletingId(null);
-    }
-  };
+    };
 
   /**
    * ========================================
    * Vehicle Options
    * ========================================
    */
-  const vehicleOptions = useMemo(() => {
-    const map =
-      new Map<string, string>();
+  const vehicleOptions =
+    useMemo(() => {
+      const map =
+        new Map<
+          string,
+          string
+        >();
 
-    vehicles.forEach(
-      (vehicle) => {
-        map.set(
-          String(vehicle.id),
-          vehicle.plate_number
-        );
-      }
-    );
+      vehicles.forEach(
+        (vehicle) => {
+          map.set(
+            String(
+              vehicle.id
+            ),
+            vehicle.plate_number
+          );
+        }
+      );
 
-    return Array.from(
-      map.entries()
-    ).map(
-      ([value, label]) => ({
-        value,
-        label,
-      })
-    );
-  }, [vehicles]);
+      return Array.from(
+        map.entries()
+      ).map(
+        ([
+          value,
+          label,
+        ]) => ({
+          value,
+          label,
+        })
+      );
+    }, [vehicles]);
 
   /**
    * ========================================
    * KPI Options
    * ========================================
    */
-  const kpiOptions = useMemo(() => {
-    const map =
-      new Map<string, string>();
+  const kpiOptions =
+    useMemo(() => {
+      const map =
+        new Map<
+          string,
+          string
+        >();
 
-    kpis.forEach((kpi) => {
-      map.set(
-        String(kpi.id),
-        kpi.name
+      kpis.forEach(
+        (kpi) => {
+          map.set(
+            String(kpi.id),
+            kpi.name
+          );
+        }
       );
-    });
 
-    return Array.from(
-      map.entries()
-    ).map(
-      ([value, label]) => ({
-        value,
-        label,
-      })
-    );
-  }, [kpis]);
+      return Array.from(
+        map.entries()
+      ).map(
+        ([
+          value,
+          label,
+        ]) => ({
+          value,
+          label,
+        })
+      );
+    }, [kpis]);
 
   /**
    * ========================================
    * Sub KPI Options
    * ========================================
    */
-  const subKpiOptions = useMemo(() => {
-    const selectedKpi =
-      kpis.find(
-        (kpi) =>
-          String(kpi.id) ===
-          kpiId
+  const subKpiOptions =
+    useMemo(() => {
+      const selectedKpi =
+        kpis.find(
+          (kpi) =>
+            String(kpi.id) ===
+            kpiId
+        );
+
+      if (!selectedKpi) {
+        return [];
+      }
+
+      return selectedKpi.sub_kpis.map(
+        (subKpi) => ({
+          value: String(
+            subKpi.id
+          ),
+          label:
+            subKpi.name,
+        })
       );
-
-    if (!selectedKpi) {
-      return [];
-    }
-
-    return selectedKpi.sub_kpis.map(
-      (subKpi) => ({
-        value: String(
-          subKpi.id
-        ),
-        label: subKpi.name,
-      })
-    );
-  }, [kpis, kpiId]);
+    }, [
+      kpis,
+      kpiId,
+    ]);
 
   /**
    * ========================================
@@ -573,27 +681,29 @@ const handleExportExcel = async () => {
            * Search
            */
           if (query) {
-            const searchableText = [
-              record.id,
-              record.plate_number,
-              record.model,
-              record.area,
-              record.kpi_name,
-              record.sub_kpi_name,
-              record.description,
-              record.notes,
-              record.created_by,
-              record.updated_by,
-            ]
-              .filter(
-                (value) =>
-                  value !==
-                    null &&
-                  value !==
-                    undefined
-              )
-              .join(" ")
-              .toLowerCase();
+            const searchableText =
+              [
+                record.id,
+                record.plate_number,
+                record.model,
+                record.area,
+                record.kpi_name,
+                record.sub_kpi_name,
+                record.description,
+                record.notes,
+                record.created_by,
+                record.updated_by,
+                record.cost,
+              ]
+                .filter(
+                  (value) =>
+                    value !==
+                      null &&
+                    value !==
+                      undefined
+                )
+                .join(" ")
+                .toLowerCase();
 
             if (
               !searchableText.includes(
@@ -777,143 +887,145 @@ const handleExportExcel = async () => {
    * Format Duration
    * ========================================
    */
-  const formatDuration = (
-    entryAt: string,
-    exitAt: string | null
-  ) => {
-    const start =
-      new Date(
-        entryAt
-      ).getTime();
+  const formatDuration =
+    (
+      entryAt: string,
+      exitAt: string | null
+    ) => {
+      const start =
+        new Date(
+          entryAt
+        ).getTime();
 
-    if (
-      Number.isNaN(start)
-    ) {
-      return "-";
-    }
-
-    const end = exitAt
-      ? new Date(
-          exitAt
-        ).getTime()
-      : now;
-
-    if (
-      Number.isNaN(end)
-    ) {
-      return "-";
-    }
-
-    const difference =
-      Math.max(
-        0,
-        end - start
-      );
-
-    const totalSeconds =
-      Math.floor(
-        difference / 1000
-      );
-
-    const days =
-      Math.floor(
-        totalSeconds /
-          86400
-      );
-
-    const hours =
-      Math.floor(
-        (totalSeconds %
-          86400) /
-          3600
-      );
-
-    const minutes =
-      Math.floor(
-        (totalSeconds %
-          3600) /
-          60
-      );
-
-    const seconds =
-      totalSeconds % 60;
-
-    const parts: string[] =
-      [];
-
-    if (days > 0) {
-      parts.push(
-        `${days} يوم`
-      );
-    }
-
-    if (hours > 0) {
-      parts.push(
-        `${hours} ساعة`
-      );
-    }
-
-    if (minutes > 0) {
-      parts.push(
-        `${minutes} دقيقة`
-      );
-    }
-
-    /**
-     * إذا أقل من دقيقة
-     */
-    if (
-      days === 0 &&
-      hours === 0 &&
-      minutes === 0
-    ) {
       if (
-        seconds > 0
+        Number.isNaN(start)
       ) {
-        return `${seconds} ثانية`;
+        return "-";
       }
 
-      return "أقل من دقيقة";
-    }
+      const end = exitAt
+        ? new Date(
+            exitAt
+          ).getTime()
+        : now;
 
-    return parts.join(
-      " و "
-    );
-  };
+      if (
+        Number.isNaN(end)
+      ) {
+        return "-";
+      }
+
+      const difference =
+        Math.max(
+          0,
+          end - start
+        );
+
+      const totalSeconds =
+        Math.floor(
+          difference /
+            1000
+        );
+
+      const days =
+        Math.floor(
+          totalSeconds /
+            86400
+        );
+
+      const hours =
+        Math.floor(
+          (totalSeconds %
+            86400) /
+            3600
+        );
+
+      const minutes =
+        Math.floor(
+          (totalSeconds %
+            3600) /
+            60
+        );
+
+      const seconds =
+        totalSeconds % 60;
+
+      const parts: string[] =
+        [];
+
+      if (days > 0) {
+        parts.push(
+          `${days} يوم`
+        );
+      }
+
+      if (hours > 0) {
+        parts.push(
+          `${hours} ساعة`
+        );
+      }
+
+      if (
+        minutes > 0
+      ) {
+        parts.push(
+          `${minutes} دقيقة`
+        );
+      }
+
+      if (
+        days === 0 &&
+        hours === 0 &&
+        minutes === 0
+      ) {
+        if (
+          seconds > 0
+        ) {
+          return `${seconds} ثانية`;
+        }
+
+        return "أقل من دقيقة";
+      }
+
+      return parts.join(
+        " و "
+      );
+    };
 
   /**
    * ========================================
    * Format Date
    * ========================================
    */
-  const formatDateTime = (
-    value: string | null
-  ) => {
-    if (!value) {
-      return "-";
-    }
-
-    const date =
-      new Date(value);
-
-    if (
-      Number.isNaN(
-        date.getTime()
-      )
-    ) {
-      return "-";
-    }
-
-    return date.toLocaleString(
-      "EN-JO",
-      {
-        dateStyle:
-          "medium",
-        timeStyle:
-          "short",
+  const formatDateTime =
+    (
+      value: string | null
+    ) => {
+      if (!value) {
+        return "-";
       }
-    );
-  };
+
+      const date =
+        new Date(value);
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+        return "-";
+      }
+
+      return date.toLocaleString(
+        "EN-JO",
+        {
+          dateStyle:
+            "medium",
+          timeStyle:
+            "short",
+        }
+      );
+    };
 
   /**
    * ========================================
@@ -931,6 +1043,189 @@ const handleExportExcel = async () => {
       true
     );
   };
+
+  /**
+   * ========================================
+   * Open Cost Modal
+   * ========================================
+   */
+  const openCostModal = (
+    record: MaintenanceRecord
+  ) => {
+    setSelectedCostRecord(
+      record
+    );
+
+    setCostValue(
+      record.cost !==
+        null &&
+      record.cost !==
+        undefined
+        ? String(
+            record.cost
+          )
+        : ""
+    );
+
+    setCostOpened(
+      true
+    );
+  };
+
+  /**
+   * ========================================
+   * Save Cost
+   * ========================================
+   */
+  const saveCost =
+    async () => {
+      if (
+        !selectedCostRecord
+      ) {
+        return;
+      }
+
+      const trimmedValue =
+        costValue.trim();
+
+      const cost =
+        trimmedValue ===
+        ""
+          ? null
+          : Number(
+              trimmedValue
+            );
+
+      if (
+        cost !== null &&
+        (!Number.isFinite(
+          cost
+        ) ||
+          cost < 0)
+      ) {
+        setError(
+          "يرجى إدخال قيمة تكلفة صحيحة"
+        );
+
+        return;
+      }
+
+      try {
+        setSavingCost(
+          true
+        );
+
+        setError("");
+
+        const response =
+          await fetch(
+            `/api/maintenance/history/${selectedCostRecord.id}`,
+            {
+              method:
+                "PATCH",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify(
+                {
+                  cost,
+                }
+              ),
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.error ||
+              "Failed to save maintenance cost"
+          );
+        }
+
+        /**
+         * تحديث الجدول
+         */
+        setRecords(
+          (
+            currentRecords
+          ) =>
+            currentRecords.map(
+              (item) =>
+                item.id ===
+                selectedCostRecord.id
+                  ? {
+                      ...item,
+                      cost,
+                      updated_at:
+                        data
+                          .data
+                          ?.updated_at ??
+                        item.updated_at,
+                    }
+                  : item
+            )
+        );
+
+        /**
+         * تحديث Details Modal
+         */
+        setSelectedRecord(
+          (
+            currentRecord
+          ) =>
+            currentRecord &&
+            currentRecord.id ===
+              selectedCostRecord.id
+              ? {
+                  ...currentRecord,
+                  cost,
+                  updated_at:
+                    data
+                      .data
+                      ?.updated_at ??
+                    currentRecord.updated_at,
+                }
+              : currentRecord
+        );
+
+        /**
+         * إغلاق Cost Modal
+         */
+        setCostOpened(
+          false
+        );
+
+        setSelectedCostRecord(
+          null
+        );
+
+        setCostValue(
+          ""
+        );
+      } catch (err) {
+        console.error(
+          "Save maintenance cost error:",
+          err
+        );
+
+        setError(
+          err instanceof
+            Error
+            ? err.message
+            : "حدث خطأ أثناء حفظ تكلفة الصيانة"
+        );
+      } finally {
+        setSavingCost(
+          false
+        );
+      }
+    };
 
   /**
    * ========================================
@@ -976,22 +1271,26 @@ const handleExportExcel = async () => {
             </Text>
           </div>
 
-          
           <Button
-          radius="xl"
-          color="green"
-  variant="light"
-  leftSection={
-    <IconFileDescription size={18} />
-  }
-  onClick={handleExportExcel}
-  disabled={
-    loading ||
-    filteredRecords.length === 0
-  }
->
-  تصدير Excel
-</Button>
+            radius="xl"
+            color="green"
+            variant="light"
+            leftSection={
+              <IconFileDescription
+                size={18}
+              />
+            }
+            onClick={
+              handleExportExcel
+            }
+            disabled={
+              loading ||
+              filteredRecords.length ===
+                0
+            }
+          >
+            تصدير Excel
+          </Button>
         </Group>
 
         {/* ================= Error ================= */}
@@ -1115,8 +1414,7 @@ const handleExportExcel = async () => {
                   value
                 ) =>
                   setVehicleId(
-                    value ??
-                      ""
+                    value ?? ""
                   )
                 }
                 searchable
@@ -1136,8 +1434,7 @@ const handleExportExcel = async () => {
                   value
                 ) => {
                   setKpiId(
-                    value ??
-                      ""
+                    value ?? ""
                   );
 
                   setSubKpiId(
@@ -1167,8 +1464,7 @@ const handleExportExcel = async () => {
                   value
                 ) =>
                   setSubKpiId(
-                    value ??
-                      ""
+                    value ?? ""
                   )
                 }
                 searchable
@@ -1188,13 +1484,13 @@ const handleExportExcel = async () => {
                     value:
                       "open",
                     label:
-                      "مفتوحة",
+                      "داخل الصيانة",
                   },
                   {
                     value:
                       "closed",
                     label:
-                      "مغلقة",
+                      "خارج الصيانة",
                   },
                 ]}
                 value={
@@ -1204,8 +1500,7 @@ const handleExportExcel = async () => {
                   value
                 ) =>
                   setStatus(
-                    value ??
-                      ""
+                    value ?? ""
                   )
                 }
                 clearable
@@ -1341,14 +1636,10 @@ const handleExportExcel = async () => {
               </thead>
 
               <tbody>
-                {/* Loading */}
-
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={
-                        8
-                      }
+                      colSpan={8}
                       style={{
                         padding:
                           40,
@@ -1363,13 +1654,9 @@ const handleExportExcel = async () => {
                   </tr>
                 ) : paginatedRecords.length ===
                   0 ? (
-                  /* Empty */
-
                   <tr>
                     <td
-                      colSpan={
-                        8
-                      }
+                      colSpan={8}
                       style={{
                         padding:
                           40,
@@ -1384,8 +1671,6 @@ const handleExportExcel = async () => {
                     </td>
                   </tr>
                 ) : (
-                  /* Records */
-
                   paginatedRecords.map(
                     (
                       record,
@@ -1570,12 +1855,13 @@ const handleExportExcel = async () => {
                         >
                           {record.status ===
                           "open" ? (
-                            <Badge color="orange">
-                              مفتوحة
+                            <Badge                               variant="light"
+ color="orange">
+                              داخل الصيانة
                             </Badge>
                           ) : (
-                            <Badge color="green">
-                              مغلقة
+                            <Badge  variant="light" color="green">
+                              خارج الصيانة
                             </Badge>
                           )}
                         </td>
@@ -1603,7 +1889,27 @@ const handleExportExcel = async () => {
                                 )
                               }
                             >
-                              التفاصيل
+                              <IconEye size={15}/>
+                            </Button>
+
+                            {/* Cost */}
+
+                            <Button
+                              size="xs"
+                              color= {
+                                record.cost !==
+                                null
+                                  ? "red"
+                                  : "green"
+                              }
+                              variant="light"
+                              onClick={() =>
+                                openCostModal(
+                                  record
+                                )
+                              }
+                            >
+                              <IconReportMoney size ={15} stroke={2} />
                             </Button>
 
                             {/* Delete */}
@@ -1612,13 +1918,9 @@ const handleExportExcel = async () => {
                               size="xs"
                               color="red"
                               variant="light"
-                              leftSection={
-                                <IconTrash
-                                  size={
-                                    15
-                                  }
-                                />
-                              }
+                              
+                                
+                             
                               loading={
                                 deletingId ===
                                 record.id
@@ -1635,7 +1937,11 @@ const handleExportExcel = async () => {
                                 )
                               }
                             >
-                              حذف
+                             <IconTrash
+                                  size={
+                                    15
+                                  }
+                                />
                             </Button>
                           </Group>
                         </td>
@@ -1694,748 +2000,1115 @@ const handleExportExcel = async () => {
           )}
       </Stack>
 
-      {/* ================= Details Modal ================= */}
-
-     <Modal
-  dir="rtl"
-  opened={detailsOpened}
-  onClose={() => {
-    setDetailsOpened(false);
-    setSelectedRecord(null);
-  }}
-  size="xl"
-  centered
-  radius="lg"
-  padding={20}
-  withCloseButton
-  title={
-    <Group gap="sm" px="xs">
-      <ThemeIcon
-        size={38}
-        radius="md"
-        variant="light"
-        color="blue"
-      >
-        <IconTool size={21} />
-      </ThemeIcon>
-
-      <div>
-        <Text fw={700} size="md">
-          تفاصيل سجل الصيانة
-        </Text>
-
-        <Text size="xs" c="dimmed">
-          معلومات الصيانة والتوقيت وسجل الإجراءات
-        </Text>
-      </div>
-    </Group>
-  }
->
-  {selectedRecord && (
-    <Stack gap="lg">
-
       {/* ===================================================== */}
-      {/* Vehicle Header */}
+      {/* Details Modal */}
       {/* ===================================================== */}
 
-      <Card
-        withBorder
+      <Modal
+        dir="rtl"
+        opened={detailsOpened}
+        onClose={() => {
+          setDetailsOpened(
+            false
+          );
+
+          setSelectedRecord(
+            null
+          );
+        }}
+        size="xl"
+        centered
         radius="lg"
-        padding="lg"
-        bg="var(--mantine-color-gray-0)"
-      >
-        <Group
-          justify="space-between"
-          align="center"
-          wrap="nowrap"
-        >
-          <Group gap="md" wrap="nowrap">
-
+        padding={20}
+        withCloseButton
+        title={
+          <Group
+            gap="sm"
+            px="xs"
+          >
             <ThemeIcon
-              size={54}
-              radius="xl"
+              size={38}
+              radius="md"
               variant="light"
               color="blue"
             >
-              <IconCar size={30} />
+              <IconTool
+                size={21}
+              />
             </ThemeIcon>
 
             <div>
-              <Text
-                size="xs"
-                c="dimmed"
-                fw={500}
-              >
-                المركبة
-              </Text>
-
-              <Text
-                size="xl"
-                fw={800}
-                lh={1.2}
-              >
-                {selectedRecord.plate_number || "-"}
-              </Text>
-
-              <Text
-                size="sm"
-                c="dimmed"
-                mt={3}
-              >
-                {selectedRecord.model || "-"}
-              </Text>
-            </div>
-
-          </Group>
-
-          <Badge
-            size="lg"
-            radius="md"
-            variant="light"
-            color={
-              selectedRecord.status === "open"
-                ? "orange"
-                : "green"
-            }
-            leftSection={
-              selectedRecord.status === "open" ? (
-                <IconClock size={15} />
-              ) : (
-                <IconCircleCheck size={15} />
-              )
-            }
-          >
-            {selectedRecord.status === "open"
-              ? "الصيانة مفتوحة"
-              : "الصيانة مغلقة"}
-          </Badge>
-        </Group>
-      </Card>
-
-
-      {/* ===================================================== */}
-      {/* Maintenance Type */}
-      {/* ===================================================== */}
-
-      <Card
-        withBorder
-        radius="lg"
-        padding="lg"
-      >
-        <Group
-          justify="space-between"
-          align="flex-start"
-          wrap="nowrap"
-        >
-
-          <Group
-            gap="md"
-            align="flex-start"
-            wrap="nowrap"
-          >
-            <ThemeIcon
-              size={42}
-              radius="md"
-              variant="light"
-              color="orange"
-            >
-              <IconTool size={22} />
-            </ThemeIcon>
-
-            <div>
-              <Text
-                size="xs"
-                c="dimmed"
-                fw={500}
-              >
-                نوع الصيانة
-              </Text>
-
               <Text
                 fw={700}
                 size="md"
-                mt={2}
               >
-                {selectedRecord.kpi_name || "-"}
+                تفاصيل سجل الصيانة
               </Text>
 
               <Text
-                size="sm"
+                size="xs"
                 c="dimmed"
-                mt={3}
               >
-                {selectedRecord.sub_kpi_name || "-"}
+                معلومات الصيانة والتوقيت وسجل الإجراءات
               </Text>
             </div>
           </Group>
-
-          <Badge
-            variant="dot"
-            color={
-              selectedRecord.status === "open"
-                ? "orange"
-                : "green"
-            }
-          >
-            {selectedRecord.status === "open"
-              ? "مفتوحة"
-              : "مغلقة"}
-          </Badge>
-
-        </Group>
-      </Card>
-
-
-      {/* ===================================================== */}
-      {/* Maintenance Timeline */}
-      {/* ===================================================== */}
-
-      <div>
-        <Group gap="xs" mb="sm">
-          <IconTimeline size={18} />
-
-          <Text fw={700} size="sm">
-            دورة الصيانة
-          </Text>
-        </Group>
-
-        <SimpleGrid
-          cols={{
-            base: 1,
-            sm: 2,
-          }}
-          spacing="md"
-        >
-
-          {/* Entry */}
-
-          <Card
-            withBorder
-            radius="lg"
-            padding="lg"
-          >
-            <Group
-              justify="space-between"
-              align="flex-start"
-            >
-              <Group gap="sm">
-                <ThemeIcon
-                  size={40}
-                  radius="xl"
-                  variant="light"
-                  color="green"
-                >
-                  <IconLogin size={20} />
-                </ThemeIcon>
-
-                <div>
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                  >
-                    وقت الدخول
-                  </Text>
-
-                  <Text
-                    fw={700}
-                    size="sm"
-                    mt={2}
-                  >
-                    دخول الصيانة
-                  </Text>
-                </div>
-              </Group>
-            </Group>
-
-            <Divider my="md" />
-
-            <Text
-              fw={600}
-              size="sm"
-            >
-              {formatDateTime(
-                selectedRecord.entry_at
-              )}
-            </Text>
-          </Card>
-
-
-          {/* Exit */}
-
-          <Card
-            withBorder
-            radius="lg"
-            padding="lg"
-          >
-            <Group
-              justify="space-between"
-              align="flex-start"
-            >
-              <Group gap="sm">
-                <ThemeIcon
-                  size={40}
-                  radius="xl"
-                  variant="light"
-                  color="red"
-                >
-                  <IconLogout size={20} />
-                </ThemeIcon>
-
-                <div>
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                  >
-                    وقت الخروج
-                  </Text>
-
-                  <Text
-                    fw={700}
-                    size="sm"
-                    mt={2}
-                  >
-                    إخراج من الصيانة
-                  </Text>
-                </div>
-              </Group>
-            </Group>
-
-            <Divider my="md" />
-
-            <Text
-              fw={600}
-              size="sm"
-            >
-              {selectedRecord.exit_at
-                ? formatDateTime(
-                    selectedRecord.exit_at
-                  )
-                : "المركبة ما زالت في الصيانة"}
-            </Text>
-          </Card>
-
-        </SimpleGrid>
-      </div>
-
-
-      {/* ===================================================== */}
-      {/* Duration */}
-      {/* ===================================================== */}
-
-      <Card
-        withBorder
-        radius="lg"
-        padding="lg"
+        }
       >
-        <Group
-          justify="space-between"
-          align="center"
-        >
+        {selectedRecord && (
+          <Stack gap="lg">
 
+            {/* Vehicle Header */}
+
+            <Card
+              withBorder
+              radius="lg"
+              padding="lg"
+              bg="var(--mantine-color-gray-0)"
+            >
+              <Group
+                justify="space-between"
+                align="center"
+                wrap="nowrap"
+              >
+                <Group
+                  gap="md"
+                  wrap="nowrap"
+                >
+                  <ThemeIcon
+                    size={54}
+                    radius="xl"
+                    variant="light"
+                    color="blue"
+                  >
+                    <IconCar
+                      size={30}
+                    />
+                  </ThemeIcon>
+
+                  <div>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      fw={500}
+                    >
+                      المركبة
+                    </Text>
+
+                    <Text
+                      size="xl"
+                      fw={800}
+                      lh={1.2}
+                    >
+                      {selectedRecord.plate_number ||
+                        "-"}
+                    </Text>
+
+                    <Text
+                      size="sm"
+                      c="dimmed"
+                      mt={3}
+                    >
+                      {selectedRecord.model ||
+                        "-"}
+                    </Text>
+                  </div>
+                </Group>
+
+                <Badge
+                  size="lg"
+                  radius="md"
+                  variant="light"
+                  color={
+                    selectedRecord.status ===
+                    "open"
+                      ? "orange"
+                      : "green"
+                  }
+                  leftSection={
+                    selectedRecord.status ===
+                    "open" ? (
+                      <IconClock
+                        size={
+                          15
+                        }
+                      />
+                    ) : (
+                      <IconCircleCheck
+                        size={
+                          15
+                        }
+                      />
+                    )
+                  }
+                >
+                  {selectedRecord.status ===
+                  "open"
+                    ? " داخل الصيانة"
+                    : " خارج الصيانة"}
+                </Badge>
+              </Group>
+            </Card>
+
+            {/* Maintenance Type */}
+
+            <Card
+              withBorder
+              radius="lg"
+              padding="lg"
+            >
+              <Group
+                justify="space-between"
+                align="flex-start"
+                wrap="nowrap"
+              >
+                <Group
+                  gap="md"
+                  align="flex-start"
+                  wrap="nowrap"
+                >
+                  <ThemeIcon
+                    size={42}
+                    radius="md"
+                    variant="light"
+                    color="orange"
+                  >
+                    <IconTool
+                      size={22}
+                    />
+                  </ThemeIcon>
+
+                  <div>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      fw={500}
+                    >
+                      نوع الصيانة
+                    </Text>
+
+                    <Text
+                      fw={700}
+                      size="md"
+                      mt={2}
+                    >
+                      {selectedRecord.kpi_name ||
+                        "-"}
+                    </Text>
+
+                    <Text
+                      size="sm"
+                      c="dimmed"
+                      mt={3}
+                    >
+                      {selectedRecord.sub_kpi_name ||
+                        "-"}
+                    </Text>
+                  </div>
+                </Group>
+
+                <Badge
+                  variant="dot"
+                  color={
+                    selectedRecord.status ===
+                    "open"
+                      ? "orange"
+                      : "green"
+                  }
+                >
+                  {selectedRecord.status ===
+                  "open"
+                    ? "داخل الصيانة"
+                    : "خارج الصيانة"}
+                </Badge>
+              </Group>
+            </Card>
+
+            {/* Maintenance Timeline */}
+
+            <div>
+              <Group
+                gap="xs"
+                mb="sm"
+              >
+                <IconTimeline
+                  size={18}
+                />
+
+                <Text
+                  fw={700}
+                  size="sm"
+                >
+                  دورة الصيانة
+                </Text>
+              </Group>
+
+              <SimpleGrid
+                cols={{
+                  base: 1,
+                  sm: 2,
+                }}
+                spacing="md"
+              >
+                {/* Entry */}
+
+                <Card
+                  withBorder
+                  radius="lg"
+                  padding="lg"
+                >
+                  <Group
+                    justify="space-between"
+                    align="flex-start"
+                  >
+                    <Group gap="sm">
+                      <ThemeIcon
+                        size={40}
+                        radius="xl"
+                        variant="light"
+                        color="green"
+                      >
+                        <IconLogin
+                          size={20}
+                        />
+                      </ThemeIcon>
+
+                      <div>
+                        <Text
+                          size="xs"
+                          c="dimmed"
+                        >
+                          وقت الدخول
+                        </Text>
+
+                        <Text
+                          fw={700}
+                          size="sm"
+                          mt={2}
+                        >
+                          دخول الصيانة
+                        </Text>
+                      </div>
+                    </Group>
+                  </Group>
+
+                  <Divider my="md" />
+
+                  <Text
+                    fw={600}
+                    size="sm"
+                  >
+                    {formatDateTime(
+                      selectedRecord.entry_at
+                    )}
+                  </Text>
+                </Card>
+
+                {/* Exit */}
+
+                <Card
+                  withBorder
+                  radius="lg"
+                  padding="lg"
+                >
+                  <Group
+                    justify="space-between"
+                    align="flex-start"
+                  >
+                    <Group gap="sm">
+                      <ThemeIcon
+                        size={40}
+                        radius="xl"
+                        variant="light"
+                        color="red"
+                      >
+                        <IconLogout
+                          size={20}
+                        />
+                      </ThemeIcon>
+
+                      <div>
+                        <Text
+                          size="xs"
+                          c="dimmed"
+                        >
+                          وقت الخروج
+                        </Text>
+
+                        <Text
+                          fw={700}
+                          size="sm"
+                          mt={2}
+                        >
+                          إخراج من الصيانة
+                        </Text>
+                      </div>
+                    </Group>
+                  </Group>
+
+                  <Divider my="md" />
+
+                  <Text
+                    fw={600}
+                    size="sm"
+                  >
+                    {selectedRecord.exit_at
+                      ? formatDateTime(
+                          selectedRecord.exit_at
+                        )
+                      : "المركبة ما زالت في الصيانة"}
+                  </Text>
+                </Card>
+              </SimpleGrid>
+            </div>
+
+            {/* Duration */}
+
+            <Card
+              withBorder
+              radius="lg"
+              padding="lg"
+            >
+              <Group
+                justify="space-between"
+                align="center"
+              >
+                <Group gap="sm">
+                  <ThemeIcon
+                    size={42}
+                    radius="md"
+                    variant="light"
+                    color="violet"
+                  >
+                    <IconClock
+                      size={22}
+                    />
+                  </ThemeIcon>
+
+                  <div>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                    >
+                      مدة الصيانة
+                    </Text>
+
+                    <Text
+                      fw={800}
+                      size="lg"
+                      mt={2}
+                    >
+                      {formatDuration(
+                        selectedRecord.entry_at,
+                        selectedRecord.exit_at
+                      )}
+                    </Text>
+                  </div>
+                </Group>
+              </Group>
+            </Card>
+
+            {/* Maintenance Cost */}
+
+            <Card
+              withBorder
+              radius="lg"
+              padding="lg"
+            >
+              <Group
+                justify="space-between"
+                align="center"
+              >
+                <Group gap="sm">
+                  <ThemeIcon
+                    size={42}
+                    radius="md"
+                    variant="light"
+                    color="teal"
+                  >
+                    <IconFileDescription
+                      size={22}
+                    />
+                  </ThemeIcon>
+
+                  <div>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                    >
+                      تكلفة الصيانة
+                    </Text>
+
+                    <Text
+                      fw={800}
+                      size="lg"
+                      mt={2}
+                    >
+                      {selectedRecord.cost !==
+                        null &&
+                      selectedRecord.cost !==
+                        undefined
+                        ? Number(
+                            selectedRecord.cost
+                          ).toFixed(2)
+                        : "غير مسجلة"}
+                    </Text>
+                  </div>
+                </Group>
+
+                <Button
+                  size="xs"
+                  color="teal"
+                  variant="light"
+                  onClick={() =>
+                    openCostModal(
+                      selectedRecord
+                    )
+                  }
+                >
+                  {selectedRecord.cost !==
+                  null
+                    ? "تعديل"
+                    : "إضافة تكلفة"}
+                </Button>
+              </Group>
+            </Card>
+
+            {/* Description & Notes */}
+
+            {(selectedRecord.description ||
+              selectedRecord.notes) && (
+              <SimpleGrid
+                cols={{
+                  base: 1,
+                  sm: 2,
+                }}
+                spacing="md"
+              >
+                {/* Description */}
+
+                {selectedRecord.description && (
+                  <Card
+                    withBorder
+                    radius="lg"
+                    padding="lg"
+                  >
+                    <Group
+                      gap="sm"
+                      mb="sm"
+                    >
+                      <ThemeIcon
+                        size={34}
+                        radius="md"
+                        variant="light"
+                        color="blue"
+                      >
+                        <IconFileDescription
+                          size={18}
+                        />
+                      </ThemeIcon>
+
+                      <Text
+                        fw={700}
+                        size="sm"
+                      >
+                        وصف الصيانة
+                      </Text>
+                    </Group>
+
+                    <Text
+                      size="sm"
+                      c="dimmed"
+                      lh={1.7}
+                    >
+                      {
+                        selectedRecord.description
+                      }
+                    </Text>
+                  </Card>
+                )}
+
+                {/* Notes */}
+
+                {selectedRecord.notes && (
+                  <Card
+                    withBorder
+                    radius="lg"
+                    padding="lg"
+                  >
+                    <Group
+                      gap="sm"
+                      mb="sm"
+                    >
+                      <ThemeIcon
+                        size={34}
+                        radius="md"
+                        variant="light"
+                        color="yellow"
+                      >
+                        <IconNotes
+                          size={18}
+                        />
+                      </ThemeIcon>
+
+                      <Text
+                        fw={700}
+                        size="sm"
+                      >
+                        الملاحظات
+                      </Text>
+                    </Group>
+
+                    <Text
+                      size="sm"
+                      c="dimmed"
+                      lh={1.7}
+                    >
+                      {
+                        selectedRecord.notes
+                      }
+                    </Text>
+                  </Card>
+                )}
+              </SimpleGrid>
+            )}
+
+            {/* Vehicle Information */}
+
+            <div>
+              <Group
+                gap="xs"
+                mb="sm"
+              >
+                <IconInfoCircle
+                  size={18}
+                />
+
+                <Text
+                  fw={700}
+                  size="sm"
+                >
+                  معلومات المركبة
+                </Text>
+              </Group>
+
+              <Card
+                withBorder
+                radius="lg"
+                padding="lg"
+              >
+                <SimpleGrid
+                  cols={{
+                    base: 2,
+                    sm: 4,
+                  }}
+                  spacing="lg"
+                >
+                  <div>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      mb={4}
+                    >
+                      المنطقة
+                    </Text>
+
+                    <Text
+                      size="sm"
+                      fw={700}
+                    >
+                      {selectedRecord.area ||
+                        "-"}
+                    </Text>
+                  </div>
+
+                  <div>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      mb={4}
+                    >
+                      سنة الصنع
+                    </Text>
+
+                    <Text
+                      size="sm"
+                      fw={700}
+                    >
+                      {selectedRecord.manufacture_year ||
+                        "-"}
+                    </Text>
+                  </div>
+
+                  <div>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      mb={4}
+                    >
+                      الوزن
+                    </Text>
+
+                    <Text
+                      size="sm"
+                      fw={700}
+                    >
+                      {selectedRecord.weight ??
+                        "-"}
+                    </Text>
+                  </div>
+
+                  <div>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      mb={4}
+                    >
+                      السعة
+                    </Text>
+
+                    <Text
+                      size="sm"
+                      fw={700}
+                    >
+                      {selectedRecord.capacity ??
+                        "-"}
+                    </Text>
+                  </div>
+                </SimpleGrid>
+              </Card>
+            </div>
+
+            {/* Audit Information */}
+
+            <div>
+              <Group
+                gap="xs"
+                mb="sm"
+              >
+                <IconHistory
+                  size={18}
+                />
+
+                <Text
+                  fw={700}
+                  size="sm"
+                >
+                  سجل الإجراءات
+                </Text>
+              </Group>
+
+              <Card
+                withBorder
+                radius="lg"
+                padding="lg"
+              >
+                <Stack gap="md">
+
+                  {/* Created */}
+
+                  <Group
+                    justify="space-between"
+                    align="center"
+                    wrap="nowrap"
+                  >
+                    <Group
+                      gap="sm"
+                      wrap="nowrap"
+                    >
+                      <ThemeIcon
+                        size={34}
+                        radius="xl"
+                        variant="light"
+                        color="green"
+                      >
+                        <IconLogin
+                          size={17}
+                        />
+                      </ThemeIcon>
+
+                      <div>
+                        <Text
+                          size="sm"
+                          fw={600}
+                        >
+                          إدخال المركبة
+                        </Text>
+
+                        <Text
+                          size="xs"
+                          c="dimmed"
+                        >
+                          بواسطة{" "}
+                          <Text
+                            component="span"
+                            fw={600}
+                          >
+                            {selectedRecord.created_by ||
+                              "-"}
+                          </Text>
+                        </Text>
+                      </div>
+                    </Group>
+
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      ta="left"
+                    >
+                      {formatDateTime(
+                        selectedRecord.created_at
+                      )}
+                    </Text>
+                  </Group>
+
+                  <Divider />
+
+                  {/* Updated */}
+
+                  <Group
+                    justify="space-between"
+                    align="center"
+                    wrap="nowrap"
+                  >
+                    <Group
+                      gap="sm"
+                      wrap="nowrap"
+                    >
+                      <ThemeIcon
+                        size={34}
+                        radius="xl"
+                        variant="light"
+                        color="red"
+                      >
+                        <IconLogout
+                          size={17}
+                        />
+                      </ThemeIcon>
+                  <div>
+                       
+                        <Text
+                          size="sm"
+                          fw={600}
+                        >
+                          إخراج المركبة
+                        </Text>
+
+                        {
+                          selectedRecord.status ===
+                          "open" ? (
+                            <Text
+                              size="xs"
+                              c="dimmed"
+                              mt={2}
+                            >
+                              لم يتم إخراج المركبة بعد
+                            </Text>
+                          ) : (
+                            <Text
+                              size="xs"
+                              c="dimmed"
+                              mt={2}
+                            >
+                              بواسطة{" "}
+                              <Text
+                                component="span"
+                                fw={600}
+                              >
+                                {selectedRecord.updated_by ||
+                                  "-"}
+                              </Text>
+                            </Text>
+                          ) 
+                        }
+                      </div>
+                    </Group>
+
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      ta="left"
+                    >
+                      {selectedRecord.updated_at
+                        ? formatDateTime(
+                            selectedRecord.updated_at
+                          )
+                        : "-"}
+                    </Text>
+                  </Group>
+                </Stack>
+              </Card>
+            </div>
+
+            {/* Delete */}
+
+            <Divider />
+
+            <Button
+              fullWidth
+              size="md"
+              radius="md"
+              color="red"
+              variant="light"
+              leftSection={
+                <IconTrash
+                  size={18}
+                />
+              }
+              loading={
+                deletingId ===
+                selectedRecord.id
+              }
+              disabled={
+                deletingId !==
+                null
+              }
+              onClick={() =>
+                deleteRecord(
+                  selectedRecord
+                )
+              }
+            >
+              حذف سجل الصيانة
+            </Button>
+          </Stack>
+        )}
+      </Modal>
+
+      {/* ===================================================== */}
+      {/* Cost Modal */}
+      {/* ===================================================== */}
+
+      <Modal
+        dir="rtl"
+        opened={costOpened}
+        onClose={() => {
+          if (savingCost) {
+            return;
+          }
+
+          setCostOpened(
+            false
+          );
+
+          setSelectedCostRecord(
+            null
+          );
+
+          setCostValue("");
+        }}
+        centered
+        size="sm"
+        radius="lg"
+        title={
           <Group gap="sm">
             <ThemeIcon
-              size={42}
+              size={40}
               radius="md"
               variant="light"
-              color="violet"
+              color="teal"
             >
-              <IconClock size={22} />
+              <IconFileDescription
+                size={21}
+              />
             </ThemeIcon>
 
             <div>
               <Text
-                size="xs"
-                c="dimmed"
+                fw={700}
+                size="md"
               >
-                مدة الصيانة
+                تكلفة الصيانة
               </Text>
 
               <Text
-                fw={800}
-                size="lg"
+                size="xs"
+                c="dimmed"
                 mt={2}
               >
-                {formatDuration(
-                  selectedRecord.entry_at,
-                  selectedRecord.exit_at
-                )}
+                إدخال أو تعديل تكلفة سجل الصيانة
               </Text>
             </div>
           </Group>
-
-        </Group>
-      </Card>
-
-
-      {/* ===================================================== */}
-      {/* Description & Notes */}
-      {/* ===================================================== */}
-
-      {(selectedRecord.description ||
-        selectedRecord.notes) && (
-        <SimpleGrid
-          cols={{
-            base: 1,
-            sm: 2,
-          }}
-          spacing="md"
-        >
-
-          {/* Description */}
-
-          {selectedRecord.description && (
-            <Card
-              withBorder
-              radius="lg"
-              padding="lg"
-            >
-              <Group gap="sm" mb="sm">
-                <ThemeIcon
-                  size={34}
-                  radius="md"
-                  variant="light"
-                  color="blue"
-                >
-                  <IconFileDescription size={18} />
-                </ThemeIcon>
-
-                <Text fw={700} size="sm">
-                  وصف الصيانة
-                </Text>
-              </Group>
-
-              <Text
-                size="sm"
-                c="dimmed"
-                lh={1.7}
-              >
-                {selectedRecord.description}
-              </Text>
-            </Card>
-          )}
-
-
-          {/* Notes */}
-
-          {selectedRecord.notes && (
-            <Card
-              withBorder
-              radius="lg"
-              padding="lg"
-            >
-              <Group gap="sm" mb="sm">
-                <ThemeIcon
-                  size={34}
-                  radius="md"
-                  variant="light"
-                  color="yellow"
-                >
-                  <IconNotes size={18} />
-                </ThemeIcon>
-
-                <Text fw={700} size="sm">
-                  الملاحظات
-                </Text>
-              </Group>
-
-              <Text
-                size="sm"
-                c="dimmed"
-                lh={1.7}
-              >
-                {selectedRecord.notes}
-              </Text>
-            </Card>
-          )}
-
-        </SimpleGrid>
-      )}
-
-
-      {/* ===================================================== */}
-      {/* Vehicle Information */}
-      {/* ===================================================== */}
-
-      <div>
-
-        <Group gap="xs" mb="sm">
-          <IconInfoCircle size={18} />
-
-          <Text fw={700} size="sm">
-            معلومات المركبة
-          </Text>
-        </Group>
-
-        <Card
-          withBorder
-          radius="lg"
-          padding="lg"
-        >
-          <SimpleGrid
-            cols={{
-              base: 2,
-              sm: 4,
-            }}
-            spacing="lg"
-          >
-
-            <div>
-              <Text
-                size="xs"
-                c="dimmed"
-                mb={4}
-              >
-                المنطقة
-              </Text>
-
-              <Text
-                size="sm"
-                fw={700}
-              >
-                {selectedRecord.area || "-"}
-              </Text>
-            </div>
-
-
-            <div>
-              <Text
-                size="xs"
-                c="dimmed"
-                mb={4}
-              >
-                سنة الصنع
-              </Text>
-
-              <Text
-                size="sm"
-                fw={700}
-              >
-                {selectedRecord.manufacture_year || "-"}
-              </Text>
-            </div>
-
-
-            <div>
-              <Text
-                size="xs"
-                c="dimmed"
-                mb={4}
-              >
-                الوزن
-              </Text>
-
-              <Text
-                size="sm"
-                fw={700}
-              >
-                {selectedRecord.weight ?? "-"}
-              </Text>
-            </div>
-
-
-            <div>
-              <Text
-                size="xs"
-                c="dimmed"
-                mb={4}
-              >
-                السعة
-              </Text>
-
-              <Text
-                size="sm"
-                fw={700}
-              >
-                {selectedRecord.capacity ?? "-"}
-              </Text>
-            </div>
-
-          </SimpleGrid>
-        </Card>
-
-      </div>
-
-
-      {/* ===================================================== */}
-      {/* Audit Information */}
-      {/* ===================================================== */}
-
-      <div>
-
-        <Group gap="xs" mb="sm">
-          <IconHistory size={18} />
-
-          <Text fw={700} size="sm">
-            سجل الإجراءات
-          </Text>
-        </Group>
-
-        <Card
-          withBorder
-          radius="lg"
-          padding="lg"
-        >
-
-          <Stack gap="md">
-
-            {/* Created */}
-
-            <Group
-              justify="space-between"
-              align="center"
-              wrap="nowrap"
-            >
-
-              <Group
-                gap="sm"
-                wrap="nowrap"
-              >
-                <ThemeIcon
-                  size={34}
-                  radius="xl"
-                  variant="light"
-                  color="green"
-                >
-                  <IconLogin size={17} />
-                </ThemeIcon>
-
-                <div>
-                  <Text
-                    size="sm"
-                    fw={600}
-                  >
-                    إدخال المركبة
-                  </Text>
-
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                  >
-                    بواسطة{" "}
-                    <Text
-                      component="span"
-                      fw={600}
-                    >
-                      {selectedRecord.created_by ||
-                        "-"}
-                    </Text>
-                  </Text>
-                </div>
-              </Group>
-
-              <Text
-                size="xs"
-                c="dimmed"
-                ta="left"
-              >
-                {formatDateTime(
-                  selectedRecord.created_at
-                )}
-              </Text>
-
-            </Group>
-
-
-            <Divider />
-
-
-            {/* Updated */}
-
-            <Group
-              justify="space-between"
-              align="center"
-              wrap="nowrap"
-            >
-
-              <Group
-                gap="sm"
-                wrap="nowrap"
-              >
-                <ThemeIcon
-                  size={34}
-                  radius="xl"
-                  variant="light"
-                  color="red"
-                >
-                  <IconLogout size={17} />
-                </ThemeIcon>
-
-                <div>
-                  <Text
-                    size="sm"
-                    fw={600}
-                  >
-                    إخراج المركبة
-                  </Text>
-
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                  >
-                    بواسطة{" "}
-                    <Text
-                      component="span"
-                      fw={600}
-                    >
-                      {selectedRecord.updated_by ||
-                        "-"}
-                    </Text>
-                  </Text>
-                </div>
-              </Group>
-
-              <Text
-                size="xs"
-                c="dimmed"
-                ta="left"
-              >
-                {selectedRecord.updated_at
-                  ? formatDateTime(
-                      selectedRecord.updated_at
-                    )
-                  : "-"}
-              </Text>
-
-            </Group>
-
-          </Stack>
-
-        </Card>
-
-      </div>
-
-
-      {/* ===================================================== */}
-      {/* Delete */}
-      {/* ===================================================== */}
-
-      <Divider />
-
-      <Button
-        fullWidth
-        size="md"
-        radius="md"
-        color="red"
-        variant="light"
-        leftSection={
-          <IconTrash size={18} />
-        }
-        loading={
-          deletingId === selectedRecord.id
-        }
-        disabled={
-          deletingId !== null
-        }
-        onClick={() =>
-          deleteRecord(selectedRecord)
         }
       >
-        حذف سجل الصيانة
-      </Button>
+        {selectedCostRecord && (
+          <Stack gap="lg">
 
-    </Stack>
-  )}
-</Modal>
+            {/* Vehicle */}
+
+            <Card
+              withBorder
+              radius="lg"
+              padding="md"
+              bg="var(--mantine-color-gray-0)"
+            >
+              <Group
+                justify="space-between"
+                align="center"
+              >
+                <Group gap="sm">
+                  <ThemeIcon
+                    size={42}
+                    radius="xl"
+                    variant="light"
+                    color="blue"
+                  >
+                    <IconCar
+                      size={22}
+                    />
+                  </ThemeIcon>
+
+                  <div>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                    >
+                      المركبة
+                    </Text>
+
+                    <Text
+                      fw={800}
+                      size="md"
+                    >
+                      {
+                        selectedCostRecord.plate_number
+                      }
+                    </Text>
+                  </div>
+                </Group>
+
+                {selectedCostRecord.cost !==
+                  null && (
+                  <Badge
+                    color="teal"
+                    variant="light"
+                    size="lg"
+                  >
+                    {Number(
+                      selectedCostRecord.cost
+                    ).toFixed(2)}
+                  </Badge>
+                )}
+              </Group>
+
+              <Divider my="md" />
+
+              <Text
+                size="sm"
+                fw={700}
+              >
+                {
+                  selectedCostRecord.kpi_name
+                }
+              </Text>
+
+              <Text
+                size="xs"
+                c="dimmed"
+                mt={3}
+              >
+                {
+                  selectedCostRecord.sub_kpi_name
+                }
+              </Text>
+            </Card>
+
+            {/* Cost Input */}
+
+            <div>
+              <Text
+                size="sm"
+                fw={600}
+                mb={6}
+              >
+                قيمة التكلفة
+              </Text>
+
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={
+                  costValue
+                }
+                onChange={(
+                  event
+                ) =>
+                  setCostValue(
+                    event
+                      .currentTarget
+                      .value
+                  )
+                }
+                placeholder="مثال: 150.00"
+                inputMode="decimal"
+                style={{
+                  width:
+                    "100%",
+                  height: 42,
+                  border:
+                    "1px solid #ced4da",
+                  borderRadius: 8,
+                  padding:
+                    "0 12px",
+                  fontSize: 15,
+                  outline:
+                    "none",
+                  direction:
+                    "ltr",
+                  boxSizing:
+                    "border-box",
+                }}
+              />
+            </div>
+
+            {/* Actions */}
+
+            <Group
+              justify="flex-end"
+              gap="sm"
+            >
+              <Button
+                variant="default"
+                onClick={() => {
+                  setCostOpened(
+                    false
+                  );
+
+                  setSelectedCostRecord(
+                    null
+                  );
+
+                  setCostValue(
+                    ""
+                  );
+                }}
+                disabled={
+                  savingCost
+                }
+              >
+                إلغاء
+              </Button>
+
+              <Button
+                color="teal"
+                onClick={
+                  saveCost
+                }
+                loading={
+                  savingCost
+                }
+              >
+                {selectedCostRecord.cost !==
+                null
+                  ? "تحديث التكلفة"
+                  : "حفظ التكلفة"}
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
     </Container>
   );
 }

@@ -42,6 +42,7 @@ export async function GET() {
 
         mr.description,
         mr.notes,
+        mr.cost,
 
         mr.created_by,
         mr.updated_by,
