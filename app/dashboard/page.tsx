@@ -788,8 +788,8 @@ color="#2563EB"  />
                   stroke={1.8}
                 />
               }
-              title="Maintenance"
-              description="Vehicle maintenance, records and configuration"
+              title="الصيانة"
+              description="ادخال و اخراج المركبات من والى الصيانة، إدارة أنواع الصيانة والمركبات."
               color="#e03131"
               count={maintenanceCount}
               collapsible
@@ -813,9 +813,9 @@ color="#2563EB"  />
                 {can("maintenance") && (
                   <ModuleCard
                     href="/maintenance/management"
-                    title="Maintenance Management"
-                    description="Manage maintenance tasks, work orders and operational actions."
-                    footer="Open Management"
+                    title="ادارة الصيانة"
+                    description="ادخال و اخراج المركبات من والى الصيانة"
+                    footer="فتح إدارة الصيانة"
                     icon={<IconTool size={28} />}
                    color="#16A34A"
                   />
@@ -826,9 +826,9 @@ color="#2563EB"  />
                 {can("maintenance_history") && (
                   <ModuleCard
                     href="/maintenance/history"
-                    title="Maintenance History"
-                    description="Review previous maintenance operations and service records."
-                    footer="Open History"
+                    title="سجلات الصيانة"
+                    description="مشاهدة وتحليل سجلات الصيانة، الأعمال السابقة والتقارير."
+                    footer="فتح سجلات الصيانة"
                     icon={<IconHistory size={28} />}
                     color="#059669"
                   />
@@ -839,9 +839,9 @@ color="#2563EB"  />
                 {can("maintenance_types") && (
                   <ModuleCard
                     href="/maintenance/setup"
-                    title="Maintenance Types"
-                    description="Configure maintenance types and service categories."
-                    footer="Open Configuration"
+                    title="انواع الصيانة"
+                    description="ادارة أنواع الصيانة، الفئات والإعدادات الخاصة بها."
+                    footer="فتح إعدادات الصيانة"
                     icon={<IconSettings size={28} />}
                   color="#0D9488" 
                   />
@@ -852,9 +852,9 @@ color="#2563EB"  />
                 {can("vehicles") && (
                   <ModuleCard
                     href="/maintenance/vehicles"
-                    title="Maintenance Vehicles"
-                    description="Manage vehicles and their maintenance information."
-                    footer="Open Vehicles"
+                    title="المركبات"
+                    description="إدارة المركبات ومعلوماتها ."
+                    footer="فتح إدارة المركبات"
                     icon={<IconTruck size={28} />}
                     color="#0891B2"
                   />
