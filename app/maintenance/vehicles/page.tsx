@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -132,29 +131,56 @@ const EMPTY_FORM: VehicleForm = {
   driver_3: "",
 
   fuel_card_status: "active",
-tracking_device_status: "active",
+  tracking_device_status: "active",
+
   is_active: true,
 };
 
 const FUEL_CARD_OPTIONS = [
-  { value: "active", label: "فعالة" },
-  { value: "suspended", label: "موقوفة" },
-  { value: "missing", label: "غير موجودة" },
-  { value: "expired", label: "منتهية" },
+  {
+    value: "active",
+    label: "فعالة",
+  },
+  {
+    value: "suspended",
+    label: "موقوفة",
+  },
+  {
+    value: "missing",
+    label: "غير موجودة",
+  },
+  {
+    value: "expired",
+    label: "منتهية",
+  },
 ];
 
 const TRACKING_OPTIONS = [
-  { value: "active", label: "فعال" },
-  { value: "inactive", label: "متوقف" },
-  { value: "missing", label: "غير موجود" },
-  { value: "maintenance", label: "صيانة" },
+  {
+    value: "active",
+    label: "فعال",
+  },
+  {
+    value: "inactive",
+    label: "متوقف",
+  },
+  {
+    value: "missing",
+    label: "غير موجود",
+  },
+  {
+    value: "maintenance",
+    label: "صيانة",
+  },
 ];
 
 /* =========================================================
    HELPERS
 ========================================================= */
 
-function getFuelCardColor(status: string | null) {
+function getFuelCardColor(
+  status: string | null,
+) {
   switch (status) {
     case "active":
       return "green";
@@ -173,7 +199,9 @@ function getFuelCardColor(status: string | null) {
   }
 }
 
-function getFuelCardLabel(status: string | null) {
+function getFuelCardLabel(
+  status: string | null,
+) {
   switch (status) {
     case "active":
       return "فعالة";
@@ -192,7 +220,9 @@ function getFuelCardLabel(status: string | null) {
   }
 }
 
-function getTrackingColor(status: string | null) {
+function getTrackingColor(
+  status: string | null,
+) {
   switch (status) {
     case "active":
       return "green";
@@ -211,7 +241,9 @@ function getTrackingColor(status: string | null) {
   }
 }
 
-function getTrackingLabel(status: string | null) {
+function getTrackingLabel(
+  status: string | null,
+) {
   switch (status) {
     case "active":
       return "فعال";
@@ -230,19 +262,19 @@ function getTrackingLabel(status: string | null) {
   }
 }
 
-
-
 function formatNumber(
   value: number | null | undefined,
 ) {
   if (
     value === null ||
-    value === undefined 
+    value === undefined
   ) {
     return "—";
   }
 
-  return Number(value).toLocaleString("en-US");
+  return Number(value).toLocaleString(
+    "en-US",
+  );
 }
 
 /* =========================================================
@@ -254,13 +286,11 @@ export default function VehiclesPage() {
      DATA
   ======================================================= */
 
-  const [vehicles, setVehicles] = useState<
-    Vehicle[]
-  >([]);
+  const [vehicles, setVehicles] =
+    useState<Vehicle[]>([]);
 
-  const [areas, setAreas] = useState<Area[]>(
-    [],
-  );
+  const [areas, setAreas] =
+    useState<Area[]>([]);
 
   /* =======================================================
      LOADING
@@ -268,6 +298,9 @@ export default function VehiclesPage() {
 
   const [loading, setLoading] =
     useState(true);
+
+  const [areasLoading, setAreasLoading] =
+    useState(false);
 
   const [saving, setSaving] =
     useState(false);
@@ -322,8 +355,108 @@ export default function VehiclesPage() {
     useState("");
 
   /* =======================================================
+     LOAD AREAS
+     
+     مهم:
+     المناطق يتم تحميلها مباشرة من /api/areas
+     وليس من بيانات الآليات
+  ======================================================= */
+
+  async function loadAreas() {
+    try {
+      setAreasLoading(true);
+
+      const response = await fetch(
+        "/api/collection-areas",
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.message ||
+            result?.error ||
+            "تعذر تحميل المناطق",
+        );
+      }
+
+      /*
+       * API الحالي يرجع:
+       *
+       * [
+       *   { id, name, created_at },
+       *   ...
+       * ]
+       *
+       * وندعم أيضاً في حال كان الرد:
+       *
+       * { data: [...] }
+       */
+
+      const areaData: Area[] =
+        Array.isArray(result)
+          ? result
+          : Array.isArray(result?.data)
+            ? result.data
+            : [];
+
+      const normalizedAreas =
+        areaData
+          .filter(
+            (area) =>
+              area &&
+              area.id !== null &&
+              area.id !== undefined &&
+              area.name,
+          )
+          .map((area) => ({
+            id: Number(area.id),
+            name: String(
+              area.name,
+            ).trim(),
+          }))
+          .filter(
+            (area) =>
+              Number.isFinite(area.id) &&
+              area.name.length > 0,
+          )
+          .sort((a, b) =>
+            a.name.localeCompare(
+              b.name,
+              "ar",
+            ),
+          );
+
+      setAreas(normalizedAreas);
+
+      console.log(
+        "Areas loaded:",
+        normalizedAreas,
+      );
+    } catch (err) {
+      console.error(
+        "Failed to load areas:",
+        err,
+      );
+
+      setAreas([]);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "حدث خطأ أثناء تحميل المناطق",
+      );
+    } finally {
+      setAreasLoading(false);
+    }
+  }
+
+  /* =======================================================
      FETCH VEHICLES
-     + BUILD AREAS FROM VEHICLES
   ======================================================= */
 
   async function loadVehicles() {
@@ -355,58 +488,9 @@ export default function VehiclesPage() {
 
       setVehicles(vehicleData);
 
-      /* =================================================
-         BUILD UNIQUE AREAS
-         
-         نعتمد على:
-         area_id
-         area_name
-      ================================================= */
-
-      const areaMap = new Map<
-        number,
-        Area
-      >();
-
-      vehicleData.forEach((vehicle) => {
-        if (
-          vehicle.area_id === null ||
-          vehicle.area_id === undefined
-        ) {
-          return;
-        }
-
-        const areaName =
-          vehicle.area?.trim();
-
-        areaMap.set(vehicle.area_id, {
-          id: vehicle.area_id,
-          name:
-            areaName ||
-            `منطقة ${vehicle.area_id}`,
-        });
-      });
-
-      const uniqueAreas =
-        Array.from(
-          areaMap.values(),
-        ).sort((a, b) =>
-          a.name.localeCompare(
-            b.name,
-            "ar",
-          ),
-        );
-
-      setAreas(uniqueAreas);
-
       console.log(
         "Vehicles:",
         vehicleData,
-      );
-
-      console.log(
-        "Areas:",
-        uniqueAreas,
       );
     } catch (err) {
       console.error(
@@ -430,6 +514,7 @@ export default function VehiclesPage() {
 
   useEffect(() => {
     loadVehicles();
+    loadAreas();
   }, []);
 
   /* =======================================================
@@ -449,80 +534,76 @@ export default function VehiclesPage() {
      FILTERED VEHICLES
   ======================================================= */
 
-  const filteredVehicles = useMemo(() => {
-    const query = search
-      .trim()
-      .toLowerCase();
+  const filteredVehicles =
+    useMemo(() => {
+      const query =
+        search
+          .trim()
+          .toLowerCase();
 
-    return vehicles.filter((vehicle) => {
-      /* SEARCH */
+      return vehicles.filter(
+        (vehicle) => {
+          const matchesSearch =
+            !query ||
+            [
+              vehicle.plate_number,
+              vehicle.model,
+              vehicle.type,
+              vehicle.area,
+              vehicle.driver_1,
+              vehicle.driver_2,
+              vehicle.driver_3,
+              vehicle.fuel_card_status,
+              vehicle.tracking_device_status,
+            ].some((value) =>
+              String(value ?? "")
+                .toLowerCase()
+                .includes(query),
+            );
 
-      const matchesSearch =
-        !query ||
-        [
-          vehicle.plate_number,
-          vehicle.model,
-          vehicle.type,
-          vehicle.area,
-          vehicle.driver_1,
-          vehicle.driver_2,
-          vehicle.driver_3,
-          vehicle.fuel_card_status,
-          vehicle.tracking_device_status,
-        ].some((value) =>
-          String(value ?? "")
-            .toLowerCase()
-            .includes(query),
-        );
+          const matchesArea =
+            !areaFilter ||
+            String(
+              vehicle.area_id ?? "",
+            ) === areaFilter;
 
-      /* AREA */
+          const matchesStatus =
+            !statusFilter ||
+            statusFilter === "all" ||
+            (statusFilter ===
+              "active" &&
+              vehicle.is_active) ||
+            (statusFilter ===
+              "inactive" &&
+              !vehicle.is_active);
 
-      const matchesArea =
-        !areaFilter ||
-        String(
-          vehicle.area_id ?? "",
-        ) === areaFilter;
+          const matchesFuel =
+            !fuelFilter ||
+            vehicle.fuel_card_status ===
+              fuelFilter;
 
-      /* ACTIVE */
+          const matchesTracking =
+            !trackingFilter ||
+            vehicle.tracking_device_status ===
+              trackingFilter;
 
-      const matchesStatus =
-        !statusFilter ||
-        statusFilter === "all" ||
-        (statusFilter === "active" &&
-          vehicle.is_active) ||
-        (statusFilter === "inactive" &&
-          !vehicle.is_active);
-
-      /* FUEL */
-
-      const matchesFuel =
-        !fuelFilter ||
-        vehicle.fuel_card_status ===
-          fuelFilter;
-
-      /* TRACKING */
-
-      const matchesTracking =
-        !trackingFilter ||
-        vehicle.tracking_device_status ===
-          trackingFilter;
-
-      return (
-        matchesSearch &&
-        matchesArea &&
-        matchesStatus &&
-        matchesFuel &&
-        matchesTracking
+          return (
+            matchesSearch &&
+            matchesArea &&
+            matchesStatus &&
+            matchesFuel &&
+            matchesTracking
+          );
+        },
       );
-    });
-  }, [
-    vehicles,
-    search,
-    areaFilter,
-    statusFilter,
-    fuelFilter,
-    trackingFilter,
-  ]);
+    }, [
+      vehicles,
+      search,
+      areaFilter,
+      statusFilter,
+      fuelFilter,
+      trackingFilter,
+    ]);
 
   /* =======================================================
      RESET FILTERS
@@ -549,55 +630,97 @@ export default function VehiclesPage() {
 
     setError("");
     setModalOpened(true);
+
+    /*
+     * احتياطاً:
+     * إذا لم تكن المناطق محملة لأي سبب
+     */
+    if (areas.length === 0) {
+      loadAreas();
+    }
   }
 
   /* =======================================================
      OPEN EDIT
   ======================================================= */
 
- function openEditModal(vehicle: Vehicle) {
-  setEditingVehicle(vehicle);
+  function openEditModal(
+    vehicle: Vehicle,
+  ) {
+    setEditingVehicle(vehicle);
 
-  setForm({
-    plate_number: vehicle.plate_number || "",
-    weight: vehicle.weight ?? "",
-    capacity: vehicle.capacity ?? "",
-    manufacture_year: vehicle.manufacture_year ?? "",
-    model: vehicle.model || "",
-    type: vehicle.type || "",
+    setForm({
+      plate_number:
+        vehicle.plate_number || "",
 
-    area_id:
-      vehicle.area_id !== null &&
-      vehicle.area_id !== undefined
-        ? String(vehicle.area_id)
-        : "",
+      weight:
+        vehicle.weight ?? "",
 
-    driver_1: vehicle.driver_1 || "",
-    driver_2: vehicle.driver_2 || "",
-    driver_3: vehicle.driver_3 || "",
+      capacity:
+        vehicle.capacity ?? "",
 
-    fuel_card_status:
-      vehicle.fuel_card_status &&
-      ["active", "suspended", "missing", "expired"].includes(
-        vehicle.fuel_card_status,
-      )
-        ? vehicle.fuel_card_status
-        : "active",
+      manufacture_year:
+        vehicle.manufacture_year ?? "",
 
-    tracking_device_status:
-      vehicle.tracking_device_status &&
-      ["active", "inactive", "missing", "maintenance"].includes(
-        vehicle.tracking_device_status,
-      )
-        ? vehicle.tracking_device_status
-        : "active",
+      model:
+        vehicle.model || "",
 
-    is_active: vehicle.is_active,
-  });
+      type:
+        vehicle.type || "",
 
-  setError("");
-  setModalOpened(true);
-}
+      area_id:
+        vehicle.area_id !== null &&
+        vehicle.area_id !== undefined
+          ? String(vehicle.area_id)
+          : "",
+
+      driver_1:
+        vehicle.driver_1 || "",
+
+      driver_2:
+        vehicle.driver_2 || "",
+
+      driver_3:
+        vehicle.driver_3 || "",
+
+      fuel_card_status:
+        vehicle.fuel_card_status &&
+        [
+          "active",
+          "suspended",
+          "missing",
+          "expired",
+        ].includes(
+          vehicle.fuel_card_status,
+        )
+          ? vehicle.fuel_card_status
+          : "active",
+
+      tracking_device_status:
+        vehicle.tracking_device_status &&
+        [
+          "active",
+          "inactive",
+          "missing",
+          "maintenance",
+        ].includes(
+          vehicle.tracking_device_status,
+        )
+          ? vehicle.tracking_device_status
+          : "active",
+
+      is_active:
+        vehicle.is_active,
+    });
+
+    setError("");
+    setModalOpened(true);
+
+    if (areas.length === 0) {
+      loadAreas();
+    }
+  }
+
   /* =======================================================
      FORM UPDATE
   ======================================================= */
@@ -623,8 +746,6 @@ export default function VehiclesPage() {
       setSaving(true);
       setError("");
 
-      /* VALIDATION */
-
       if (
         !form.plate_number.trim()
       ) {
@@ -640,8 +761,6 @@ export default function VehiclesPage() {
         );
         return;
       }
-
-      /* PAYLOAD */
 
       const payload = {
         plate_number:
@@ -689,24 +808,30 @@ export default function VehiclesPage() {
           form.driver_3.trim() ||
           null,
 
-       fuel_card_status: form.fuel_card_status || "active",
-tracking_device_status: form.tracking_device_status || "active",
+        fuel_card_status:
+          form.fuel_card_status ||
+          "active",
+
+        tracking_device_status:
+          form.tracking_device_status ||
+          "active",
 
         is_active:
           form.is_active,
       };
 
-      const url = editingVehicle
-        ? `/api/maintenance/vehicles/${editingVehicle.id}`
-        : "/api/maintenance/vehicles";
+      const url =
+        editingVehicle
+          ? `/api/maintenance/vehicles/${editingVehicle.id}`
+          : "/api/maintenance/vehicles";
 
-      const method = editingVehicle
-        ? "PATCH"
-        : "POST";
+      const method =
+        editingVehicle
+          ? "PATCH"
+          : "POST";
 
-      const response = await fetch(
-        url,
-        {
+      const response =
+        await fetch(url, {
           method,
           headers: {
             "Content-Type":
@@ -715,8 +840,7 @@ tracking_device_status: form.tracking_device_status || "active",
           body: JSON.stringify(
             payload,
           ),
-        },
-      );
+        });
 
       const result: ApiResult<Vehicle> =
         await response.json();
@@ -736,7 +860,10 @@ tracking_device_status: form.tracking_device_status || "active",
         ...EMPTY_FORM,
       });
 
-      await loadVehicles();
+      await Promise.all([
+        loadVehicles(),
+        loadAreas(),
+      ]);
     } catch (err) {
       console.error(err);
 
@@ -770,12 +897,13 @@ tracking_device_status: form.tracking_device_status || "active",
       setSaving(true);
       setError("");
 
-      const response = await fetch(
-        `/api/maintenance/vehicles/${vehicleToDelete.id}`,
-        {
-          method: "DELETE",
-        },
-      );
+      const response =
+        await fetch(
+          `/api/maintenance/vehicles/${vehicleToDelete.id}`,
+          {
+            method: "DELETE",
+          },
+        );
 
       const result: ApiResult<Vehicle> =
         await response.json();
@@ -915,10 +1043,14 @@ tracking_device_status: form.tracking_device_status || "active",
                   color="white"
                   size="lg"
                   radius="md"
-                  onClick={
-                    loadVehicles
+                  onClick={() => {
+                    loadVehicles();
+                    loadAreas();
+                  }}
+                  disabled={
+                    loading ||
+                    areasLoading
                   }
-                  disabled={loading}
                 >
                   <IconRefresh
                     size={19}
@@ -1160,17 +1292,22 @@ tracking_device_status: form.tracking_device_status || "active",
             >
               <Select
                 label="المنطقة"
-                placeholder="كل المناطق"
+                placeholder={
+                  areasLoading
+                    ? "جاري تحميل المناطق..."
+                    : "كل المناطق"
+                }
                 value={areaFilter}
                 onChange={
                   setAreaFilter
                 }
-                data={
-                  areaOptions
-                }
+                data={areaOptions}
                 searchable
                 clearable
                 radius="md"
+                disabled={
+                  areasLoading
+                }
                 nothingFoundMessage="لا توجد مناطق"
               />
             </Grid.Col>
@@ -1610,10 +1747,9 @@ tracking_device_status: form.tracking_device_status || "active",
                             radius="sm"
                             size="sm"
                           >
-                            {
-                              vehicle.fuel_card_status ||
-                              "غير محددة"
-                            }
+                            {getFuelCardLabel(
+                              vehicle.fuel_card_status,
+                            )}
                           </Badge>
                         </Table.Td>
 
@@ -1626,10 +1762,9 @@ tracking_device_status: form.tracking_device_status || "active",
                             radius="sm"
                             size="sm"
                           >
-                            {
-                              vehicle.tracking_device_status ||
-                              "غير محدد"
-                            }
+                            {getTrackingLabel(
+                              vehicle.tracking_device_status,
+                            )}
                           </Badge>
                         </Table.Td>
 
@@ -1864,6 +1999,10 @@ tracking_device_status: form.tracking_device_status || "active",
                 />
               </Grid.Col>
 
+              {/* =================================================
+                  AREA DROPDOWN
+              ================================================= */}
+
               <Grid.Col
                 span={{
                   base: 12,
@@ -1873,7 +2012,11 @@ tracking_device_status: form.tracking_device_status || "active",
               >
                 <Select
                   label="المنطقة"
-                  placeholder="اختر المنطقة"
+                  placeholder={
+                    areasLoading
+                      ? "جاري تحميل المناطق..."
+                      : "اختر المنطقة"
+                  }
                   value={
                     form.area_id ||
                     null
@@ -1886,14 +2029,22 @@ tracking_device_status: form.tracking_device_status || "active",
                       value || "",
                     )
                   }
-                  data={
-                    areaOptions
-                  }
+                  data={areaOptions}
                   searchable
                   clearable
                   required
                   radius="md"
+                  disabled={
+                    areasLoading
+                  }
                   nothingFoundMessage="لا توجد مناطق"
+                  rightSection={
+                    areasLoading ? (
+                      <Loader
+                        size={16}
+                      />
+                    ) : undefined
+                  }
                 />
               </Grid.Col>
 
@@ -2150,7 +2301,7 @@ tracking_device_status: form.tracking_device_status || "active",
                     updateForm(
                       "fuel_card_status",
                       value ||
-                        "غير محددة",
+                        "active",
                     )
                   }
                   data={
@@ -2186,7 +2337,7 @@ tracking_device_status: form.tracking_device_status || "active",
                     updateForm(
                       "tracking_device_status",
                       value ||
-                        "غير محدد",
+                        "active",
                     )
                   }
                   data={
@@ -2855,13 +3006,17 @@ function MobileVehicleCard({
           </Text>
 
           <Badge
-  variant="light"
-  color={getFuelCardColor(vehicle.fuel_card_status)}
-  radius="sm"
-  size="sm"
->
-  {getFuelCardLabel(vehicle.fuel_card_status)}
-</Badge>
+            variant="light"
+            color={getFuelCardColor(
+              vehicle.fuel_card_status,
+            )}
+            radius="sm"
+            size="sm"
+          >
+            {getFuelCardLabel(
+              vehicle.fuel_card_status,
+            )}
+          </Badge>
         </Box>
 
         <Box>
@@ -2874,13 +3029,17 @@ function MobileVehicleCard({
           </Text>
 
           <Badge
-  variant="light"
-  color={getTrackingColor(vehicle.tracking_device_status)}
-  radius="sm"
-  size="sm"
->
-  {getTrackingLabel(vehicle.tracking_device_status)}
-</Badge>
+            variant="light"
+            color={getTrackingColor(
+              vehicle.tracking_device_status,
+            )}
+            radius="sm"
+            size="sm"
+          >
+            {getTrackingLabel(
+              vehicle.tracking_device_status,
+            )}
+          </Badge>
         </Box>
       </SimpleGrid>
 
@@ -2950,4 +3109,3 @@ function MobileInfo({
     </Box>
   );
 }
-
