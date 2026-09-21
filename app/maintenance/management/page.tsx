@@ -46,7 +46,6 @@ type Vehicle = {
   plate?: string | null;
   model?: string | null;
 
-  // الجديد
   area?: string | null;
   capacity?: number | string | null;
 };
@@ -74,7 +73,6 @@ type MaintenanceRecord = {
   vehicle_name?: string | null;
   plate_number?: string | null;
 
-  // الجديد
   area?: string | null;
   capacity?: number | string | null;
 
@@ -90,11 +88,12 @@ type MaintenanceRecord = {
   entry_at: string;
   exit_at?: string | null;
 
-created_at?: string | null;
-created_by?: string | null;
+  created_at?: string | null;
+  created_by?: string | null;
 
-updated_at?: string | null;
-updated_by?: string | null;};
+  updated_at?: string | null;
+  updated_by?: string | null;
+};
 
 type Message = {
   type: "success" | "error";
@@ -121,18 +120,6 @@ function getCurrentTime(date = new Date()) {
   )}`;
 }
 
-/**
- * تحويل التاريخ والوقت المحلي الذي اختاره المستخدم
- * إلى ISO UTC.
- *
- * مثال في الأردن:
- *
- * 2026-09-04 + 12:00
- *
- * تصبح:
- *
- * 2026-09-04T09:00:00.000Z
- */
 function localDateTimeToISOString(
   date: string,
   time: string
@@ -152,24 +139,12 @@ function localDateTimeToISOString(
   return localDate.toISOString();
 }
 
-
 function formatDateTime(
   value?: string | null
 ) {
   if (!value) return "-";
 
   let normalizedValue = value.trim();
-
-  // PostgreSQL timestamp without time zone
-  // created_at عندنا مخزن UTC
-  //
-  // مثال:
-  // 2026-09-09 06:00:00
-  //
-  // نحوله إلى:
-  // 2026-09-09T06:00:00Z
-  //
-  // حتى لا يضيف JavaScript +3 ساعات.
 
   if (
     !normalizedValue.endsWith("Z") &&
@@ -179,31 +154,23 @@ function formatDateTime(
       normalizedValue.replace(" ", "T") + "Z";
   }
 
-  const date =
-    new Date(normalizedValue);
+  const date = new Date(normalizedValue);
 
   if (Number.isNaN(date.getTime())) {
     return "-";
   }
 
-  return date.toLocaleString(
-    "en-GB",
-    {
-      timeZone: "Asia/Amman",
-
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-
-      hour12: false,
-    }
-  );
+  return date.toLocaleString("en-GB", {
+    timeZone: "Asia/Amman",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
 }
-
 
 function getDateTimeTimestamp(
   date: string,
@@ -312,7 +279,10 @@ function extractArray(
     return response;
   }
 
-  if (!response || typeof response !== "object") {
+  if (
+    !response ||
+    typeof response !== "object"
+  ) {
     return [];
   }
 
@@ -613,10 +583,6 @@ export default function MaintenancePage() {
                 item.model ??
                 null,
 
-              // =========================================
-              // الجديد
-              // =========================================
-
               area:
                 item.area ??
                 null,
@@ -675,26 +641,14 @@ export default function MaintenancePage() {
         kpiRows
       );
 
-      // =================================================
-      // KPI Map
-      // =================================================
-
       const kpiMap =
         new Map<string, KPI>();
-
-      // =================================================
-      // Sub KPI Map
-      // =================================================
 
       const subKpiMap =
         new Map<string, SubKPI>();
 
       kpiRows.forEach(
         (item: any) => {
-          // ---------------------------------------------
-          // KPI
-          // ---------------------------------------------
-
           const kpiId =
             item.id ??
             item.kpi_id ??
@@ -722,10 +676,6 @@ export default function MaintenancePage() {
               });
             }
           }
-
-          // ---------------------------------------------
-          // Sub KPI
-          // ---------------------------------------------
 
           const subKpiId =
             item.sub_kpi_id ??
@@ -860,7 +810,6 @@ export default function MaintenancePage() {
               item.plate ??
               null,
 
-            // الجديد
             area:
               item.area ??
               null,
@@ -903,25 +852,21 @@ export default function MaintenancePage() {
               item.exit_at ??
               null,
 
-            // =========================================
-// Created / Updated information
-// =========================================
+            created_at:
+              item.created_at ??
+              null,
 
-created_at:
-  item.created_at ??
-  null,
+            created_by:
+              item.created_by ??
+              null,
 
-created_by:
-  item.created_by ??
-  null,
+            updated_at:
+              item.updated_at ??
+              null,
 
-updated_at:
-  item.updated_at ??
-  null,
-
-updated_by:
-  item.updated_by ??
-  null,
+            updated_by:
+              item.updated_by ??
+              null,
           })
         );
 
@@ -959,7 +904,7 @@ updated_by:
   }, []);
 
   // ===================================================
-  // Vehicle options
+  // Vehicles in maintenance
   // ===================================================
 
   const vehiclesInMaintenance =
@@ -972,79 +917,110 @@ updated_by:
       );
     }, [currentMaintenance]);
 
-const vehicleOptions = useMemo(() => {
-  const map = new Map<
-    string,
-    {
-      value: string;
-      label: string;
-      disabled?: boolean;
-      vehicleNumber: string;
-      capacity: string;
-      area: string;
-      isInMaintenance: boolean;
-    }
-  >();
+  // ===================================================
+  // Vehicle options
+  // ===================================================
 
-  vehicles.forEach((vehicle) => {
-    if (
-      vehicle.id === undefined ||
-      vehicle.id === null
-    ) {
-      return;
-    }
+  const vehicleOptions = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        value: string;
+        label: string;
+        disabled?: boolean;
+        vehicleNumber: string;
+        capacity: string;
+        area: string;
+        isInMaintenance: boolean;
+      }
+    >();
 
-    const value = String(vehicle.id);
+    vehicles.forEach((vehicle) => {
+      if (
+        vehicle.id === undefined ||
+        vehicle.id === null
+      ) {
+        return;
+      }
 
-    const isInMaintenance =
-      vehiclesInMaintenance.has(value);
+      const value =
+        String(vehicle.id);
 
-    // رقم المركبة
-    const vehicleNumber =
-      vehicle.plate_number ||
-      vehicle.vehicle_number ||
-      vehicle.plate ||
-      vehicle.name ||
-      vehicle.model ||
-      `مركبة ${value}`;
+      const isInMaintenance =
+        vehiclesInMaintenance.has(value);
 
-    // السعة
-    const capacity =
-      vehicle.capacity !== undefined &&
-      vehicle.capacity !== null &&
-      String(vehicle.capacity).trim() !== ""
-        ? String(vehicle.capacity)
-        : "-السعة غير محددة-";
+      const vehicleNumber =
+        vehicle.plate_number ||
+        vehicle.vehicle_number ||
+        vehicle.plate ||
+        vehicle.name ||
+        vehicle.model ||
+        `مركبة ${value}`;
 
-    // المنطقة
-    const area =
-      vehicle.area &&
-      String(vehicle.area).trim() !== ""
-        ? String(vehicle.area)
-        : "غير محددة";
+      const capacity =
+        vehicle.capacity !== undefined &&
+        vehicle.capacity !== null &&
+        String(vehicle.capacity).trim() !== ""
+          ? String(vehicle.capacity)
+          : "-السعة غير محددة-";
 
-    if (!map.has(value)) {
-      map.set(value, {
-        value,
+      const area =
+        vehicle.area &&
+        String(vehicle.area).trim() !== ""
+          ? String(vehicle.area)
+          : "غير محددة";
 
-        // مهم للبحث
-        label: `${vehicleNumber} ${capacity} ${area}`,
+      if (!map.has(value)) {
+        map.set(value, {
+          value,
 
-        disabled: isInMaintenance,
+          // Mantine سيستخدم هذا النص في البحث
+          // وبالتالي لا نحتاج filter مخصص
+          label: `${vehicleNumber} ${capacity} ${area}`,
 
-        vehicleNumber: String(vehicleNumber),
-        capacity,
-        area,
-        isInMaintenance,
-      });
-    }
-  });
+          disabled:
+            isInMaintenance,
 
-  return Array.from(map.values());
-}, [
-  vehicles,
-  vehiclesInMaintenance,
-]);
+          vehicleNumber:
+            String(vehicleNumber),
+
+          capacity,
+
+          area,
+
+          isInMaintenance,
+        });
+      }
+    });
+
+    return Array.from(
+      map.values()
+    );
+  }, [
+    vehicles,
+    vehiclesInMaintenance,
+  ]);
+
+  // ===================================================
+  // Vehicle lookup map
+  // Important for search/render performance
+  // ===================================================
+
+  const vehicleOptionsMap = useMemo(() => {
+    const map = new Map<
+      string,
+      (typeof vehicleOptions)[number]
+    >();
+
+    vehicleOptions.forEach((vehicle) => {
+      map.set(
+        vehicle.value,
+        vehicle
+      );
+    });
+
+    return map;
+  }, [vehicleOptions]);
 
   // ===================================================
   // KPI options
@@ -1307,10 +1283,6 @@ const vehicleOptions = useMemo(() => {
       return;
     }
 
-    // ===============================================
-    // Final client-side future check
-    // ===============================================
-
     if (
       isFutureDateTime(
         entryDate,
@@ -1326,10 +1298,6 @@ const vehicleOptions = useMemo(() => {
 
       return;
     }
-
-    // ===============================================
-    // Convert local Jordan time -> UTC ISO
-    // ===============================================
 
     const entryAt =
       localDateTimeToISOString(
@@ -1500,278 +1468,303 @@ const vehicleOptions = useMemo(() => {
   // Submit exit
   // ===================================================
 
- const handleExit = async () => {
-  if (!selectedExitRecord) {
-    return;
-  }
+  const handleExit = async () => {
+    if (!selectedExitRecord) {
+      return;
+    }
 
-  // =========================================
-  // التأكد من وجود المستخدم
-  // =========================================
-  if (!username) {
-    setMessage({
-      type: "error",
-      text: "لم يتم التعرف على المستخدم الحالي، يرجى تسجيل الدخول مرة أخرى.",
-    });
-
-    return;
-  }
-
-  // =========================================
-  // التحقق من تاريخ الخروج
-  // =========================================
-  if (!exitDate) {
-    setMessage({
-      type: "error",
-      text: "يرجى تحديد تاريخ الخروج.",
-    });
-
-    return;
-  }
-
-  // =========================================
-  // التحقق من وقت الخروج
-  // =========================================
-  if (!exitTime) {
-    setMessage({
-      type: "error",
-      text: "يرجى تحديد وقت الخروج.",
-    });
-
-    return;
-  }
-
-  // =========================================
-  // تحويل التاريخ والوقت إلى ISO
-  // =========================================
-  const exitAt = localDateTimeToISOString(
-    exitDate,
-    exitTime
-  );
-
-  if (!exitAt) {
-    setMessage({
-      type: "error",
-      text: "تاريخ أو وقت الخروج غير صحيح.",
-    });
-
-    return;
-  }
-
-  // =========================================
-  // التحقق من أن الخروج بعد الدخول
-  // =========================================
-  if (selectedExitRecord.entry_at) {
-    const entryDate = new Date(selectedExitRecord.entry_at);
-    const parsedExitDate = new Date(exitAt);
-
-    if (
-      !Number.isNaN(entryDate.getTime()) &&
-      !Number.isNaN(parsedExitDate.getTime()) &&
-      parsedExitDate.getTime() < entryDate.getTime()
-    ) {
+    if (!username) {
       setMessage({
         type: "error",
-        text: "وقت الخروج لا يمكن أن يكون قبل وقت الدخول.",
+        text:
+          "لم يتم التعرف على المستخدم الحالي، يرجى تسجيل الدخول مرة أخرى.",
       });
 
       return;
     }
-  }
 
-  try {
-    setLoading(true);
+    if (!exitDate) {
+      setMessage({
+        type: "error",
+        text:
+          "يرجى تحديد تاريخ الخروج.",
+      });
 
-    // Debug
-    console.log("EXIT USERNAME:", username);
-
-    const response = await fetch(
-      `/api/maintenance/${selectedExitRecord.id}/exit`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          exit_at: exitAt,
-          notes: exitNotes.trim() || null,
-
-          // المستخدم الذي قام بإغلاق الصيانة
-          updated_by: username,
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(
-        data?.error || "Failed to close maintenance record"
-      );
+      return;
     }
 
-    // =========================================
-    // نجاح العملية
-    // =========================================
-    setMessage({
-      type: "success",
-      text: "تم إخراج المركبة من الصيانة بنجاح.",
-    });
+    if (!exitTime) {
+      setMessage({
+        type: "error",
+        text:
+          "يرجى تحديد وقت الخروج.",
+      });
 
-    // إغلاق المودال
-    setExitModalOpened(false);
+      return;
+    }
 
-    // تنظيف البيانات
-    setSelectedExitRecord(null);
-setExitDate(getCurrentDate());    setExitTime("");
-    setExitNotes("");
+    const exitAt =
+      localDateTimeToISOString(
+        exitDate,
+        exitTime
+      );
 
-    // تحديث البيانات
-    await loadData(false);
-  } catch (error) {
-    console.error("Exit maintenance error:", error);
+    if (!exitAt) {
+      setMessage({
+        type: "error",
+        text:
+          "تاريخ أو وقت الخروج غير صحيح.",
+      });
 
-    setMessage({
-      type: "error",
-      text:
-        error instanceof Error
-          ? error.message
-          : "حدث خطأ أثناء إخراج المركبة من الصيانة.",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      return;
+    }
+
+    if (selectedExitRecord.entry_at) {
+      const entryDate =
+        new Date(
+          selectedExitRecord.entry_at
+        );
+
+      const parsedExitDate =
+        new Date(exitAt);
+
+      if (
+        !Number.isNaN(
+          entryDate.getTime()
+        ) &&
+        !Number.isNaN(
+          parsedExitDate.getTime()
+        ) &&
+        parsedExitDate.getTime() <
+          entryDate.getTime()
+      ) {
+        setMessage({
+          type: "error",
+          text:
+            "وقت الخروج لا يمكن أن يكون قبل وقت الدخول.",
+        });
+
+        return;
+      }
+    }
+
+    try {
+      setSavingExit(true);
+
+      console.log(
+        "EXIT USERNAME:",
+        username
+      );
+
+      const response =
+        await fetch(
+          `/api/maintenance/${selectedExitRecord.id}/exit`,
+          {
+            method: "PATCH",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              exit_at: exitAt,
+
+              notes:
+                exitNotes.trim() ||
+                null,
+
+              updated_by:
+                username,
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        throw new Error(
+          data?.error ||
+            "Failed to close maintenance record"
+        );
+      }
+
+      setMessage({
+        type: "success",
+        text:
+          "تم إخراج المركبة من الصيانة بنجاح.",
+      });
+
+      setExitModalOpened(
+        false
+      );
+
+      setSelectedExitRecord(
+        null
+      );
+
+      setExitDate(
+        getCurrentDate()
+      );
+
+      setExitTime("");
+
+      setExitNotes("");
+
+      await loadData(false);
+    } catch (error) {
+      console.error(
+        "Exit maintenance error:",
+        error
+      );
+
+      setMessage({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "حدث خطأ أثناء إخراج المركبة من الصيانة.",
+      });
+    } finally {
+      setSavingExit(false);
+    }
+  };
+
+  // ===================================================
+  // Vehicle option renderer
+  // Optimized for mobile
+  // ===================================================
+
+  const renderVehicleOption: SelectProps["renderOption"] =
+    ({ option, checked }) => {
+      const vehicle =
+        vehicleOptionsMap.get(
+          option.value
+        );
+
+      if (!vehicle) {
+        return option.label;
+      }
+
+      return (
+        <Group
+          dir="rtl"
+          wrap="nowrap"
+          gap="sm"
+          w="100%"
+          py={4}
+        >
+          <Card
+            withBorder
+            radius="md"
+            p={7}
+            style={{
+              flexShrink: 0,
+
+              background:
+                vehicle.isInMaintenance
+                  ? "var(--mantine-color-red-0)"
+                  : "var(--mantine-color-blue-0)",
+            }}
+          >
+            <IconCar
+              size={20}
+              stroke={1.8}
+            />
+          </Card>
+
+          <Stack
+            gap={3}
+            style={{
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <Group
+              justify="space-between"
+              gap="xs"
+              wrap="nowrap"
+            >
+              <Text
+                fw={700}
+                size="sm"
+                truncate
+              >
+                {
+                  vehicle.vehicleNumber
+                }
+              </Text>
+
+              {vehicle.isInMaintenance && (
+                <Badge
+                  color="red"
+                  variant="light"
+                  size="xs"
+                  radius="sm"
+                >
+                  قيد الصيانة
+                </Badge>
+              )}
+            </Group>
+
+            <Group
+              gap="md"
+              wrap="wrap"
+            >
+              <Group gap={4}>
+                <IconWeight
+                  size={14}
+                  stroke={1.7}
+                />
+
+                <Text
+                  size="xs"
+                  c="dimmed"
+                >
+                  {
+                    vehicle.capacity
+                  }
+                </Text>
+              </Group>
+
+              <Group gap={4}>
+                <IconMapPin
+                  size={14}
+                  stroke={1.7}
+                />
+
+                <Text
+                  size="xs"
+                  c="dimmed"
+                  truncate
+                >
+                  {vehicle.area}
+                </Text>
+              </Group>
+            </Group>
+          </Stack>
+
+          {checked && (
+            <Badge
+              color="blue"
+              variant="light"
+              size="xs"
+            >
+              محددة
+            </Badge>
+          )}
+        </Group>
+      );
+    };
 
   // ===================================================
   // Loading screen
   // ===================================================
-const renderVehicleOption: SelectProps["renderOption"] = ({
-  option,
-  checked,
-}) => {
-  const vehicle = vehicleOptions.find(
-    (item) => item.value === option.value
-  );
 
-  if (!vehicle) {
-    return option.label;
-  }
-
-  return (
-    <Group
-    dir={"rtl"}
-      wrap="nowrap"
-      gap="sm"
-      w="100%"
-      py={4}
-    >
-      {/* Vehicle Icon */}
-
-      <Card
-        withBorder
-        radius="md"
-        p={7}
-        style={{
-          flexShrink: 0,
-          background: vehicle.isInMaintenance
-            ? "var(--mantine-color-red-0)"
-            : "var(--mantine-color-blue-0)",
-        }}
-      >
-        <IconCar
-          size={21}
-          stroke={1.8}
-        />
-      </Card>
-
-      {/* Main Information */}
-
-      <Stack
-        gap={3}
-        style={{
-          flex: 1,
-          minWidth: 0,
-        }}
-      >
-        {/* Vehicle Number */}
-
-        <Group
-          justify="space-between"
-          gap="xs"
-          wrap="nowrap"
-        >
-          <Text
-            fw={700}
-            size="sm"
-            truncate
-          >
-            {vehicle.vehicleNumber}
-          </Text>
-
-          {vehicle.isInMaintenance && (
-            <Badge
-              color="red"
-              variant="light"
-              size="xs"
-              radius="sm"
-            >
-              قيد الصيانة
-            </Badge>
-          )}
-        </Group>
-
-        {/* Details */}
-
-        <Group
-          gap="md"
-          wrap="wrap"
-        >
-          <Group gap={4}>
-            <IconWeight
-              size={14}
-              stroke={1.7}
-            />
-
-            <Text
-              size="xs"
-              c="dimmed"
-            >
-              {vehicle.capacity}
-            </Text>
-          </Group>
-
-          <Group gap={4}>
-            <IconMapPin
-              size={14}
-              stroke={1.7}
-            />
-
-            <Text
-              size="xs"
-              c="dimmed"
-              truncate
-            >
-              {vehicle.area}
-            </Text>
-          </Group>
-        </Group>
-      </Stack>
-
-      {/* Selected indicator */}
-
-      {checked && (
-        <Badge
-          color="blue"
-          variant="light"
-          size="xs"
-        >
-          محددة
-        </Badge>
-      )}
-    </Group>
-  );
-};
   if (loading) {
     return (
       <Container
@@ -2059,7 +2052,7 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                   `مركبة ${record.vehicle_id}`;
 
                 const vehicleDetails =
-                  `${vehicleNumber} -  ${
+                  `${vehicleNumber} - ${
                     record.capacity ??
                     "الوزن غير محدد"
                   } - ${
@@ -2085,15 +2078,11 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                   >
                     <Stack gap="md">
 
-                      {/* Vehicle */}
-
                       <Group
                         justify="space-between"
                         align="flex-start"
                       >
-                        <Group
-                          gap="sm"
-                        >
+                        <Group gap="sm">
                           <IconCar
                             size={26}
                           />
@@ -2106,8 +2095,6 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                                 vehicleDetails
                               }
                             </Text>
-
-                           
                           </div>
                         </Group>
 
@@ -2121,8 +2108,6 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
 
                       <Divider />
 
-                      {/* KPI */}
-
                       <div>
                         <Text
                           size="xs"
@@ -2131,17 +2116,13 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                           نوع الصيانة
                         </Text>
 
-                        <Text
-                          fw={600}
-                        >
+                        <Text fw={600}>
                           {
                             record.kpi_name ||
                             "-"
                           }
                         </Text>
                       </div>
-
-                      {/* Sub KPI */}
 
                       <div>
                         <Text
@@ -2151,17 +2132,13 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                           نوع الصيانة الفرعي
                         </Text>
 
-                        <Text
-                          fw={600}
-                        >
+                        <Text fw={600}>
                           {
                             record.sub_kpi_name ||
                             "-"
                           }
                         </Text>
                       </div>
-
-                      {/* Description */}
 
                       {record.description && (
                         <div>
@@ -2172,17 +2149,13 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                             الوصف
                           </Text>
 
-                          <Text
-                            size="sm"
-                          >
+                          <Text size="sm">
                             {
                               record.description
                             }
                           </Text>
                         </div>
                       )}
-
-                      {/* Entry */}
 
                       <Group
                         justify="space-between"
@@ -2195,9 +2168,7 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                             وقت الدخول
                           </Text>
 
-                          <Text
-                            size="sm"
-                          >
+                          <Text size="sm">
                             {formatDateTime(
                               record.entry_at
                             )}
@@ -2217,9 +2188,7 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                             مدة الصيانة
                           </Text>
 
-                          <Text
-                            fw={700}
-                          >
+                          <Text fw={700}>
                             {calculateDuration(
                               record.entry_at,
                               record.exit_at,
@@ -2229,31 +2198,23 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                         </div>
                       </Group>
 
-                      {/* Created */}
+                      <Stack gap={3}>
+                        {record.created_at && (
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                          >
+                            تم إنشاء السجل:{" "}
+                            {formatDateTime(
+                              record.created_at
+                            )}
 
-                     {/* Created / Updated */}
-
-<Stack gap={3}>
-
-  {/* Created */}
-
-  {record.created_at && (
-    <Text
-      size="xs"
-      c="dimmed"
-    >
-      تم إنشاء السجل:{" "}
-      {formatDateTime(record.created_at)}
-
-      {record.created_by
-        ? ` بواسطة ${record.created_by}`
-        : ""}
-    </Text>
-  )}
-
-  
-
-</Stack>
+                            {record.created_by
+                              ? ` بواسطة ${record.created_by}`
+                              : ""}
+                          </Text>
+                        )}
+                      </Stack>
 
                       <Button
                         color="red"
@@ -2304,75 +2265,87 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
           }
           centered
           size="lg"
+          fullScreen={false}
+          lockScroll
+          overlayProps={{
+            backgroundOpacity: 0.55,
+            blur: 3,
+          }}
+          transitionProps={{
+            transition: "slide-up",
+            duration: 200,
+          }}
+          styles={{
+            content: {
+              maxHeight: "90dvh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            },
+
+            header: {
+              flexShrink: 0,
+            },
+
+            body: {
+              overflowY: "auto",
+              overflowX: "hidden",
+              overscrollBehavior: "contain",
+              WebkitOverflowScrolling:
+                "touch",
+              paddingBottom:
+                "max(16px, env(safe-area-inset-bottom))",
+            },
+          }}
         >
           <Stack gap="md">
 
             {/* Vehicle */}
 
             <Select
-  label="المركبة"
-  description="اختر المركبة المراد إدخالها إلى الصيانة"
-  placeholder="ابحث عن رقم المركبة أو المنطقة..."
-  data={vehicleOptions}
-  value={entryVehicle}
-  onChange={setEntryVehicle}
-  searchable
-  clearable
-  nothingFoundMessage="لا توجد مركبات مطابقة"
-  renderOption={renderVehicleOption}
-  maxDropdownHeight={420}
-  checkIconPosition="right"
-  radius="md"
-  size="md"
-  filter={({ options, search }) => {
-    const query = search
-      .trim()
-      .toLowerCase();
-
-    if (!query) {
-      return options;
-    }
-
-    return options.filter((option :any) => {
-      const vehicle =
-        vehicleOptions.find(
-          (item) =>
-            item.value === option.value 
-        );
-
-      if (!vehicle) {
-        return false;
-      }
-
-      return [
-        vehicle.vehicleNumber,
-        vehicle.capacity,
-        vehicle.area,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(query);
-    });
-  }}
-/>
+              label="المركبة"
+              description="اختر المركبة المراد إدخالها إلى الصيانة"
+              placeholder="ابحث عن رقم المركبة أو المنطقة..."
+              data={vehicleOptions}
+              value={entryVehicle}
+              onChange={setEntryVehicle}
+              searchable
+              clearable
+              nothingFoundMessage="لا توجد مركبات مطابقة"
+              renderOption={
+                renderVehicleOption
+              }
+              maxDropdownHeight={280}
+              checkIconPosition="right"
+              radius="md"
+              size="md"
+              comboboxProps={{
+                withinPortal: true,
+                zIndex: 1100,
+                shadow: "md",
+                offset: 4,
+              }}
+            />
 
             {/* KPI */}
 
             <Select
               label="مؤشر الصيانة"
               placeholder="اختر مؤشر الصيانة"
-              data={
-                kpiOptions
-              }
-              value={
-                entryKpi
-              }
+              data={kpiOptions}
+              value={entryKpi}
               onChange={
                 handleKpiChange
               }
-              searchable
               clearable
+              
               nothingFoundMessage="لا توجد مؤشرات صيانة"
+              comboboxProps={{
+                withinPortal: true,
+                zIndex: 1100,
+                shadow: "md",
+                offset: 4,
+              }}
             />
 
             {/* Sub KPI */}
@@ -2384,27 +2357,30 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                   ? "اختر المؤشر الفرعي"
                   : "اختر مؤشر الصيانة أولا"
               }
-              data={
-                subKpiOptions
-              }
-              value={
-                entrySubKpi
-              }
+              data={subKpiOptions}
+              value={entrySubKpi}
               onChange={
                 setEntrySubKpi
               }
-              searchable
               clearable
-              disabled={
-                !entryKpi
-              }
+              
+              disabled={!entryKpi}
               nothingFoundMessage="لا توجد مؤشرات فرعية"
+              comboboxProps={{
+                withinPortal: true,
+                zIndex: 1100,
+                shadow: "md",
+                offset: 4,
+              }}
             />
 
             {/* Entry Date / Time */}
 
             <SimpleGrid
-              cols={2}
+              cols={{
+                base: 1,
+                xs: 2,
+              }}
             >
               <div>
                 <Text
@@ -2417,12 +2393,8 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
 
                 <input
                   type="date"
-                  value={
-                    entryDate
-                  }
-                  max={
-                    maxDate
-                  }
+                  value={entryDate}
+                  max={maxDate}
                   onChange={(
                     event
                   ) =>
@@ -2433,18 +2405,14 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                     )
                   }
                   style={{
-                    width:
-                      "100%",
-                    height:
-                      36,
+                    width: "100%",
+                    height: 36,
                     padding:
                       "0 10px",
                     border:
                       "1px solid #ced4da",
-                    borderRadius:
-                      6,
-                    fontSize:
-                      14,
+                    borderRadius: 6,
+                    fontSize: 14,
                   }}
                 />
               </div>
@@ -2460,9 +2428,7 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
 
                 <input
                   type="time"
-                  value={
-                    entryTime
-                  }
+                  value={entryTime}
                   max={
                     entryDate ===
                     maxDate
@@ -2479,18 +2445,14 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                     )
                   }
                   style={{
-                    width:
-                      "100%",
-                    height:
-                      36,
+                    width: "100%",
+                    height: 36,
                     padding:
                       "0 10px",
                     border:
                       "1px solid #ced4da",
-                    borderRadius:
-                      6,
-                    fontSize:
-                      14,
+                    borderRadius: 6,
+                    fontSize: 14,
                   }}
                 />
               </div>
@@ -2521,12 +2483,9 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
               value={
                 entryDescription
               }
-              onChange={(
-                event
-              ) =>
+              onChange={(event) =>
                 setEntryDescription(
-                  event
-                    .currentTarget
+                  event.currentTarget
                     .value
                 )
               }
@@ -2539,15 +2498,10 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
             <Textarea
               label="ملاحظات"
               placeholder="أي ملاحظات إضافية"
-              value={
-                entryNotes
-              }
-              onChange={(
-                event
-              ) =>
+              value={entryNotes}
+              onChange={(event) =>
                 setEntryNotes(
-                  event
-                    .currentTarget
+                  event.currentTarget
                     .value
                 )
               }
@@ -2557,8 +2511,12 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
 
             <Divider />
 
+            {/* Buttons */}
+
             <Group
               justify="flex-end"
+              gap="sm"
+              wrap="wrap"
             >
               <Button
                 variant="default"
@@ -2619,8 +2577,42 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
           }
           centered
           size="lg"
+          fullScreen={false}
+          lockScroll
+          overlayProps={{
+            backgroundOpacity: 0.55,
+            blur: 3,
+          }}
+          transitionProps={{
+            transition: "slide-up",
+            duration: 200,
+          }}
+          styles={{
+            content: {
+              maxHeight: "90dvh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            },
+
+            header: {
+              flexShrink: 0,
+            },
+
+            body: {
+              overflowY: "auto",
+              overflowX: "hidden",
+              overscrollBehavior: "contain",
+              WebkitOverflowScrolling:
+                "touch",
+              paddingBottom:
+                "max(16px, env(safe-area-inset-bottom))",
+            },
+          }}
         >
           <Stack gap="md">
+
+            {/* Selected vehicle */}
 
             {selectedExitRecord && (
               <Card
@@ -2628,16 +2620,32 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                 radius="md"
                 p="md"
               >
-                <Group>
+                <Group
+                  align="flex-start"
+                  wrap="nowrap"
+                >
                   <IconCar
                     size={26}
+                    style={{
+                      flexShrink: 0,
+                    }}
                   />
 
-                  <div>
-                    <Text fw={700}>
-                      {selectedExitRecord.plate_number ||
+                  <div
+                    style={{
+                      minWidth: 0,
+                      flex: 1,
+                    }}
+                  >
+                    <Text
+                      fw={700}
+                      truncate
+                    >
+                      {
+                        selectedExitRecord.plate_number ||
                         selectedExitRecord.vehicle_name ||
-                        `مركبة ${selectedExitRecord.vehicle_id}`}
+                        `مركبة ${selectedExitRecord.vehicle_id}`
+                      }
                     </Text>
 
                     <Text
@@ -2657,8 +2665,11 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
 
                 <Divider my="md" />
 
-                <Group
-                  justify="space-between"
+                <SimpleGrid
+                  cols={{
+                    base: 1,
+                    xs: 2,
+                  }}
                 >
                   <div>
                     <Text
@@ -2668,21 +2679,14 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                       وقت الدخول
                     </Text>
 
-                    <Text
-                      size="sm"
-                    >
+                    <Text size="sm">
                       {formatDateTime(
                         selectedExitRecord.entry_at
                       )}
                     </Text>
                   </div>
 
-                  <div
-                    style={{
-                      textAlign:
-                        "right",
-                    }}
-                  >
+                  <div>
                     <Text
                       size="xs"
                       c="dimmed"
@@ -2690,9 +2694,7 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                       المدة الحالية
                     </Text>
 
-                    <Text
-                      fw={700}
-                    >
+                    <Text fw={700}>
                       {calculateDuration(
                         selectedExitRecord.entry_at,
                         null,
@@ -2700,14 +2702,17 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                       )}
                     </Text>
                   </div>
-                </Group>
+                </SimpleGrid>
               </Card>
             )}
 
             {/* Exit Date / Time */}
 
             <SimpleGrid
-              cols={2}
+              cols={{
+                base: 1,
+                xs: 2,
+              }}
             >
               <div>
                 <Text
@@ -2720,15 +2725,9 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
 
                 <input
                   type="date"
-                  value={
-                    exitDate
-                  }
-                  max={
-                    maxDate
-                  }
-                  onChange={(
-                    event
-                  ) =>
+                  value={exitDate}
+                  max={maxDate}
+                  onChange={(event) =>
                     setExitDate(
                       event
                         .currentTarget
@@ -2736,18 +2735,14 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                     )
                   }
                   style={{
-                    width:
-                      "100%",
-                    height:
-                      36,
+                    width: "100%",
+                    height: 36,
                     padding:
                       "0 10px",
                     border:
                       "1px solid #ced4da",
-                    borderRadius:
-                      6,
-                    fontSize:
-                      14,
+                    borderRadius: 6,
+                    fontSize: 14,
                   }}
                 />
               </div>
@@ -2763,18 +2758,14 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
 
                 <input
                   type="time"
-                  value={
-                    exitTime
-                  }
+                  value={exitTime}
                   max={
                     exitDate ===
                     maxDate
                       ? maxTime
                       : undefined
                   }
-                  onChange={(
-                    event
-                  ) =>
+                  onChange={(event) =>
                     setExitTime(
                       event
                         .currentTarget
@@ -2782,18 +2773,14 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
                     )
                   }
                   style={{
-                    width:
-                      "100%",
-                    height:
-                      36,
+                    width: "100%",
+                    height: 36,
                     padding:
                       "0 10px",
                     border:
                       "1px solid #ced4da",
-                    borderRadius:
-                      6,
-                    fontSize:
-                      14,
+                    borderRadius: 6,
+                    fontSize: 14,
                   }}
                 />
               </div>
@@ -2821,15 +2808,10 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
             <Textarea
               label="ملاحظات الخروج"
               placeholder="اكتب ملاحظات عند إخراج المركبة"
-              value={
-                exitNotes
-              }
-              onChange={(
-                event
-              ) =>
+              value={exitNotes}
+              onChange={(event) =>
                 setExitNotes(
-                  event
-                    .currentTarget
+                  event.currentTarget
                     .value
                 )
               }
@@ -2839,8 +2821,12 @@ const renderVehicleOption: SelectProps["renderOption"] = ({
 
             <Divider />
 
+            {/* Buttons */}
+
             <Group
               justify="flex-end"
+              gap="sm"
+              wrap="wrap"
             >
               <Button
                 variant="default"

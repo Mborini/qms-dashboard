@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 import withSerwist from "@serwist/next";
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  allowedDevOrigins: ["192.168.1.89"],
+};
 
 export default withSerwist({
   swSrc: "app/sw.ts",

@@ -490,28 +490,30 @@ const adminCount = adminPermissions.filter(can).length;
           {/* USER */}
 
           <Box>
-            {session?.user?.name && (
-              <Text
-                size="sm"
-                fw={800}
-                style={{
-                  color: "#354957",
-                }}
-              >
-                مرحباً، {session.user.name}
-              </Text>
-            )}
+  {session?.user?.name && (
+    <>
+      <Text
+        size="sm"
+        fw={800}
+        style={{
+          color: "#354957",
+        }}
+      >
+        مرحباً، {session.user.name}
+      </Text>
 
-            <Text
-              size="xs"
-              mt={2}
-              style={{
-                color: "#9aa5ac",
-              }}
-            >
-              Operations Intelligence
-            </Text>
-          </Box>
+      <Text
+        size="xs"
+        mt={2}
+        style={{
+          color: "#9aa5ac",
+        }}
+      >
+        {session.user.role}
+      </Text>
+    </>
+  )}
+</Box>
 
           {/* LOGOUT */}
 
@@ -636,7 +638,7 @@ const adminCount = adminPermissions.filter(can).length;
         ================================================= */}
 
         {showOperations && (
-          <Box className="dashboard-section" mb={60}>
+          <Box dir="rtl" className="dashboard-section" mb={60}>
             <SectionHeader
               icon={
                 <IconMap2
@@ -644,8 +646,8 @@ const adminCount = adminPermissions.filter(can).length;
                   stroke={1.8}
                 />
               }
-              title="Operations"
-              description="Operational monitoring, field activities and collection"
+              title="العمليات"
+              description="إدارة العمليات، الملاحظات، المخالفات, الخرائط، المناطق وادارة الحاويات."
               color="#228be6"
               count={operationsCount}
             />
@@ -665,18 +667,18 @@ const adminCount = adminPermissions.filter(can).length;
 {can("statistics") && (
   <ModuleCard
     href="/failures/stats"
-    title="Violations Statistics"
-    description="Analyze violations, KPIs, areas and operational performance."
-    footer="Open Statistics"
+    title="احصائيات المخالفات"
+    description=" عرض وتحليل احصائيات المخالفات، المؤشرات والبيانات التشغيلية."
+    footer=" فتح الاحصائيات"
     icon={<IconChartBar size={28} />}
 color="#2563EB"  />
 )}
 {can("vehicle_movements_history") && (
   <ModuleCard
     href="/vehicle-movements/history"
-    title="Vehicle Movements History"
-    description="Review and analyze historical vehicle movement records and operational activity."
-    footer="Open Movement History"
+    title="سجل حركة المركبات"
+    description="مراجعة وتحليل سجلات حركة المركبات التاريخية والنشاط التشغيلي."
+    footer="فتح سجل الحركة"
     icon={<IconHistory size={28} />}
     color="#7C3AED"
   />
@@ -686,9 +688,9 @@ color="#2563EB"  />
 {can("statistics") && (
   <ModuleCard
     href="/vehicle-movements"
-    title="Vehicle Movements"
-    description="Monitor vehicle movements, daily activity and operational movement records."
-    footer="Open Vehicle Movements"
+    title="حركة المركبات"
+    description="مراقبة حركة المركبات، النشاط اليومي وسجلات الحركة التشغيلية."
+    footer="فتح حركة المركبات"
     icon={<IconArrowsExchange size={28} />}
     color="#DB2777"
   />
@@ -701,9 +703,9 @@ color="#2563EB"  />
               {can("map") && (
                 <ModuleCard
                   href="/failures/osm"
-                  title="Violations Map"
-                  description="Explore violations geographically using the interactive map."
-                  footer="Open Map"
+                  title="خرائط المخالفات"
+                  description=" عرض المخالفات على الخرائط، مراجعة المواقع وتحليل البيانات الجغرافية."
+                  footer=" فتح الخرائط"
                   icon={<IconMap size={28} />}
                  color="#DC2626"
                 />
@@ -714,9 +716,9 @@ color="#2563EB"  />
               {can("route_notes") && (
                 <ModuleCard
                   href="/route-notes"
-                  title="Route Notes"
-                  description="Create, review and manage route notes and field observations."
-                  footer="Open Route Notes"
+                  title="ملاحظات تتبع المركبات"
+                  description=" عرض وإدارة ملاحظات تتبع المركبات، الملاحظات التشغيلية والمواقع."
+                  footer=" فتح ملاحظات التتبع"
                   icon={<IconRoute size={28} />}
                   color="#EA580C"
                 />
@@ -727,9 +729,9 @@ color="#2563EB"  />
               {can("bins") && (
                 <ModuleCard
                   href="/binCollection/map"
-                  title="Collection Map"
-                  description="View and manage bin locations directly on the map."
-                  footer="Open Collection Map"
+                  title="اداة جمع مواقع الحاويات"
+                  description=" عرض مواقع الحاويات على الخرائط، مراجعة المواقع وتحليل البيانات الجغرافية."
+                  footer=" فتح خريطة الجمع"
                   icon={<IconMapPin size={28} />}
                   color="#D97706"
                 />
@@ -740,9 +742,9 @@ color="#2563EB"  />
               {can("collection_areas") && (
                 <ModuleCard
                   href="/binCollection/collection-areas/manage"
-                  title="Collection Areas"
-                  description="Manage collection areas, zones and operational boundaries."
-                  footer="Manage Areas"
+                  title="مناطق الجمع"
+                  description="إدارة مناطق الجمع، المناطق والحدود التشغيلية."
+                  footer="إدارة المناطق"
                   icon={<IconMap2 size={28} />}
                   color="#CA8A04"
                 />
@@ -753,9 +755,9 @@ color="#2563EB"  />
               {can("bin_export") && (
                 <ModuleCard
                   href="/binCollection/export-bins"
-                  title="Export Bins"
-                  description="Export bin data and collection information for reporting."
-                  footer="Export Data"
+                  title="تصدير بيانات الحاويات"
+                  description=" تصدير بيانات الحاويات، المواقع والمعلومات التشغيلية."
+                  footer="تصدير البيانات"
                   icon={<IconFileTypeXls size={28} />}
                   color="#65A30D"
                 />
@@ -780,7 +782,7 @@ color="#2563EB"  />
         ================================================= */}
 
         {showMaintenance && (
-          <Box className="dashboard-section" mb={60}>
+          <Box dir="rtl" className="dashboard-section" mb={60}>
             <SectionHeader
               icon={
                 <IconTool

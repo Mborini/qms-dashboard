@@ -178,9 +178,7 @@ const TRACKING_OPTIONS = [
    HELPERS
 ========================================================= */
 
-function getFuelCardColor(
-  status: string | null,
-) {
+function getFuelCardColor(status: string | null) {
   switch (status) {
     case "active":
       return "green";
@@ -199,9 +197,7 @@ function getFuelCardColor(
   }
 }
 
-function getFuelCardLabel(
-  status: string | null,
-) {
+function getFuelCardLabel(status: string | null) {
   switch (status) {
     case "active":
       return "فعالة";
@@ -220,9 +216,7 @@ function getFuelCardLabel(
   }
 }
 
-function getTrackingColor(
-  status: string | null,
-) {
+function getTrackingColor(status: string | null) {
   switch (status) {
     case "active":
       return "green";
@@ -241,9 +235,7 @@ function getTrackingColor(
   }
 }
 
-function getTrackingLabel(
-  status: string | null,
-) {
+function getTrackingLabel(status: string | null) {
   switch (status) {
     case "active":
       return "فعال";
@@ -356,10 +348,6 @@ export default function VehiclesPage() {
 
   /* =======================================================
      LOAD AREAS
-     
-     مهم:
-     المناطق يتم تحميلها مباشرة من /api/areas
-     وليس من بيانات الآليات
   ======================================================= */
 
   async function loadAreas() {
@@ -374,7 +362,8 @@ export default function VehiclesPage() {
         },
       );
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -383,19 +372,6 @@ export default function VehiclesPage() {
             "تعذر تحميل المناطق",
         );
       }
-
-      /*
-       * API الحالي يرجع:
-       *
-       * [
-       *   { id, name, created_at },
-       *   ...
-       * ]
-       *
-       * وندعم أيضاً في حال كان الرد:
-       *
-       * { data: [...] }
-       */
 
       const areaData: Area[] =
         Array.isArray(result)
@@ -631,10 +607,6 @@ export default function VehiclesPage() {
     setError("");
     setModalOpened(true);
 
-    /*
-     * احتياطاً:
-     * إذا لم تكن المناطق محملة لأي سبب
-     */
     if (areas.length === 0) {
       loadAreas();
     }
@@ -1302,13 +1274,18 @@ export default function VehiclesPage() {
                   setAreaFilter
                 }
                 data={areaOptions}
-                searchable
                 clearable
                 radius="md"
                 disabled={
                   areasLoading
                 }
                 nothingFoundMessage="لا توجد مناطق"
+                maxDropdownHeight={280}
+                comboboxProps={{
+                  withinPortal: true,
+                  zIndex: 1000,
+                  shadow: "md",
+                }}
               />
             </Grid.Col>
 
@@ -1349,6 +1326,12 @@ export default function VehiclesPage() {
                   },
                 ]}
                 radius="md"
+                maxDropdownHeight={220}
+                comboboxProps={{
+                  withinPortal: true,
+                  zIndex: 1000,
+                  shadow: "md",
+                }}
               />
             </Grid.Col>
 
@@ -1371,6 +1354,12 @@ export default function VehiclesPage() {
                 }
                 clearable
                 radius="md"
+                maxDropdownHeight={220}
+                comboboxProps={{
+                  withinPortal: true,
+                  zIndex: 1000,
+                  shadow: "md",
+                }}
               />
             </Grid.Col>
 
@@ -1395,6 +1384,12 @@ export default function VehiclesPage() {
                 }
                 clearable
                 radius="md"
+                maxDropdownHeight={220}
+                comboboxProps={{
+                  withinPortal: true,
+                  zIndex: 1000,
+                  shadow: "md",
+                }}
               />
             </Grid.Col>
           </Grid>
@@ -1893,7 +1888,7 @@ export default function VehiclesPage() {
           }
         }}
         title={
-          <Group gap="sm">
+          <Group gap="sm" wrap="nowrap">
             <Box
               style={{
                 width: 38,
@@ -1906,6 +1901,7 @@ export default function VehiclesPage() {
                   "center",
                 background:
                   "linear-gradient(135deg, #e8f3ff, #dcecff)",
+                flexShrink: 0,
               }}
             >
               {editingVehicle ? (
@@ -1921,8 +1917,15 @@ export default function VehiclesPage() {
               )}
             </Box>
 
-            <Box>
-              <Text fw={800}>
+            <Box
+              style={{
+                minWidth: 0,
+              }}
+            >
+              <Text
+                fw={800}
+                truncate
+              >
                 {editingVehicle
                   ? "تعديل بيانات الآلية"
                   : "إضافة آلية جديدة"}
@@ -1931,17 +1934,75 @@ export default function VehiclesPage() {
               <Text
                 size="xs"
                 c="dimmed"
+                mt={2}
+                truncate
               >
                 بيانات الآلية والسائقين والتجهيزات
               </Text>
             </Box>
           </Group>
         }
-        centered
         size="xl"
         radius="xl"
         closeOnClickOutside={!saving}
         closeOnEscape={!saving}
+        centered
+        transitionProps={{
+          transition: "pop",
+          duration: 180,
+        }}
+        styles={{
+          inner: {
+            alignItems: "center",
+            justifyContent: "center",
+            paddingTop: 16,
+            paddingBottom: 16,
+            paddingLeft: 12,
+            paddingRight: 12,
+          },
+
+          content: {
+            width:
+              "min(1100px, calc(100vw - 24px))",
+            height:
+              "min(90dvh, 900px)",
+            maxHeight:
+              "90dvh",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            margin: 0,
+          },
+
+          header: {
+            flexShrink: 0,
+            minHeight: 70,
+            borderBottom:
+              "1px solid #edf1f7",
+            paddingLeft: 20,
+            paddingRight: 20,
+          },
+
+          title: {
+            width: "100%",
+            minWidth: 0,
+          },
+
+          body: {
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            overflowX: "hidden",
+            WebkitOverflowScrolling:
+              "touch",
+            overscrollBehavior:
+              "contain",
+            paddingLeft: 20,
+            paddingRight: 20,
+            paddingTop: 20,
+            paddingBottom: 20,
+          },
+        }}
       >
         <Stack gap="lg">
           {/* BASIC */}
@@ -1999,9 +2060,7 @@ export default function VehiclesPage() {
                 />
               </Grid.Col>
 
-              {/* =================================================
-                  AREA DROPDOWN
-              ================================================= */}
+              {/* AREA */}
 
               <Grid.Col
                 span={{
@@ -2030,7 +2089,6 @@ export default function VehiclesPage() {
                     )
                   }
                   data={areaOptions}
-                  searchable
                   clearable
                   required
                   radius="md"
@@ -2038,6 +2096,18 @@ export default function VehiclesPage() {
                     areasLoading
                   }
                   nothingFoundMessage="لا توجد مناطق"
+                  maxDropdownHeight={280}
+                  comboboxProps={{
+                    withinPortal: true,
+                    zIndex: 2000,
+                    shadow: "md",
+                  }}
+                  styles={{
+                    dropdown: {
+                      maxWidth:
+                        "calc(100vw - 32px)",
+                    },
+                  }}
                   rightSection={
                     areasLoading ? (
                       <Loader
@@ -2311,6 +2381,12 @@ export default function VehiclesPage() {
                     false
                   }
                   radius="md"
+                  maxDropdownHeight={220}
+                  comboboxProps={{
+                    withinPortal: true,
+                    zIndex: 2000,
+                    shadow: "md",
+                  }}
                   leftSection={
                     <IconGauge
                       size={17}
@@ -2347,6 +2423,12 @@ export default function VehiclesPage() {
                     false
                   }
                   radius="md"
+                  maxDropdownHeight={220}
+                  comboboxProps={{
+                    withinPortal: true,
+                    zIndex: 2000,
+                    shadow: "md",
+                  }}
                   leftSection={
                     <IconActivity
                       size={17}
@@ -2455,7 +2537,10 @@ export default function VehiclesPage() {
 
           {/* ACTIONS */}
 
-          <Group>
+          <Group
+            gap="sm"
+            wrap="wrap"
+          >
             <Button
               onClick={
                 handleSubmit

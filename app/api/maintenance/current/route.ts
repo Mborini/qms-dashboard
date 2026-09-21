@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         v.capacity,
         v.manufacture_year,
         v.model,
-        v.area,
+        ar.name AS area,
 
         k.id AS kpi_id,
         k.name AS kpi_name,
@@ -82,6 +82,9 @@ export async function GET(request: NextRequest) {
 
       INNER JOIN vehicles v
         ON v.id = mr.vehicle_id
+
+      INNER JOIN areas ar
+        ON ar.id = v.area_id
 
       INNER JOIN maintenance_kpis k
         ON k.id = mr.kpi_id
