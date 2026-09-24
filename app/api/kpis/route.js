@@ -374,69 +374,107 @@ export async function GET(request) {
             const activities =
               details.activities || [];
 
+// =========================================
+// LAST ACTIVITY
+// =========================================
 
-            // =========================================
-            // LAST ACTIVITY
-            // =========================================
-
-            const lastActivity =
-              activities.at(-1);
-
-
-            // =========================================
-            // LAST RESOLUTION
-            // =========================================
-
-            const resolutionActivity =
-              activities
-                .slice()
-                .reverse()
-                .find(
-                  (activity) =>
-                    activity.activityType ===
-                    "ResolutionSubmitted",
-                );
+const lastActivity =
+  activities.at(-1);
 
 
-            // =========================================
-            // FINAL USER
-            // =========================================
+// =========================================
+// LAST RESOLUTION
+// =========================================
 
-            const finalUser =
-              resolutionActivity?.userName ??
-              lastActivity?.userName ??
-              "غير معروف";
+const resolutionActivity =
+  activities
+    .slice()
+    .reverse()
+    .find(
+      (activity) =>
+        activity.activityType ===
+        "ResolutionSubmitted",
+    );
 
 
-            // =========================================
-            // RETURN
-            // =========================================
+// =========================================
+// SERVICE PROVIDER REJECTION
+// =========================================
+// الموظف الذي قام برفض المخالفة من C&C
 
-            return {
-              id: item.id,
+const spRejectedActivity =
+  activities
+    .slice()
+    .reverse()
+    .find(
+      (activity) =>
+        activity.activityType ===
+        "SpRejected",
+    );
 
-              districtName:
-                item.districtName,
 
-              blockName:
-                item.blockName,
+// =========================================
+// FINAL USER
+// =========================================
 
-              status:
-                item.status,
+let finalUser = "غير معروف";
 
-              kpiNameAr:
-                details.kpiNameAr,
+// إذا كانت المخالفة InProgress
+// وكان هناك SpRejected من موظف C&C
+// نعتبر موظف SpRejected هو الموظف المسؤول
+if (
+  item.status === "InProgress" &&
+  spRejectedActivity?.userName
+) {
+  finalUser =
+    spRejectedActivity.userName;
+} else {
+  // باقي الحالات تستخدم المنطق السابق
+  finalUser =
+    resolutionActivity?.userName ??
+    lastActivity?.userName ??
+    "غير معروف";
+}
 
-              userName:
-                finalUser,
-complaintSource:
+
+// =========================================
+// RETURN
+// =========================================
+
+return {
+  id: item.id,
+
+  districtName:
+    item.districtName,
+
+  blockName:
+    item.blockName,
+
+  status:
+    item.status,
+
+  kpiNameAr:
+    details.kpiNameAr,
+
+  // الموظف المسؤول عن المخالفة
+  userName:
+    finalUser,
+
+  complaintSource:
     item.complaintSource ?? null,
-              resolutionUser:
-                resolutionActivity?.userName ||
-                null,
 
-              activities,
-            };
+  // آخر موظف قام بـ ResolutionSubmitted
+  resolutionUser:
+    resolutionActivity?.userName ||
+    null,
+
+  // موظف C&C الذي قام بـ SpRejected
+  spRejectedUser:
+    spRejectedActivity?.userName ||
+    null,
+
+  activities,
+};
           } catch (error) {
             // =========================================
             // IMPORTANT

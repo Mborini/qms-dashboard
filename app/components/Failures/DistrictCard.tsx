@@ -38,6 +38,7 @@ import {
   statusConfig,
   summaryOnlyStatuses,
 } from "./statusConfig";
+import { useSession } from "next-auth/react";
 
 /* =========================================================
    TYPES
@@ -415,7 +416,9 @@ export default function DistrictCard({
     selectedFailures,
     setSelectedFailures,
   ] = useState<FailureItem[]>([]);
-
+const { data: session, status } = useSession();const isAdmin =
+  session?.user?.role === "Admin" ||
+  session?.user?.roleId === 1;
   const [
     selectedStatus,
     setSelectedStatus,
@@ -1708,7 +1711,7 @@ export default function DistrictCard({
       {/* =====================================================
           PERFORMANCE
       ===================================================== */}
-
+{isAdmin && (
       <Card
         radius="md"
         p="sm"
@@ -1823,7 +1826,7 @@ export default function DistrictCard({
           </Text>
         </Group>
       </Card>
-
+)}
       {/* =====================================================
           STATUS SUMMARY
       ===================================================== */}

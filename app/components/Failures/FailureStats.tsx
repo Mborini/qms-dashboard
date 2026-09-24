@@ -11,7 +11,6 @@ import {
   SimpleGrid,
   Badge,
   Button,
-  ActionIcon,
 } from "@mantine/core";
 
 import {
@@ -32,7 +31,9 @@ import {
   statusConfig,
   summaryOnlyStatuses,
 } from "./statusConfig";
+
 import GeneralSummary from "./GeneralSummary";
+import { useSession } from "next-auth/react";
 
 /* =========================================================
    TYPES
@@ -153,7 +154,9 @@ export default function FailureStats({
 }: FailureStatsProps) {
   const [complaintSourceFilter, setComplaintSourceFilter] =
     useState("all");
-
+const { data: session, status } = useSession();
+const isAdmin =
+  session?.user?.roleId === 1;
   /* =========================================================
      FILTER
   ========================================================= */
@@ -168,7 +171,9 @@ export default function FailureStats({
         return item.complaintSource == null;
       }
 
-      return item.complaintSource === complaintSourceFilter;
+      return (
+        item.complaintSource === complaintSourceFilter
+      );
     });
   }, [items, complaintSourceFilter]);
 
@@ -182,11 +187,19 @@ export default function FailureStats({
     let avtrTeam = 0;
 
     items.forEach((item) => {
-      if (item.complaintSource === "call-center") {
+      if (
+        item.complaintSource ===
+        "call-center"
+      ) {
         callCenter++;
-      } else if (item.complaintSource === "citizen-portal") {
+      } else if (
+        item.complaintSource ===
+        "citizen-portal"
+      ) {
         citizenPortal++;
-      } else if (item.complaintSource == null) {
+      } else if (
+        item.complaintSource == null
+      ) {
         avtrTeam++;
       }
     });
@@ -213,14 +226,21 @@ export default function FailureStats({
 
       const block = item.blockName?.trim()
         ? item.blockName.trim()
-        : `KPI: ${item.kpiNameAr || "غير محدد"}`;
+        : `KPI: ${
+            item.kpiNameAr || "غير محدد"
+          }`;
 
       const status = item.status || "Unknown";
 
       let lastUser: string | null = null;
 
-      if (!summaryOnlyStatuses.includes(status)) {
-        lastUser = item.userName || "غير معروف";
+      if (
+        !summaryOnlyStatuses.includes(
+          status
+        )
+      ) {
+        lastUser =
+          item.userName || "غير معروف";
       }
 
       if (!result[district]) {
@@ -232,14 +252,17 @@ export default function FailureStats({
 
       result[district].total++;
 
-      if (!result[district].blocks[block]) {
+      if (
+        !result[district].blocks[block]
+      ) {
         result[district].blocks[block] = {
           total: 0,
           statuses: {},
         };
       }
 
-      const blockData = result[district].blocks[block];
+      const blockData =
+        result[district].blocks[block];
 
       blockData.total++;
 
@@ -251,7 +274,8 @@ export default function FailureStats({
         };
       }
 
-      const statusData = blockData.statuses[status];
+      const statusData =
+        blockData.statuses[status];
 
       statusData.total++;
 
@@ -271,9 +295,13 @@ export default function FailureStats({
 
         if (
           item.id !== undefined &&
-          !statusData.users[lastUser].ids.includes(item.id)
+          !statusData.users[
+            lastUser
+          ].ids.includes(item.id)
         ) {
-          statusData.users[lastUser].ids.push(item.id);
+          statusData.users[
+            lastUser
+          ].ids.push(item.id);
         }
       }
     });
@@ -285,80 +313,112 @@ export default function FailureStats({
      TOTAL STATUSES
   ========================================================= */
 
-  const totalStatuses = useMemo<Record<string, number>>(() => {
-    const result: Record<string, number> = {};
+  const totalStatuses =
+    useMemo<Record<string, number>>(
+      () => {
+        const result: Record<
+          string,
+          number
+        > = {};
 
-    Object.keys(statusConfig).forEach((status) => {
-      result[status] = 0;
-    });
+        Object.keys(statusConfig).forEach(
+          (status) => {
+            result[status] = 0;
+          }
+        );
 
-    filteredItems.forEach((item) => {
-      const status = item.status || "Unknown";
+        filteredItems.forEach((item) => {
+          const status =
+            item.status || "Unknown";
 
-      result[status] = (result[status] || 0) + 1;
-    });
+          result[status] =
+            (result[status] || 0) + 1;
+        });
 
-    return result;
-  }, [filteredItems]);
+        return result;
+      },
+      [filteredItems]
+    );
 
-/* =========================================================
-   KPIs
-========================================================= */
+  /* =========================================================
+     KPIs
+  ========================================================= */
 
-const kpis = useMemo(() => {
-  const total = filteredItems.length;
+  const kpis = useMemo(() => {
+    const total =
+      filteredItems.length;
 
-  const field =
-    totalStatuses.PendingFieldMonitorVerification || 0;
+    const field =
+      totalStatuses
+        .PendingFieldMonitorVerification ||
+      0;
 
-  const resolved =
-    totalStatuses.Resolved || 0;
+    const resolved =
+      totalStatuses.Resolved || 0;
 
-  const supervisorReview =
-    totalStatuses.PendingSupervisorReview || 0;
+    const supervisorReview =
+      totalStatuses
+        .PendingSupervisorReview || 0;
 
-  const rejected =
-    totalStatuses.Rejected || 0;
+    const rejected =
+      totalStatuses.Rejected || 0;
 
-  const achievementCount =
-    field +
-    resolved +
-    supervisorReview +
-    rejected;
+    const achievementCount =
+      field +
+      resolved +
+      supervisorReview +
+      rejected;
 
-  const achievementPercentage = total
-    ? ((achievementCount / total) * 100).toFixed(1)
-    : "0.0";
+    const achievementPercentage = total
+      ? (
+          (achievementCount /
+            total) *
+          100
+        ).toFixed(1)
+      : "0.0";
 
-  return {
-    total,
-    field,
-    resolved,
-    supervisorReview,
-    rejected,
-    achievementCount,
-    achievementPercentage,
-  };
-}, [filteredItems, totalStatuses]);
+    return {
+      total,
+      field,
+      resolved,
+      supervisorReview,
+      rejected,
+      achievementCount,
+      achievementPercentage,
+    };
+  }, [
+    filteredItems,
+    totalStatuses,
+  ]);
 
-const achievement = kpis.achievementPercentage;
+  const achievement =
+    kpis.achievementPercentage;
+
   /* =========================================================
      ACTIVE SOURCE
   ========================================================= */
 
   const activeSource =
     SOURCE_OPTIONS.find(
-      (source) => source.key === complaintSourceFilter
-    ) ?? SOURCE_OPTIONS[0];
+      (source) =>
+        source.key ===
+        complaintSourceFilter
+    ) ??
+    SOURCE_OPTIONS[0];
 
   /* =========================================================
      FOCUS DISTRICT
   ========================================================= */
 
-  const focusDistrict = (district: string) => {
-    const element = document.getElementById(
-      `district-${encodeURIComponent(district)}`
-    );
+  const focusDistrict = (
+    district: string
+  ) => {
+    const element =
+      document.getElementById(
+        `district-${encodeURIComponent(
+          district
+        )}`
+      );
 
     if (element) {
       element.scrollIntoView({
@@ -375,14 +435,26 @@ const achievement = kpis.achievementPercentage;
 
   const exportExcel = () => {
     const STATUS = {
-      PENDING_ACCEPTANCE: "PendingSpValidation",
-      IN_PROGRESS: "InProgress",
+      PENDING_ACCEPTANCE:
+        "PendingSpValidation",
+
+      IN_PROGRESS:
+        "InProgress",
+
       FIELD_VERIFICATION:
         "PendingFieldMonitorVerification",
-      RESOLVED: "Resolved",
-      AVTR_REVIEW: "PendingSupervisorReview",
-      AVTR_ACCEPTED_REJECTION: "ResolutionRejected",
-      AVTR_REJECTED_SOLUTION: "Rejected",
+
+      RESOLVED:
+        "Resolved",
+
+      AVTR_REVIEW:
+        "PendingSupervisorReview",
+
+      AVTR_ACCEPTED_REJECTION:
+        "ResolutionRejected",
+
+      AVTR_REJECTED_SOLUTION:
+        "Rejected",
     };
 
     const createEmptyStats = () => ({
@@ -397,7 +469,9 @@ const achievement = kpis.achievementPercentage;
     });
 
     const addStatus = (
-      target: ReturnType<typeof createEmptyStats>,
+      target: ReturnType<
+        typeof createEmptyStats
+      >,
       status: string
     ) => {
       target.total++;
@@ -436,33 +510,41 @@ const achievement = kpis.achievementPercentage;
       }
     };
 
-const getAchievement = (
-  data: ReturnType<typeof createEmptyStats>
-) => {
-  if (!data.total) return "0.0";
+    const getAchievement = (
+      data: ReturnType<
+        typeof createEmptyStats
+      >
+    ) => {
+      if (!data.total) {
+        return "0.0";
+      }
 
-  return (
-    (
-      ((data.fieldVerification +
-        data.resolved +
-        data.avtrReview +
-        data.avtrRejectedSolution) /
-        data.total) *
-      100
-    ).toFixed(1)
-  );
-};
-    const getReportDate = () => {
-      const firstItem = filteredItems.find(
-        (item) =>
-          item.date ||
-          item.createdAt ||
-          item.created_at ||
-          item.violationDate ||
-          item.failureDate
+      return (
+        (
+          ((data.fieldVerification +
+            data.resolved +
+            data.avtrReview +
+            data.avtrRejectedSolution) /
+            data.total) *
+          100
+        ).toFixed(1)
       );
+    };
 
-      if (!firstItem) return null;
+    const getReportDate = () => {
+      const firstItem =
+        filteredItems.find(
+          (item) =>
+            item.date ||
+            item.createdAt ||
+            item.created_at ||
+            item.violationDate ||
+            item.failureDate
+        );
+
+      if (!firstItem) {
+        return null;
+      }
 
       const rawDate =
         firstItem.date ||
@@ -471,21 +553,34 @@ const getAchievement = (
         firstItem.violationDate ||
         firstItem.failureDate;
 
-      if (!rawDate) return null;
+      if (!rawDate) {
+        return null;
+      }
 
-      const date = new Date(rawDate);
+      const date = new Date(
+        rawDate
+      );
 
-      if (Number.isNaN(date.getTime())) {
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
         return null;
       }
 
       return date;
     };
 
-    const reportDate = getReportDate();
+    const reportDate =
+      getReportDate();
 
-    const getArabicDayName = (date: Date | null) => {
-      if (!date) return "غير محدد";
+    const getArabicDayName = (
+      date: Date | null
+    ) => {
+      if (!date) {
+        return "غير محدد";
+      }
 
       const days = [
         "الأحد",
@@ -500,89 +595,154 @@ const getAchievement = (
       return days[date.getDay()];
     };
 
-    const formatArabicDate = (date: Date | null) => {
-      if (!date) return "غير محدد";
+    const formatArabicDate = (
+      date: Date | null
+    ) => {
+      if (!date) {
+        return "غير محدد";
+      }
 
-      return date.toLocaleDateString("ar-JO", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
+      return date.toLocaleDateString(
+        "ar-JO",
+        {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }
+      );
     };
 
     const hierarchy: Record<
       string,
       {
-        stats: ReturnType<typeof createEmptyStats>;
+        stats: ReturnType<
+          typeof createEmptyStats
+        >;
+
         blocks: Record<
           string,
           {
-            stats: ReturnType<typeof createEmptyStats>;
+            stats: ReturnType<
+              typeof createEmptyStats
+            >;
+
             users: Record<
               string,
-              ReturnType<typeof createEmptyStats>
+              ReturnType<
+                typeof createEmptyStats
+              >
             >;
           }
         >;
       }
     > = {};
 
-    filteredItems.forEach((item) => {
-      const district = item.districtName?.trim()
-        ? `منطقة ${item.districtName.trim()}`
-        : "مخالفات حسب مؤشرات الأداء";
+    filteredItems.forEach(
+      (item) => {
+        const district =
+          item.districtName?.trim()
+            ? `منطقة ${item.districtName.trim()}`
+            : "مخالفات حسب مؤشرات الأداء";
 
-      const block = item.blockName?.trim()
-        ? item.blockName.trim()
-        : `KPI: ${item.kpiNameAr || "غير محدد"}`;
+        const block =
+          item.blockName?.trim()
+            ? item.blockName.trim()
+            : `KPI: ${
+                item.kpiNameAr ||
+                "غير محدد"
+              }`;
 
-      const user = item.userName?.trim() || "غير معروف";
-      const status = item.status || "Unknown";
+        const user =
+          item.userName?.trim() ||
+          "غير معروف";
 
-      if (!hierarchy[district]) {
-        hierarchy[district] = {
-          stats: createEmptyStats(),
-          blocks: {},
-        };
+        const status =
+          item.status || "Unknown";
+
+        if (!hierarchy[district]) {
+          hierarchy[district] = {
+            stats:
+              createEmptyStats(),
+            blocks: {},
+          };
+        }
+
+        const districtData =
+          hierarchy[district];
+
+        addStatus(
+          districtData.stats,
+          status
+        );
+
+        if (
+          !districtData.blocks[
+            block
+          ]
+        ) {
+          districtData.blocks[
+            block
+          ] = {
+            stats:
+              createEmptyStats(),
+            users: {},
+          };
+        }
+
+        const blockData =
+          districtData.blocks[block];
+
+        addStatus(
+          blockData.stats,
+          status
+        );
+
+        const normalizedUser =
+          user.trim().toUpperCase();
+
+        if (
+          normalizedUser.includes(
+            "C&C"
+          )
+        ) {
+          return;
+        }
+
+        if (
+          summaryOnlyStatuses.includes(
+            status
+          )
+        ) {
+          return;
+        }
+
+        if (
+          !blockData.users[user]
+        ) {
+          blockData.users[user] =
+            createEmptyStats();
+        }
+
+        addStatus(
+          blockData.users[user],
+          status
+        );
       }
-
-      const districtData = hierarchy[district];
-
-      addStatus(districtData.stats, status);
-
-      if (!districtData.blocks[block]) {
-        districtData.blocks[block] = {
-          stats: createEmptyStats(),
-          users: {},
-        };
-      }
-
-      const blockData = districtData.blocks[block];
-
-      addStatus(blockData.stats, status);
-
-      const normalizedUser = user.trim().toUpperCase();
-
-      if (normalizedUser.includes("C&C")) {
-        return;
-      }
-
-      if (summaryOnlyStatuses.includes(status)) {
-        return;
-      }
-
-      if (!blockData.users[user]) {
-        blockData.users[user] = createEmptyStats();
-      }
-
-      addStatus(blockData.users[user], status);
-    });
-
-    const sortedDistricts = Object.entries(hierarchy).sort(
-      ([, a], [, b]) => b.stats.total - a.stats.total
     );
 
-    const worksheet = XLSX.utils.aoa_to_sheet([]);
+    const sortedDistricts =
+      Object.entries(
+        hierarchy
+      ).sort(
+        ([, a], [, b]) =>
+          b.stats.total -
+          a.stats.total
+      );
+
+    const worksheet =
+      XLSX.utils.aoa_to_sheet(
+        []
+      );
 
     const COLORS = {
       primary: "1F4E78",
@@ -600,19 +760,27 @@ const getAchievement = (
     const border = {
       top: {
         style: "thin",
-        color: { rgb: COLORS.border },
+        color: {
+          rgb: COLORS.border,
+        },
       },
       bottom: {
         style: "thin",
-        color: { rgb: COLORS.border },
+        color: {
+          rgb: COLORS.border,
+        },
       },
       left: {
         style: "thin",
-        color: { rgb: COLORS.border },
+        color: {
+          rgb: COLORS.border,
+        },
       },
       right: {
         style: "thin",
-        color: { rgb: COLORS.border },
+        color: {
+          rgb: COLORS.border,
+        },
       },
     };
 
@@ -621,10 +789,14 @@ const getAchievement = (
         name: "Arial",
         sz: 20,
         bold: true,
-        color: { rgb: COLORS.white },
+        color: {
+          rgb: COLORS.white,
+        },
       },
       fill: {
-        fgColor: { rgb: COLORS.primaryDark },
+        fgColor: {
+          rgb: COLORS.primaryDark,
+        },
       },
       alignment: {
         horizontal: "center",
@@ -637,7 +809,9 @@ const getAchievement = (
         name: "Arial",
         sz: 11,
         bold: true,
-        color: { rgb: COLORS.text },
+        color: {
+          rgb: COLORS.text,
+        },
       },
       alignment: {
         horizontal: "center",
@@ -650,10 +824,14 @@ const getAchievement = (
         name: "Arial",
         sz: 11,
         bold: true,
-        color: { rgb: COLORS.white },
+        color: {
+          rgb: COLORS.white,
+        },
       },
       fill: {
-        fgColor: { rgb: COLORS.primary },
+        fgColor: {
+          rgb: COLORS.primary,
+        },
       },
       alignment: {
         horizontal: "center",
@@ -668,10 +846,14 @@ const getAchievement = (
         name: "Arial",
         sz: 11,
         bold: true,
-        color: { rgb: COLORS.text },
+        color: {
+          rgb: COLORS.text,
+        },
       },
       fill: {
-        fgColor: { rgb: COLORS.district },
+        fgColor: {
+          rgb: COLORS.district,
+        },
       },
       alignment: {
         horizontal: "center",
@@ -686,10 +868,14 @@ const getAchievement = (
         name: "Arial",
         sz: 10,
         bold: true,
-        color: { rgb: COLORS.text },
+        color: {
+          rgb: COLORS.text,
+        },
       },
       fill: {
-        fgColor: { rgb: COLORS.block },
+        fgColor: {
+          rgb: COLORS.block,
+        },
       },
       alignment: {
         horizontal: "center",
@@ -703,10 +889,14 @@ const getAchievement = (
       font: {
         name: "Arial",
         sz: 10,
-        color: { rgb: COLORS.text },
+        color: {
+          rgb: COLORS.text,
+        },
       },
       fill: {
-        fgColor: { rgb: COLORS.user },
+        fgColor: {
+          rgb: COLORS.user,
+        },
       },
       alignment: {
         horizontal: "center",
@@ -721,10 +911,14 @@ const getAchievement = (
         name: "Arial",
         sz: 10,
         bold: true,
-        color: { rgb: COLORS.text },
+        color: {
+          rgb: COLORS.text,
+        },
       },
       fill: {
-        fgColor: { rgb: COLORS.total },
+        fgColor: {
+          rgb: COLORS.total,
+        },
       },
       alignment: {
         horizontal: "center",
@@ -741,11 +935,15 @@ const getAchievement = (
         [
           `اليوم: ${getArabicDayName(
             reportDate
-          )} | التاريخ: ${formatArabicDate(reportDate)}`,
+          )} | التاريخ: ${formatArabicDate(
+            reportDate
+          )}`,
         ],
         [],
       ],
-      { origin: "A1" }
+      {
+        origin: "A1",
+      }
     );
 
     const headers = [
@@ -766,632 +964,6 @@ const getAchievement = (
     XLSX.utils.sheet_add_aoa(
       worksheet,
       [headers],
-      { origin: "A4" }
-    );
-
-    worksheet["!merges"] = [
-      {
-        s: { r: 0, c: 0 },
-        e: { r: 0, c: 11 },
-      },
-      {
-        s: { r: 1, c: 0 },
-        e: { r: 1, c: 11 },
-      },
-    ];
-
-    worksheet["A1"].s = titleStyle;
-    worksheet["A2"].s = subtitleStyle;
-
-    for (let c = 0; c < headers.length; c++) {
-      const cell =
-        worksheet[
-          XLSX.utils.encode_cell({
-            r: 3,
-            c,
-          })
-        ];
-
-      if (cell) {
-        cell.s = headerStyle;
-      }
-    }
-
-    let currentRow = 4;
-
-    const districtMergeRanges: XLSX.Range[] = [];
-    const blockMergeRanges: XLSX.Range[] = [];
-
-    sortedDistricts.forEach(
-      ([district, districtData]) => {
-        const districtStartRow = currentRow;
-
-        XLSX.utils.sheet_add_aoa(
-          worksheet,
-          [[
-            district,
-            "توزيعات المخالفات في المنطقة",
-            "",
-            districtData.stats.total,
-            districtData.stats.pendingAcceptance,
-            districtData.stats.inProgress,
-            districtData.stats.fieldVerification,
-            districtData.stats.resolved,
-            districtData.stats.avtrReview,
-            districtData.stats.avtrAcceptedRejection,
-            districtData.stats.avtrRejectedSolution,
-            `${getAchievement(
-              districtData.stats
-            )}%`,
-          ]],
-          {
-            origin: `A${currentRow + 1}`,
-          }
-        );
-
-        for (let c = 0; c < 12; c++) {
-          const cell =
-            worksheet[
-              XLSX.utils.encode_cell({
-                r: currentRow,
-                c,
-              })
-            ];
-
-          if (cell) {
-            cell.s = totalStyle;
-          }
-        }
-
-        currentRow++;
-
-        const sortedBlocks = Object.entries(
-          districtData.blocks
-        ).sort(
-          ([, a], [, b]) =>
-            b.stats.total - a.stats.total
-        );
-
-        sortedBlocks.forEach(
-          ([block, blockData]) => {
-            const blockStartRow = currentRow;
-
-            XLSX.utils.sheet_add_aoa(
-              worksheet,
-              [[
-                "",
-                block,
-                "توزيعات المخالفات في الحي",
-                blockData.stats.total,
-                blockData.stats.pendingAcceptance,
-                blockData.stats.inProgress,
-                blockData.stats.fieldVerification,
-                blockData.stats.resolved,
-                blockData.stats.avtrReview,
-                blockData.stats.avtrAcceptedRejection,
-                blockData.stats.avtrRejectedSolution,
-                `${getAchievement(
-                  blockData.stats
-                )}%`,
-              ]],
-              {
-                origin: `A${currentRow + 1}`,
-              }
-            );
-
-            for (let c = 0; c < 12; c++) {
-              const cell =
-                worksheet[
-                  XLSX.utils.encode_cell({
-                    r: currentRow,
-                    c,
-                  })
-                ];
-
-              if (cell) {
-                cell.s = blockStyle;
-              }
-            }
-
-            currentRow++;
-
-            const sortedUsers = Object.entries(
-              blockData.users
-            ).sort(
-              ([, a], [, b]) =>
-                b.total - a.total
-            );
-
-            sortedUsers.forEach(
-              ([user, userData]) => {
-                XLSX.utils.sheet_add_aoa(
-                  worksheet,
-                  [[
-                    "",
-                    "",
-                    user,
-                    userData.total,
-                    userData.pendingAcceptance,
-                    userData.inProgress,
-                    userData.fieldVerification,
-                    userData.resolved,
-                    userData.avtrReview,
-                    userData.avtrAcceptedRejection,
-                    userData.avtrRejectedSolution,
-                    `${getAchievement(
-                      userData
-                    )}%`,
-                  ]],
-                  {
-                    origin: `A${currentRow + 1}`,
-                  }
-                );
-
-                for (let c = 0; c < 12; c++) {
-                  const cell =
-                    worksheet[
-                      XLSX.utils.encode_cell({
-                        r: currentRow,
-                        c,
-                      })
-                    ];
-
-                  if (cell) {
-                    cell.s = userStyle;
-                  }
-                }
-
-                const achievementCell =
-                  worksheet[
-                    XLSX.utils.encode_cell({
-                      r: currentRow,
-                      c: 11,
-                    })
-                  ];
-
-                if (achievementCell) {
-                  achievementCell.s = {
-                    ...userStyle,
-                    fill: {
-                      fgColor: {
-                        rgb: COLORS.achievement,
-                      },
-                    },
-                    font: {
-                      name: "Arial",
-                      sz: 10,
-                      bold: true,
-                      color: {
-                        rgb: COLORS.text,
-                      },
-                    },
-                  };
-                }
-
-                currentRow++;
-              }
-            );
-
-            const blockEndRow =
-              currentRow - 1;
-
-            if (blockEndRow >= blockStartRow) {
-              blockMergeRanges.push({
-                s: {
-                  r: blockStartRow,
-                  c: 1,
-                },
-                e: {
-                  r: blockEndRow,
-                  c: 1,
-                },
-              });
-            }
-          }
-        );
-
-        const districtEndRow =
-          currentRow - 1;
-
-        if (districtEndRow >= districtStartRow) {
-          districtMergeRanges.push({
-            s: {
-              r: districtStartRow,
-              c: 0,
-            },
-            e: {
-              r: districtEndRow,
-              c: 0,
-            },
-          });
-        }
-      }
-    );
-
-    worksheet["!merges"]?.push(
-      ...districtMergeRanges,
-      ...blockMergeRanges
-    );
-
-    districtMergeRanges.forEach(
-      (range) => {
-        const cell =
-          worksheet[
-            XLSX.utils.encode_cell(range.s)
-          ];
-
-        if (cell) {
-          cell.s = districtStyle;
-        }
-      }
-    );
-
-    blockMergeRanges.forEach(
-      (range) => {
-        const cell =
-          worksheet[
-            XLSX.utils.encode_cell(range.s)
-          ];
-
-        if (cell) {
-          cell.s = blockStyle;
-        }
-      }
-    );
-
-    worksheet["!cols"] = [
-      { wch: 24 },
-      { wch: 30 },
-      { wch: 25 },
-      { wch: 12 },
-      { wch: 18 },
-      { wch: 15 },
-      { wch: 25 },
-      { wch: 14 },
-      { wch: 20 },
-      { wch: 19 },
-      { wch: 19 },
-      { wch: 17 },
-    ];
-
-    worksheet["!rows"] = [];
-    worksheet["!rows"][0] = {
-      hpt: 36,
-    };
-    worksheet["!rows"][1] = {
-      hpt: 24,
-    };
-    worksheet["!rows"][3] = {
-      hpt: 42,
-    };
-
-    worksheet["!sheetViews"] = [
-      {
-        rightToLeft: true,
-      },
-    ];
-
-    worksheet["!freeze"] = {
-      xSplit: 0,
-      ySplit: 4,
-    };
-
-    worksheet["!autofilter"] = {
-      ref: `A4:L${currentRow}`,
-    };
-
-    worksheet["!pageSetup"] = {
-      orientation: "landscape",
-      fitToWidth: 1,
-      fitToHeight: 0,
-    };
-
-    const workbook = XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "تقرير المخالفات"
-    );
-
-    XLSX.writeFile(
-      workbook,
-      "تقرير_المخالفات.xlsx"
-    );
-  };
-
-  /* =========================================================
-     EXPORT 2
-     COMPLAINT SOURCE REPORT
-  ========================================================= */
-
-  const exportComplaintSourceExcel = () => {
-    const RESOLVED_STATUSES = new Set([
-      "PendingFieldMonitorVerification",
-      "Resolved",
-      "PendingSupervisorReview",
-      "Rejected",
-    ]);
-
-    const createSourceStats = (): SourceStats => ({
-      total: 0,
-      resolved: 0,
-    });
-
-    const districts: Record<
-      string,
-      SourceDistrictData
-    > = {};
-
-    items.forEach((item) => {
-      const district = item.districtName?.trim()
-        ? `منطقة ${item.districtName.trim()}`
-        : "مخالفات حسب مؤشرات الأداء";
-
-      if (!districts[district]) {
-        districts[district] = {
-          callCenter: createSourceStats(),
-          citizenPortal: createSourceStats(),
-          avtrTeam: createSourceStats(),
-          total: 0,
-          resolved: 0,
-        };
-      }
-
-      const districtData =
-        districts[district];
-
-      const status =
-        item.status || "Unknown";
-
-      const isResolved =
-        RESOLVED_STATUSES.has(status);
-
-      if (
-        item.complaintSource ===
-        "call-center"
-      ) {
-        districtData.callCenter.total++;
-
-        if (isResolved) {
-          districtData.callCenter.resolved++;
-        }
-      } else if (
-        item.complaintSource ===
-        "citizen-portal"
-      ) {
-        districtData.citizenPortal.total++;
-
-        if (isResolved) {
-          districtData.citizenPortal.resolved++;
-        }
-      } else if (
-        item.complaintSource == null
-      ) {
-        districtData.avtrTeam.total++;
-
-        if (isResolved) {
-          districtData.avtrTeam.resolved++;
-        }
-      }
-
-      districtData.total++;
-
-      if (isResolved) {
-        districtData.resolved++;
-      }
-    });
-
-    const sortedDistricts =
-      Object.entries(districts).sort(
-        ([, a], [, b]) =>
-          b.total - a.total
-      );
-
-    const worksheet =
-      XLSX.utils.aoa_to_sheet([]);
-
-    const COLORS = {
-      primary: "1F4E78",
-      primaryDark: "17365D",
-      callCenter: "D9EAF7",
-      citizenPortal: "E2F0D9",
-      avtrTeam: "E4DFEC",
-      total: "FFF2CC",
-      resolved: "D9EAD3",
-      white: "FFFFFF",
-      text: "1F2937",
-      border: "B7C9D6",
-    };
-
-    const border = {
-      top: {
-        style: "thin",
-        color: { rgb: COLORS.border },
-      },
-      bottom: {
-        style: "thin",
-        color: { rgb: COLORS.border },
-      },
-      left: {
-        style: "thin",
-        color: { rgb: COLORS.border },
-      },
-      right: {
-        style: "thin",
-        color: { rgb: COLORS.border },
-      },
-    };
-
-    const titleStyle = {
-      font: {
-        name: "Arial",
-        sz: 20,
-        bold: true,
-        color: { rgb: COLORS.white },
-      },
-      fill: {
-        fgColor: {
-          rgb: COLORS.primaryDark,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-      },
-    };
-
-    const subtitleStyle = {
-      font: {
-        name: "Arial",
-        sz: 11,
-        bold: true,
-        color: { rgb: COLORS.text },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-      },
-    };
-
-    const headerStyle = {
-      font: {
-        name: "Arial",
-        sz: 10,
-        bold: true,
-        color: { rgb: COLORS.white },
-      },
-      fill: {
-        fgColor: {
-          rgb: COLORS.primary,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-        wrapText: true,
-      },
-      border,
-    };
-
-    const normalStyle = {
-      font: {
-        name: "Arial",
-        sz: 10,
-        color: { rgb: COLORS.text },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-        wrapText: true,
-      },
-      border,
-    };
-
-    const callCenterStyle = {
-      ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.callCenter,
-        },
-      },
-    };
-
-    const citizenPortalStyle = {
-      ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.citizenPortal,
-        },
-      },
-    };
-
-    const avtrTeamStyle = {
-      ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.avtrTeam,
-        },
-      },
-    };
-
-    const resolvedStyle = {
-      ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.resolved,
-        },
-      },
-      font: {
-        name: "Arial",
-        sz: 10,
-        bold: true,
-        color: { rgb: COLORS.text },
-      },
-    };
-
-    const totalStyle = {
-      ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.total,
-        },
-      },
-      font: {
-        name: "Arial",
-        sz: 10,
-        bold: true,
-        color: { rgb: COLORS.text },
-      },
-    };
-
-    const percentageStyle = {
-      ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.resolved,
-        },
-      },
-      font: {
-        name: "Arial",
-        sz: 10,
-        bold: true,
-        color: { rgb: COLORS.text },
-      },
-    };
-
-    XLSX.utils.sheet_add_aoa(
-      worksheet,
-      [
-        [
-          "تقرير مصادر المخالفات حسب المناطق",
-        ],
-        [
-          "Call Center | بوابة المواطن | AVTR Team",
-        ],
-        [],
-      ],
-      {
-        origin: "A1",
-      }
-    );
-
-    const headers = [
-      "المنطقة",
-      "Call Center",
-      "Call Center - تم حلها",
-      "بوابة المواطن",
-      "بوابة المواطن - تم حلها",
-      "AVTR Team",
-      "AVTR Team - تم حلها",
-      "إجمالي المخالفات",
-      "إجمالي تم حلها",
-      "نسبة الحل",
-    ];
-
-    XLSX.utils.sheet_add_aoa(
-      worksheet,
-      [headers],
       {
         origin: "A4",
       }
@@ -1399,12 +971,24 @@ const getAchievement = (
 
     worksheet["!merges"] = [
       {
-        s: { r: 0, c: 0 },
-        e: { r: 0, c: 9 },
+        s: {
+          r: 0,
+          c: 0,
+        },
+        e: {
+          r: 0,
+          c: 11,
+        },
       },
       {
-        s: { r: 1, c: 0 },
-        e: { r: 1, c: 9 },
+        s: {
+          r: 1,
+          c: 0,
+        },
+        e: {
+          r: 1,
+          c: 11,
+        },
       },
     ];
 
@@ -1434,36 +1018,39 @@ const getAchievement = (
 
     let currentRow = 4;
 
-    sortedDistricts.forEach(
-      ([district, data]) => {
-        const total = data.total;
-        const resolved = data.resolved;
+    const districtMergeRanges: XLSX.Range[] =
+      [];
 
-        const percentage = total
-          ? (
-              (resolved / total) *
-              100
-            ).toFixed(1)
-          : "0.0";
+    const blockMergeRanges: XLSX.Range[] =
+      [];
+
+    sortedDistricts.forEach(
+      ([district, districtData]) => {
+        const districtStartRow =
+          currentRow;
 
         XLSX.utils.sheet_add_aoa(
           worksheet,
           [[
             district,
-
-            data.callCenter.total,
-            data.callCenter.resolved,
-
-            data.citizenPortal.total,
-            data.citizenPortal.resolved,
-
-            data.avtrTeam.total,
-            data.avtrTeam.resolved,
-
-            total,
-            resolved,
-
-            `${percentage}%`,
+            "توزيعات المخالفات في المنطقة",
+            "",
+            districtData.stats.total,
+            districtData.stats
+              .pendingAcceptance,
+            districtData.stats
+              .inProgress,
+            districtData.stats
+              .fieldVerification,
+            districtData.stats.resolved,
+            districtData.stats.avtrReview,
+            districtData.stats
+              .avtrAcceptedRejection,
+            districtData.stats
+              .avtrRejectedSolution,
+            `${getAchievement(
+              districtData.stats
+            )}%`,
           ]],
           {
             origin: `A${
@@ -1472,22 +1059,9 @@ const getAchievement = (
           }
         );
 
-        const rowStyles = [
-          normalStyle,
-          callCenterStyle,
-          resolvedStyle,
-          citizenPortalStyle,
-          resolvedStyle,
-          avtrTeamStyle,
-          resolvedStyle,
-          totalStyle,
-          resolvedStyle,
-          percentageStyle,
-        ];
-
         for (
           let c = 0;
-          c < headers.length;
+          c < 12;
           c++
         ) {
           const cell =
@@ -1499,135 +1073,271 @@ const getAchievement = (
             ];
 
           if (cell) {
-            cell.s =
-              rowStyles[c];
+            cell.s = totalStyle;
           }
         }
 
         currentRow++;
+
+        const sortedBlocks =
+          Object.entries(
+            districtData.blocks
+          ).sort(
+            ([, a], [, b]) =>
+              b.stats.total -
+              a.stats.total
+          );
+
+        sortedBlocks.forEach(
+          ([block, blockData]) => {
+            const blockStartRow =
+              currentRow;
+
+            XLSX.utils.sheet_add_aoa(
+              worksheet,
+              [[
+                "",
+                block,
+                "توزيعات المخالفات في الحي",
+                blockData.stats.total,
+                blockData.stats
+                  .pendingAcceptance,
+                blockData.stats
+                  .inProgress,
+                blockData.stats
+                  .fieldVerification,
+                blockData.stats
+                  .resolved,
+                blockData.stats
+                  .avtrReview,
+                blockData.stats
+                  .avtrAcceptedRejection,
+                blockData.stats
+                  .avtrRejectedSolution,
+                `${getAchievement(
+                  blockData.stats
+                )}%`,
+              ]],
+              {
+                origin: `A${
+                  currentRow + 1
+                }`,
+              }
+            );
+
+            for (
+              let c = 0;
+              c < 12;
+              c++
+            ) {
+              const cell =
+                worksheet[
+                  XLSX.utils.encode_cell({
+                    r: currentRow,
+                    c,
+                  })
+                ];
+
+              if (cell) {
+                cell.s =
+                  blockStyle;
+              }
+            }
+
+            currentRow++;
+
+            const sortedUsers =
+              Object.entries(
+                blockData.users
+              ).sort(
+                ([, a], [, b]) =>
+                  b.total - a.total
+              );
+
+            sortedUsers.forEach(
+              ([user, userData]) => {
+                XLSX.utils.sheet_add_aoa(
+                  worksheet,
+                  [[
+                    "",
+                    "",
+                    user,
+                    userData.total,
+                    userData
+                      .pendingAcceptance,
+                    userData
+                      .inProgress,
+                    userData
+                      .fieldVerification,
+                    userData.resolved,
+                    userData
+                      .avtrReview,
+                    userData
+                      .avtrAcceptedRejection,
+                    userData
+                      .avtrRejectedSolution,
+                    `${getAchievement(
+                      userData
+                    )}%`,
+                  ]],
+                  {
+                    origin: `A${
+                      currentRow + 1
+                    }`,
+                  }
+                );
+
+                for (
+                  let c = 0;
+                  c < 12;
+                  c++
+                ) {
+                  const cell =
+                    worksheet[
+                      XLSX.utils.encode_cell({
+                        r: currentRow,
+                        c,
+                      })
+                    ];
+
+                  if (cell) {
+                    cell.s =
+                      userStyle;
+                  }
+                }
+
+                const achievementCell =
+                  worksheet[
+                    XLSX.utils.encode_cell(
+                      {
+                        r: currentRow,
+                        c: 11,
+                      }
+                    )
+                  ];
+
+                if (
+                  achievementCell
+                ) {
+                  achievementCell.s =
+                    {
+                      ...userStyle,
+                      fill: {
+                        fgColor: {
+                          rgb: COLORS.achievement,
+                        },
+                      },
+                      font: {
+                        name: "Arial",
+                        sz: 10,
+                        bold: true,
+                        color: {
+                          rgb: COLORS.text,
+                        },
+                      },
+                    };
+                }
+
+                currentRow++;
+              }
+            );
+
+            const blockEndRow =
+              currentRow - 1;
+
+            if (
+              blockEndRow >=
+              blockStartRow
+            ) {
+              blockMergeRanges.push(
+                {
+                  s: {
+                    r: blockStartRow,
+                    c: 1,
+                  },
+                  e: {
+                    r: blockEndRow,
+                    c: 1,
+                  },
+                }
+              );
+            }
+          }
+        );
+
+        const districtEndRow =
+          currentRow - 1;
+
+        if (
+          districtEndRow >=
+          districtStartRow
+        ) {
+          districtMergeRanges.push(
+            {
+              s: {
+                r: districtStartRow,
+                c: 0,
+              },
+              e: {
+                r: districtEndRow,
+                c: 0,
+              },
+            }
+          );
+        }
       }
     );
 
-    const grandTotal = {
-      callCenter:
-        createSourceStats(),
+    worksheet["!merges"]?.push(
+      ...districtMergeRanges,
+      ...blockMergeRanges
+    );
 
-      citizenPortal:
-        createSourceStats(),
+    districtMergeRanges.forEach(
+      (range) => {
+        const cell =
+          worksheet[
+            XLSX.utils.encode_cell(
+              range.s
+            )
+          ];
 
-      avtrTeam:
-        createSourceStats(),
-
-      total: 0,
-      resolved: 0,
-    };
-
-    Object.values(districts).forEach(
-      (district) => {
-        grandTotal.callCenter.total +=
-          district.callCenter.total;
-
-        grandTotal.callCenter.resolved +=
-          district.callCenter.resolved;
-
-        grandTotal.citizenPortal.total +=
-          district.citizenPortal.total;
-
-        grandTotal.citizenPortal.resolved +=
-          district.citizenPortal.resolved;
-
-        grandTotal.avtrTeam.total +=
-          district.avtrTeam.total;
-
-        grandTotal.avtrTeam.resolved +=
-          district.avtrTeam.resolved;
-
-        grandTotal.total +=
-          district.total;
-
-        grandTotal.resolved +=
-          district.resolved;
+        if (cell) {
+          cell.s =
+            districtStyle;
+        }
       }
     );
 
-    const grandPercentage =
-      grandTotal.total
-        ? (
-            (grandTotal.resolved /
-              grandTotal.total) *
-            100
-          ).toFixed(1)
-        : "0.0";
+    blockMergeRanges.forEach(
+      (range) => {
+        const cell =
+          worksheet[
+            XLSX.utils.encode_cell(
+              range.s
+            )
+          ];
 
-    XLSX.utils.sheet_add_aoa(
-      worksheet,
-      [[
-        "الإجمالي العام",
-
-        grandTotal.callCenter.total,
-        grandTotal.callCenter.resolved,
-
-        grandTotal.citizenPortal.total,
-        grandTotal.citizenPortal.resolved,
-
-        grandTotal.avtrTeam.total,
-        grandTotal.avtrTeam.resolved,
-
-        grandTotal.total,
-        grandTotal.resolved,
-
-        `${grandPercentage}%`,
-      ]],
-      {
-        origin: `A${
-          currentRow + 1
-        }`,
+        if (cell) {
+          cell.s =
+            blockStyle;
+        }
       }
     );
-
-    for (
-      let c = 0;
-      c < headers.length;
-      c++
-    ) {
-      const cell =
-        worksheet[
-          XLSX.utils.encode_cell({
-            r: currentRow,
-            c,
-          })
-        ];
-
-      if (cell) {
-        cell.s = {
-          ...totalStyle,
-          fill: {
-            fgColor: {
-              rgb:
-                c === 2 ||
-                c === 4 ||
-                c === 6 ||
-                c === 8 ||
-                c === 9
-                  ? COLORS.resolved
-                  : COLORS.total,
-            },
-          },
-        };
-      }
-    }
 
     worksheet["!cols"] = [
-      { wch: 26 },
-      { wch: 18 },
-      { wch: 22 },
-      { wch: 20 },
+      { wch: 24 },
+      { wch: 30 },
       { wch: 25 },
+      { wch: 12 },
       { wch: 18 },
-      { wch: 22 },
-      { wch: 20 },
-      { wch: 20 },
       { wch: 15 },
+      { wch: 25 },
+      { wch: 14 },
+      { wch: 20 },
+      { wch: 19 },
+      { wch: 19 },
+      { wch: 17 },
     ];
 
     worksheet["!rows"] = [];
@@ -1656,9 +1366,7 @@ const getAchievement = (
     };
 
     worksheet["!autofilter"] = {
-      ref: `A4:J${
-        currentRow + 1
-      }`,
+      ref: `A4:L${currentRow}`,
     };
 
     worksheet["!pageSetup"] = {
@@ -1673,26 +1381,688 @@ const getAchievement = (
     XLSX.utils.book_append_sheet(
       workbook,
       worksheet,
-      "مصادر المخالفات"
+      "تقرير المخالفات"
     );
 
     XLSX.writeFile(
       workbook,
-      "تقرير_مصادر_المخالفات_حسب_المنطقة.xlsx"
+      "تقرير_المخالفات.xlsx"
     );
   };
+
+  /* =========================================================
+     EXPORT 2
+     COMPLAINT SOURCE REPORT
+  ========================================================= */
+
+  const exportComplaintSourceExcel =
+    () => {
+      const RESOLVED_STATUSES =
+        new Set([
+          "PendingFieldMonitorVerification",
+          "Resolved",
+          "PendingSupervisorReview",
+          "Rejected",
+        ]);
+
+      const createSourceStats =
+        (): SourceStats => ({
+          total: 0,
+          resolved: 0,
+        });
+
+      const districts: Record<
+        string,
+        SourceDistrictData
+      > = {};
+
+      items.forEach((item) => {
+        const district =
+          item.districtName?.trim()
+            ? `منطقة ${item.districtName.trim()}`
+            : "مخالفات حسب مؤشرات الأداء";
+
+        if (!districts[district]) {
+          districts[district] = {
+            callCenter:
+              createSourceStats(),
+            citizenPortal:
+              createSourceStats(),
+            avtrTeam:
+              createSourceStats(),
+            total: 0,
+            resolved: 0,
+          };
+        }
+
+        const districtData =
+          districts[district];
+
+        const status =
+          item.status || "Unknown";
+
+        const isResolved =
+          RESOLVED_STATUSES.has(
+            status
+          );
+
+        if (
+          item.complaintSource ===
+          "call-center"
+        ) {
+          districtData.callCenter.total++;
+
+          if (isResolved) {
+            districtData.callCenter.resolved++;
+          }
+        } else if (
+          item.complaintSource ===
+          "citizen-portal"
+        ) {
+          districtData.citizenPortal.total++;
+
+          if (isResolved) {
+            districtData.citizenPortal.resolved++;
+          }
+        } else if (
+          item.complaintSource ==
+          null
+        ) {
+          districtData.avtrTeam.total++;
+
+          if (isResolved) {
+            districtData.avtrTeam.resolved++;
+          }
+        }
+
+        districtData.total++;
+
+        if (isResolved) {
+          districtData.resolved++;
+        }
+      });
+
+      const sortedDistricts =
+        Object.entries(
+          districts
+        ).sort(
+          ([, a], [, b]) =>
+            b.total -
+            a.total
+        );
+
+      const worksheet =
+        XLSX.utils.aoa_to_sheet(
+          []
+        );
+
+      const COLORS = {
+        primary: "1F4E78",
+        primaryDark: "17365D",
+        callCenter: "D9EAF7",
+        citizenPortal: "E2F0D9",
+        avtrTeam: "E4DFEC",
+        total: "FFF2CC",
+        resolved: "D9EAD3",
+        white: "FFFFFF",
+        text: "1F2937",
+        border: "B7C9D6",
+      };
+
+      const border = {
+        top: {
+          style: "thin",
+          color: {
+            rgb: COLORS.border,
+          },
+        },
+        bottom: {
+          style: "thin",
+          color: {
+            rgb: COLORS.border,
+          },
+        },
+        left: {
+          style: "thin",
+          color: {
+            rgb: COLORS.border,
+          },
+        },
+        right: {
+          style: "thin",
+          color: {
+            rgb: COLORS.border,
+          },
+        },
+      };
+
+      const titleStyle = {
+        font: {
+          name: "Arial",
+          sz: 20,
+          bold: true,
+          color: {
+            rgb: COLORS.white,
+          },
+        },
+        fill: {
+          fgColor: {
+            rgb: COLORS.primaryDark,
+          },
+        },
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+        },
+      };
+
+      const subtitleStyle = {
+        font: {
+          name: "Arial",
+          sz: 11,
+          bold: true,
+          color: {
+            rgb: COLORS.text,
+          },
+        },
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+        },
+      };
+
+      const headerStyle = {
+        font: {
+          name: "Arial",
+          sz: 10,
+          bold: true,
+          color: {
+            rgb: COLORS.white,
+          },
+        },
+        fill: {
+          fgColor: {
+            rgb: COLORS.primary,
+          },
+        },
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true,
+        },
+        border,
+      };
+
+      const normalStyle = {
+        font: {
+          name: "Arial",
+          sz: 10,
+          color: {
+            rgb: COLORS.text,
+          },
+        },
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true,
+        },
+        border,
+      };
+
+      const callCenterStyle = {
+        ...normalStyle,
+        fill: {
+          fgColor: {
+            rgb: COLORS.callCenter,
+          },
+        },
+      };
+
+      const citizenPortalStyle = {
+        ...normalStyle,
+        fill: {
+          fgColor: {
+            rgb: COLORS.citizenPortal,
+          },
+        },
+      };
+
+      const avtrTeamStyle = {
+        ...normalStyle,
+        fill: {
+          fgColor: {
+            rgb: COLORS.avtrTeam,
+          },
+        },
+      };
+
+      const resolvedStyle = {
+        ...normalStyle,
+        fill: {
+          fgColor: {
+            rgb: COLORS.resolved,
+          },
+        },
+        font: {
+          name: "Arial",
+          sz: 10,
+          bold: true,
+          color: {
+            rgb: COLORS.text,
+          },
+        },
+      };
+
+      const totalStyle = {
+        ...normalStyle,
+        fill: {
+          fgColor: {
+            rgb: COLORS.total,
+          },
+        },
+        font: {
+          name: "Arial",
+          sz: 10,
+          bold: true,
+          color: {
+            rgb: COLORS.text,
+          },
+        },
+      };
+
+      const percentageStyle = {
+        ...normalStyle,
+        fill: {
+          fgColor: {
+            rgb: COLORS.resolved,
+          },
+        },
+        font: {
+          name: "Arial",
+          sz: 10,
+          bold: true,
+          color: {
+            rgb: COLORS.text,
+          },
+        },
+      };
+
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [
+          [
+            "تقرير مصادر المخالفات حسب المناطق",
+          ],
+          [
+            "Call Center | بوابة المواطن | AVTR Team",
+          ],
+          [],
+        ],
+        {
+          origin: "A1",
+        }
+      );
+
+      const headers = [
+        "المنطقة",
+        "Call Center",
+        "Call Center - تم حلها",
+        "بوابة المواطن",
+        "بوابة المواطن - تم حلها",
+        "AVTR Team",
+        "AVTR Team - تم حلها",
+        "إجمالي المخالفات",
+        "إجمالي تم حلها",
+        "نسبة الحل",
+      ];
+
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [headers],
+        {
+          origin: "A4",
+        }
+      );
+
+      worksheet["!merges"] = [
+        {
+          s: {
+            r: 0,
+            c: 0,
+          },
+          e: {
+            r: 0,
+            c: 9,
+          },
+        },
+        {
+          s: {
+            r: 1,
+            c: 0,
+          },
+          e: {
+            r: 1,
+            c: 9,
+          },
+        },
+      ];
+
+      worksheet["A1"].s =
+        titleStyle;
+
+      worksheet["A2"].s =
+        subtitleStyle;
+
+      for (
+        let c = 0;
+        c < headers.length;
+        c++
+      ) {
+        const cell =
+          worksheet[
+            XLSX.utils.encode_cell({
+              r: 3,
+              c,
+            })
+          ];
+
+        if (cell) {
+          cell.s =
+            headerStyle;
+        }
+      }
+
+      let currentRow = 4;
+
+      sortedDistricts.forEach(
+        ([district, data]) => {
+          const total = data.total;
+          const resolved =
+            data.resolved;
+
+          const percentage = total
+            ? (
+                (resolved /
+                  total) *
+                100
+              ).toFixed(1)
+            : "0.0";
+
+          XLSX.utils.sheet_add_aoa(
+            worksheet,
+            [[
+              district,
+
+              data.callCenter
+                .total,
+
+              data.callCenter
+                .resolved,
+
+              data.citizenPortal
+                .total,
+
+              data.citizenPortal
+                .resolved,
+
+              data.avtrTeam
+                .total,
+
+              data.avtrTeam
+                .resolved,
+
+              total,
+
+              resolved,
+
+              `${percentage}%`,
+            ]],
+            {
+              origin: `A${
+                currentRow + 1
+              }`,
+            }
+          );
+
+          const rowStyles = [
+            normalStyle,
+            callCenterStyle,
+            resolvedStyle,
+            citizenPortalStyle,
+            resolvedStyle,
+            avtrTeamStyle,
+            resolvedStyle,
+            totalStyle,
+            resolvedStyle,
+            percentageStyle,
+          ];
+
+          for (
+            let c = 0;
+            c < headers.length;
+            c++
+          ) {
+            const cell =
+              worksheet[
+                XLSX.utils.encode_cell(
+                  {
+                    r: currentRow,
+                    c,
+                  }
+                )
+              ];
+
+            if (cell) {
+              cell.s =
+                rowStyles[c];
+            }
+          }
+
+          currentRow++;
+        }
+      );
+
+      const grandTotal = {
+        callCenter:
+          createSourceStats(),
+
+        citizenPortal:
+          createSourceStats(),
+
+        avtrTeam:
+          createSourceStats(),
+
+        total: 0,
+        resolved: 0,
+      };
+
+      Object.values(
+        districts
+      ).forEach((district) => {
+        grandTotal.callCenter.total +=
+          district.callCenter
+            .total;
+
+        grandTotal.callCenter.resolved +=
+          district.callCenter
+            .resolved;
+
+        grandTotal.citizenPortal.total +=
+          district.citizenPortal
+            .total;
+
+        grandTotal.citizenPortal.resolved +=
+          district.citizenPortal
+            .resolved;
+
+        grandTotal.avtrTeam.total +=
+          district.avtrTeam.total;
+
+        grandTotal.avtrTeam.resolved +=
+          district.avtrTeam
+            .resolved;
+
+        grandTotal.total +=
+          district.total;
+
+        grandTotal.resolved +=
+          district.resolved;
+      });
+
+      const grandPercentage =
+        grandTotal.total
+          ? (
+              (grandTotal.resolved /
+                grandTotal.total) *
+              100
+            ).toFixed(1)
+          : "0.0";
+
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[
+          "الإجمالي العام",
+
+          grandTotal.callCenter
+            .total,
+
+          grandTotal.callCenter
+            .resolved,
+
+          grandTotal.citizenPortal
+            .total,
+
+          grandTotal.citizenPortal
+            .resolved,
+
+          grandTotal.avtrTeam
+            .total,
+
+          grandTotal.avtrTeam
+            .resolved,
+
+          grandTotal.total,
+
+          grandTotal.resolved,
+
+          `${grandPercentage}%`,
+        ]],
+        {
+          origin: `A${
+            currentRow + 1
+          }`,
+        }
+      );
+
+      for (
+        let c = 0;
+        c < headers.length;
+        c++
+      ) {
+        const cell =
+          worksheet[
+            XLSX.utils.encode_cell({
+              r: currentRow,
+              c,
+            })
+          ];
+
+        if (cell) {
+          cell.s = {
+            ...totalStyle,
+            fill: {
+              fgColor: {
+                rgb:
+                  c === 2 ||
+                  c === 4 ||
+                  c === 6 ||
+                  c === 8 ||
+                  c === 9
+                    ? COLORS.resolved
+                    : COLORS.total,
+              },
+            },
+          };
+        }
+      }
+
+      worksheet["!cols"] = [
+        { wch: 26 },
+        { wch: 18 },
+        { wch: 22 },
+        { wch: 20 },
+        { wch: 25 },
+        { wch: 18 },
+        { wch: 22 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 15 },
+      ];
+
+      worksheet["!rows"] = [];
+
+      worksheet["!rows"][0] = {
+        hpt: 36,
+      };
+
+      worksheet["!rows"][1] = {
+        hpt: 24,
+      };
+
+      worksheet["!rows"][3] = {
+        hpt: 42,
+      };
+
+      worksheet["!sheetViews"] = [
+        {
+          rightToLeft: true,
+        },
+      ];
+
+      worksheet["!freeze"] = {
+        xSplit: 0,
+        ySplit: 4,
+      };
+
+      worksheet["!autofilter"] = {
+        ref: `A4:J${
+          currentRow + 1
+        }`,
+      };
+
+      worksheet["!pageSetup"] = {
+        orientation: "landscape",
+        fitToWidth: 1,
+        fitToHeight: 0,
+      };
+
+      const workbook =
+        XLSX.utils.book_new();
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        "مصادر المخالفات"
+      );
+
+      XLSX.writeFile(
+        workbook,
+        "تقرير_مصادر_المخالفات_حسب_المنطقة.xlsx"
+      );
+    };
 
   /* =========================================================
      RENDER
   ========================================================= */
 
   return (
+    
     <Box
       dir="rtl"
       style={{
         minHeight: "100vh",
         overflowX: "hidden",
-              }}
+      }}
       p={{
         base: "xs",
         sm: "md",
@@ -1700,16 +2070,14 @@ const getAchievement = (
       }}
     >
       <Stack
-        
         maw={1600}
         mx="auto"
       >
         {/* =====================================================
             MAIN HEADER
         ===================================================== */}
-
+{isAdmin && (<>
         <Card
-         
           p={{
             base: "md",
             sm: "xl",
@@ -1794,6 +2162,10 @@ const getAchievement = (
                 </Stack>
               </Group>
 
+              {/* =================================================
+                  SOURCE
+              ================================================= */}
+
               <Badge
                 size="lg"
                 radius="xl"
@@ -1808,7 +2180,9 @@ const getAchievement = (
                   maxWidth: "100%",
                 }}
               >
-                {activeSource.label}
+                {
+                  activeSource.label
+                }
               </Badge>
             </Group>
 
@@ -1822,8 +2196,10 @@ const getAchievement = (
                 sm: "xl",
               }}
               style={{
-                position: "relative",
-                overflow: "hidden",
+                position:
+                  "relative",
+                overflow:
+                  "hidden",
                 borderRadius: 28,
                 background:
                   "linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%)",
@@ -1834,10 +2210,12 @@ const getAchievement = (
             >
               <Box
                 style={{
-                  position: "absolute",
+                  position:
+                    "absolute",
                   width: 220,
                   height: 220,
-                  borderRadius: "50%",
+                  borderRadius:
+                    "50%",
                   background:
                     "rgba(255,255,255,.07)",
                   top: -110,
@@ -1847,10 +2225,12 @@ const getAchievement = (
 
               <Box
                 style={{
-                  position: "absolute",
+                  position:
+                    "absolute",
                   width: 180,
                   height: 180,
-                  borderRadius: "50%",
+                  borderRadius:
+                    "50%",
                   background:
                     "rgba(255,255,255,.05)",
                   bottom: -100,
@@ -1877,7 +2257,8 @@ const getAchievement = (
                       opacity: 0.75,
                     }}
                   >
-                    نسبة الإنجاز الكلي
+                    نسبة الإنجاز
+                    الكلي
                   </Text>
 
                   <Text
@@ -1899,8 +2280,10 @@ const getAchievement = (
                       opacity: 0.75,
                     }}
                   >
-                    بناءً على المخالفات
-                    المعروضة حالياً
+                    بناءً على
+                    المخالفات
+                    المعروضة
+                    حالياً
                   </Text>
                 </Stack>
 
@@ -1917,7 +2300,9 @@ const getAchievement = (
                 >
                   <HeroMiniStat
                     label="الإجمالي"
-                    value={kpis.total}
+                    value={
+                      kpis.total
+                    }
                   />
 
                   <HeroMiniStat
@@ -1932,8 +2317,8 @@ const getAchievement = (
                   <HeroMiniStat
                     label="تم الحل"
                     value={
-                      totalStatuses.Resolved ||
-                      0
+                      totalStatuses
+                        .Resolved || 0
                     }
                   />
                 </SimpleGrid>
@@ -2003,8 +2388,10 @@ const getAchievement = (
                         size="xs"
                         c="dimmed"
                       >
-                        اختر المصدر لعرض
-                        البيانات الخاصة به
+                        اختر المصدر
+                        لعرض
+                        البيانات
+                        الخاصة به
                       </Text>
                     </Stack>
                   </Group>
@@ -2020,7 +2407,9 @@ const getAchievement = (
                         activeSource.color
                       }
                     >
-                      {activeSource.label}
+                      {
+                        activeSource.label
+                      }
                     </Badge>
 
                     <Badge
@@ -2131,8 +2520,7 @@ const getAchievement = (
                               >
                                 {
                                   sourceCounts[
-                                    source
-                                      .key as keyof typeof sourceCounts
+                                    source.key as keyof typeof sourceCounts
                                   ]
                                 }{" "}
                                 مخالفة
@@ -2194,7 +2582,8 @@ const getAchievement = (
                 }
                 fullWidth
               >
-                تصدير التقرير التفصيلي
+                تصدير التقرير
+                التفصيلي
               </Button>
 
               <Button
@@ -2212,18 +2601,23 @@ const getAchievement = (
                 }
                 fullWidth
               >
-                تصدير مصادر المخالفات
+                تصدير مصادر
+                المخالفات
               </Button>
             </SimpleGrid>
           </Stack>
         </Card>
-<GeneralSummary items={filteredItems} />
+
+        <GeneralSummary
+          items={filteredItems}
+        /></>
+)}
         {/* =====================================================
             DISTRICT NAVIGATION
         ===================================================== */}
 
-        {Object.keys(stats).length >
-          0 && (
+        {Object.keys(stats)
+          .length > 0 && (
           <Card
             radius="24"
             p={{
@@ -2245,12 +2639,18 @@ const getAchievement = (
               {Object.entries(stats)
                 .sort(
                   ([, a], [, b]) =>
-                    b.total - a.total
+                    b.total -
+                    a.total
                 )
                 .map(
-                  ([district, data]) => (
+                  ([
+                    district,
+                    data,
+                  ]) => (
                     <Button
-                      key={district}
+                      key={
+                        district
+                      }
                       variant="light"
                       color="blue"
                       radius="xl"
@@ -2262,6 +2662,7 @@ const getAchievement = (
                       }
                     >
                       {district}
+
                       <Badge
                         ml={6}
                         size="sm"
@@ -2335,8 +2736,9 @@ const getAchievement = (
                 size="sm"
                 c="dimmed"
               >
-                لا توجد بيانات مطابقة
-                للفلاتر الحالية.
+                لا توجد بيانات
+                مطابقة للفلاتر
+                الحالية.
               </Text>
 
               {complaintSourceFilter !==
@@ -2356,7 +2758,8 @@ const getAchievement = (
                     )
                   }
                 >
-                  عرض جميع المصادر
+                  عرض جميع
+                  المصادر
                 </Button>
               )}
             </Stack>
@@ -2371,12 +2774,18 @@ const getAchievement = (
           {Object.entries(stats)
             .sort(
               ([, a], [, b]) =>
-                b.total - a.total
+                b.total -
+                a.total
             )
             .map(
-              ([district, data]) => (
+              ([
+                district,
+                data,
+              ]) => (
                 <Box
-                  key={district}
+                  key={
+                    district
+                  }
                   id={`district-${encodeURIComponent(
                     district
                   )}`}
@@ -2386,7 +2795,9 @@ const getAchievement = (
                   }}
                 >
                   <DistrictCard
-                    district={district}
+                    district={
+                      district
+                    }
                     data={data}
                   />
                 </Box>
