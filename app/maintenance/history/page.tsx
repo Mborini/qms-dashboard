@@ -37,7 +37,10 @@ import {
   IconTimeline,
   IconTool,
   IconTrash,
+  IconMapPin,
 } from "@tabler/icons-react";
+
+import * as XLSX from "xlsx-js-style";
 
 import { exportMaintenanceExcel } from "@/utils/maintenanceExcel";
 
@@ -45,11 +48,15 @@ type MaintenanceRecord = {
   id: number;
 
   vehicle_id: number;
+  vehicle_number?: string | null;
   plate_number: string;
+  vehicle_type?: string | null;
+
   weight: number | null;
   capacity: number | null;
   manufacture_year: number | null;
   model: string | null;
+
   area: string | null;
 
   kpi_id: number;
@@ -57,6 +64,8 @@ type MaintenanceRecord = {
 
   sub_kpi_id: number;
   sub_kpi_name: string;
+
+  maintenance_location: string | null;
 
   entry_at: string;
   exit_at: string | null;
@@ -77,6 +86,7 @@ type MaintenanceRecord = {
 
 type Vehicle = {
   id: number;
+  vehicle_number?: string | null;
   plate_number: string;
   weight?: number | null;
   capacity?: number | null;
@@ -124,6 +134,7 @@ export default function MaintenanceHistoryPage() {
    * Current Time
    * ========================================
    */
+
   const [now, setNow] = useState(() =>
     Date.now()
   );
@@ -133,6 +144,7 @@ export default function MaintenanceHistoryPage() {
    * Pagination
    * ========================================
    */
+
   const [page, setPage] = useState(1);
 
   const limit = 10;
@@ -142,10 +154,14 @@ export default function MaintenanceHistoryPage() {
    * Filters
    * ========================================
    */
+
   const [search, setSearch] =
     useState("");
 
-  const [date, setDate] =
+  const [dateFrom, setDateFrom] =
+    useState("");
+
+  const [dateTo, setDateTo] =
     useState("");
 
   const [vehicleId, setVehicleId] =
@@ -165,6 +181,7 @@ export default function MaintenanceHistoryPage() {
    * Details Modal
    * ========================================
    */
+
   const [selectedRecord, setSelectedRecord] =
     useState<MaintenanceRecord | null>(
       null
@@ -178,6 +195,7 @@ export default function MaintenanceHistoryPage() {
    * Cost Modal
    * ========================================
    */
+
   const [costOpened, setCostOpened] =
     useState(false);
 
@@ -199,14 +217,37 @@ export default function MaintenanceHistoryPage() {
    * Delete
    * ========================================
    */
+
   const [deletingId, setDeletingId] =
     useState<number | null>(null);
+
+  /**
+   * ========================================
+   * Monthly Report
+   * ========================================
+   */
+
+  const [monthlyReportOpened, setMonthlyReportOpened] =
+    useState(false);
+
+  const currentDate = new Date();
+
+  const [monthlyReportMonth, setMonthlyReportMonth] =
+    useState(
+      `${currentDate.getFullYear()}-${String(
+        currentDate.getMonth() + 1
+      ).padStart(2, "0")}`
+    );
+
+  const [monthlyReportLoading, setMonthlyReportLoading] =
+    useState(false);
 
   /**
    * ========================================
    * Live Timer
    * ========================================
    */
+
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(Date.now());
@@ -222,6 +263,7 @@ export default function MaintenanceHistoryPage() {
    * Normalize KPIs
    * ========================================
    */
+
   const normalizeKpis = (
     rows: KPIApiRow[]
   ): KPI[] => {
@@ -260,9 +302,10 @@ export default function MaintenanceHistoryPage() {
 
   /**
    * ========================================
-   * Export Excel
+   * Export Existing Excel
    * ========================================
    */
+
   const handleExportExcel =
     async () => {
       try {
@@ -304,7 +347,9 @@ export default function MaintenanceHistoryPage() {
 
           filters: {
             search,
-            date,
+
+            dateFrom,
+            dateTo,
 
             vehicle:
               selectedVehicle?.plate_number,
@@ -342,6 +387,7 @@ export default function MaintenanceHistoryPage() {
    * Load Filter Data
    * ========================================
    */
+
   const loadFilterData =
     async () => {
       try {
@@ -393,10 +439,15 @@ export default function MaintenanceHistoryPage() {
           normalizeKpis(rows)
         );
       } catch (err) {
-        console.error(err);
+        console.error(
+          "Load filter data error:",
+          err
+        );
 
         setError(
-          "حدث خطأ أثناء تحميل بيانات الفلاتر"
+          err instanceof Error
+            ? err.message
+            : "حدث خطأ أثناء تحميل بيانات الفلاتر"
         );
       }
     };
@@ -406,38 +457,101 @@ export default function MaintenanceHistoryPage() {
    * Load Maintenance History
    * ========================================
    */
+
   const loadHistory =
     async () => {
       try {
         setLoading(true);
         setError("");
 
-        const response =
-          await fetch(
-            "/api/maintenance/history",
-            {
-              cache: "no-store",
-            }
-          );
+        const params =
+          new URLSearchParams();
 
-        if (!response.ok) {
-          throw new Error(
-            "Failed to load maintenance history"
+        if (dateFrom) {
+          params.set(
+            "dateFrom",
+            dateFrom
           );
         }
+
+        if (dateTo) {
+          params.set(
+            "dateTo",
+            dateTo
+          );
+        }
+
+        const query =
+          params.toString();
+
+        const url =
+          `/api/maintenance/history${
+            query
+              ? `?${query}`
+              : ""
+          }`;
+
+        console.log(
+          "Loading maintenance history:",
+          url
+        );
+
+        const response =
+          await fetch(url, {
+            method: "GET",
+            cache: "no-store",
+          });
 
         const data =
           await response.json();
 
+        console.log(
+          "MAINTENANCE HISTORY STATUS:",
+          response.status
+        );
+
+        console.log(
+          "MAINTENANCE HISTORY RESPONSE:",
+          data
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            data?.error ||
+              data?.details ||
+              data?.detail ||
+              "Failed to load maintenance history"
+          );
+        }
+
+        if (
+          data?.success === false
+        ) {
+          throw new Error(
+            data?.error ||
+              data?.details ||
+              "Failed to load maintenance history"
+          );
+        }
+
         setRecords(
-          data.data ?? []
+          Array.isArray(data?.data)
+            ? data.data
+            : []
         );
       } catch (err) {
-        console.error(err);
+        console.error(
+          "Load maintenance history error:",
+          err
+        );
 
         setError(
-          "حدث خطأ أثناء تحميل سجل الصيانة"
+          err instanceof Error
+            ? err.message
+            : "حدث خطأ أثناء تحميل سجل الصيانة"
         );
+
+        setRecords([]);
       } finally {
         setLoading(false);
       }
@@ -448,16 +562,27 @@ export default function MaintenanceHistoryPage() {
    * Initial Load
    * ========================================
    */
+
   useEffect(() => {
     loadFilterData();
-    loadHistory();
   }, []);
+
+  /**
+   * ========================================
+   * Reload History When Date Changes
+   * ========================================
+   */
+
+  useEffect(() => {
+    loadHistory();
+  }, [dateFrom, dateTo]);
 
   /**
    * ========================================
    * Delete Maintenance Record
    * ========================================
    */
+
   const deleteRecord =
     async (
       record: MaintenanceRecord
@@ -499,9 +624,6 @@ export default function MaintenanceHistoryPage() {
           );
         }
 
-        /**
-         * إزالة السجل من الجدول
-         */
         setRecords(
           (currentRecords) =>
             currentRecords.filter(
@@ -511,9 +633,6 @@ export default function MaintenanceHistoryPage() {
             )
         );
 
-        /**
-         * إغلاق Details Modal
-         */
         if (
           selectedRecord?.id ===
           record.id
@@ -527,9 +646,6 @@ export default function MaintenanceHistoryPage() {
           );
         }
 
-        /**
-         * إغلاق Cost Modal
-         */
         if (
           selectedCostRecord?.id ===
           record.id
@@ -545,7 +661,10 @@ export default function MaintenanceHistoryPage() {
           setCostValue("");
         }
       } catch (err) {
-        console.error(err);
+        console.error(
+          "Delete maintenance record error:",
+          err
+        );
 
         setError(
           err instanceof Error
@@ -564,6 +683,7 @@ export default function MaintenanceHistoryPage() {
    * Vehicle Options
    * ========================================
    */
+
   const vehicleOptions =
     useMemo(() => {
       const map =
@@ -601,6 +721,7 @@ export default function MaintenanceHistoryPage() {
    * KPI Options
    * ========================================
    */
+
   const kpiOptions =
     useMemo(() => {
       const map =
@@ -636,6 +757,7 @@ export default function MaintenanceHistoryPage() {
    * Sub KPI Options
    * ========================================
    */
+
   const subKpiOptions =
     useMemo(() => {
       const selectedKpi =
@@ -668,6 +790,7 @@ export default function MaintenanceHistoryPage() {
    * Filter Records
    * ========================================
    */
+
   const filteredRecords =
     useMemo(() => {
       const query =
@@ -677,18 +800,17 @@ export default function MaintenanceHistoryPage() {
 
       return records.filter(
         (record) => {
-          /**
-           * Search
-           */
           if (query) {
             const searchableText =
               [
                 record.id,
+                record.vehicle_number,
                 record.plate_number,
                 record.model,
                 record.area,
                 record.kpi_name,
                 record.sub_kpi_name,
+                record.maintenance_location,
                 record.description,
                 record.notes,
                 record.created_by,
@@ -714,20 +836,10 @@ export default function MaintenanceHistoryPage() {
             }
           }
 
-          /**
-           * Date
-           */
-          if (date) {
-            const dayStart =
-              new Date(
-                `${date}T00:00:00`
-              ).getTime();
-
-            const dayEnd =
-              new Date(
-                `${date}T23:59:59.999`
-              ).getTime();
-
+          if (
+            dateFrom ||
+            dateTo
+          ) {
             const entryTime =
               new Date(
                 record.entry_at
@@ -743,19 +855,40 @@ export default function MaintenanceHistoryPage() {
             if (
               Number.isNaN(
                 entryTime
-              ) ||
-              entryTime >=
-                dayEnd ||
-              exitTime <
-                dayStart
+              )
             ) {
               return false;
             }
+
+            if (dateFrom) {
+              const fromTime =
+                new Date(
+                  `${dateFrom}T00:00:00`
+                ).getTime();
+
+              if (
+                exitTime <
+                fromTime
+              ) {
+                return false;
+              }
+            }
+
+            if (dateTo) {
+              const toTime =
+                new Date(
+                  `${dateTo}T23:59:59.999`
+                ).getTime();
+
+              if (
+                entryTime >
+                toTime
+              ) {
+                return false;
+              }
+            }
           }
 
-          /**
-           * Vehicle
-           */
           if (
             vehicleId &&
             String(
@@ -765,9 +898,6 @@ export default function MaintenanceHistoryPage() {
             return false;
           }
 
-          /**
-           * KPI
-           */
           if (
             kpiId &&
             String(
@@ -777,9 +907,6 @@ export default function MaintenanceHistoryPage() {
             return false;
           }
 
-          /**
-           * Sub KPI
-           */
           if (
             subKpiId &&
             String(
@@ -790,9 +917,6 @@ export default function MaintenanceHistoryPage() {
             return false;
           }
 
-          /**
-           * Status
-           */
           if (
             status &&
             record.status !==
@@ -807,7 +931,8 @@ export default function MaintenanceHistoryPage() {
     }, [
       records,
       search,
-      date,
+      dateFrom,
+      dateTo,
       vehicleId,
       kpiId,
       subKpiId,
@@ -819,6 +944,7 @@ export default function MaintenanceHistoryPage() {
    * Total Pages
    * ========================================
    */
+
   const totalPages =
     Math.max(
       1,
@@ -833,11 +959,13 @@ export default function MaintenanceHistoryPage() {
    * Reset Page On Filter
    * ========================================
    */
+
   useEffect(() => {
     setPage(1);
   }, [
     search,
-    date,
+    dateFrom,
+    dateTo,
     vehicleId,
     kpiId,
     subKpiId,
@@ -849,6 +977,7 @@ export default function MaintenanceHistoryPage() {
    * Protect Current Page
    * ========================================
    */
+
   useEffect(() => {
     if (
       page > totalPages
@@ -867,6 +996,7 @@ export default function MaintenanceHistoryPage() {
    * Pagination
    * ========================================
    */
+
   const paginatedRecords =
     useMemo(() => {
       const start =
@@ -887,6 +1017,7 @@ export default function MaintenanceHistoryPage() {
    * Format Duration
    * ========================================
    */
+
   const formatDuration =
     (
       entryAt: string,
@@ -997,6 +1128,7 @@ export default function MaintenanceHistoryPage() {
    * Format Date
    * ========================================
    */
+
   const formatDateTime =
     (
       value: string | null
@@ -1017,7 +1149,7 @@ export default function MaintenanceHistoryPage() {
       }
 
       return date.toLocaleString(
-        "EN-JO",
+        "en-JO",
         {
           dateStyle:
             "medium",
@@ -1032,6 +1164,7 @@ export default function MaintenanceHistoryPage() {
    * Open Details
    * ========================================
    */
+
   const openDetails = (
     record: MaintenanceRecord
   ) => {
@@ -1049,6 +1182,7 @@ export default function MaintenanceHistoryPage() {
    * Open Cost Modal
    * ========================================
    */
+
   const openCostModal = (
     record: MaintenanceRecord
   ) => {
@@ -1077,6 +1211,7 @@ export default function MaintenanceHistoryPage() {
    * Save Cost
    * ========================================
    */
+
   const saveCost =
     async () => {
       if (
@@ -1148,9 +1283,6 @@ export default function MaintenanceHistoryPage() {
           );
         }
 
-        /**
-         * تحديث الجدول
-         */
         setRecords(
           (
             currentRecords
@@ -1172,9 +1304,6 @@ export default function MaintenanceHistoryPage() {
             )
         );
 
-        /**
-         * تحديث Details Modal
-         */
         setSelectedRecord(
           (
             currentRecord
@@ -1194,9 +1323,6 @@ export default function MaintenanceHistoryPage() {
               : currentRecord
         );
 
-        /**
-         * إغلاق Cost Modal
-         */
         setCostOpened(
           false
         );
@@ -1232,15 +1358,874 @@ export default function MaintenanceHistoryPage() {
    * Clear Filters
    * ========================================
    */
+
   const clearFilters =
     () => {
       setSearch("");
-      setDate("");
+      setDateFrom("");
+      setDateTo("");
       setVehicleId("");
       setKpiId("");
       setSubKpiId("");
       setStatus("");
       setPage(1);
+    };
+
+  /**
+   * ========================================
+   * Monthly Maintenance Report
+   * ========================================
+   *
+   * التقرير:
+   *
+   * رقم المركبة | المنطقة | 1/10 | 2/10 | ...
+   *
+   * المدة تخزن كرقم Excel حقيقي
+   * ويتم عرضها [h]:mm.
+   *
+   * مثال:
+   *
+   * دخول:
+   * 01/10 22:00
+   *
+   * خروج:
+   * 02/10 02:00
+   *
+   * النتيجة:
+   * 01/10 = 02:00
+   * 02/10 = 02:00
+   *
+   * وليس 04:00 في يوم واحد.
+   */
+
+  const handleMonthlyMaintenanceReport =
+    async () => {
+      if (!monthlyReportMonth) {
+        setError(
+          "يرجى اختيار الشهر"
+        );
+
+        return;
+      }
+
+      const [
+        yearText,
+        monthText,
+      ] =
+        monthlyReportMonth.split(
+          "-"
+        );
+
+      const year =
+        Number(yearText);
+
+      const month =
+        Number(monthText);
+
+      if (
+        !Number.isFinite(
+          year
+        ) ||
+        !Number.isFinite(
+          month
+        ) ||
+        month < 1 ||
+        month > 12
+      ) {
+        setError(
+          "الشهر المحدد غير صحيح"
+        );
+
+        return;
+      }
+
+      try {
+        setMonthlyReportLoading(
+          true
+        );
+
+        setError("");
+
+        /**
+         * أول يوم في الشهر.
+         */
+        const dateFrom =
+          `${year}-${String(
+            month
+          ).padStart(
+            2,
+            "0"
+          )}-01`;
+
+        /**
+         * آخر يوم في الشهر.
+         */
+        const lastDay =
+          new Date(
+            year,
+            month,
+            0
+          ).getDate();
+
+        const dateTo =
+          `${year}-${String(
+            month
+          ).padStart(
+            2,
+            "0"
+          )}-${String(
+            lastDay
+          ).padStart(
+            2,
+            "0"
+          )}`;
+
+        /**
+         * نطلب الشهر المطلوب
+         * بشكل مستقل عن فلاتر الصفحة.
+         */
+        const params =
+          new URLSearchParams();
+
+        params.set(
+          "dateFrom",
+          dateFrom
+        );
+
+        params.set(
+          "dateTo",
+          dateTo
+        );
+
+        const response =
+          await fetch(
+            `/api/maintenance/history?${params.toString()}`,
+            {
+              method: "GET",
+              cache: "no-store",
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.error ||
+              data?.details ||
+              data?.detail ||
+              "فشل تحميل بيانات التقرير الشهري"
+          );
+        }
+
+        if (
+          data?.success === false
+        ) {
+          throw new Error(
+            data?.error ||
+              data?.details ||
+              "فشل تحميل بيانات التقرير الشهري"
+          );
+        }
+
+        const monthlyRecords: MaintenanceRecord[] =
+          Array.isArray(
+            data?.data
+          )
+            ? data.data
+            : [];
+
+        /**
+         * عدد أيام الشهر.
+         */
+        const daysInMonth =
+          new Date(
+            year,
+            month,
+            0
+          ).getDate();
+
+        /**
+         * بداية الشهر.
+         */
+        const monthStart =
+          new Date(
+            year,
+            month - 1,
+            1,
+            0,
+            0,
+            0,
+            0
+          ).getTime();
+
+        /**
+         * بداية الشهر التالي.
+         *
+         * نستخدمه كـ exclusive end.
+         */
+        const monthEnd =
+          new Date(
+            year,
+            month,
+            1,
+            0,
+            0,
+            0,
+            0
+          ).getTime();
+
+        const DAY_MS =
+          24 *
+          60 *
+          60 *
+          1000;
+
+        /**
+         * Map للمركبات.
+         *
+         * كل مركبة لها صف واحد.
+         */
+        type MonthlyRow = {
+          vehicleId: number;
+          vehicleNumber: string;
+          area: string;
+          days: number[];
+          total: number;
+        };
+
+        const vehicleMap =
+          new Map<
+            number,
+            MonthlyRow
+          >();
+
+        /**
+         * نضيف كل المركبات أولاً.
+         *
+         * هذا يعني أن المركبة التي ليس
+         * لديها صيانة خلال الشهر ستظهر
+         * أيضًا بقيم 00:00.
+         */
+        for (const vehicle of vehicles) {
+          const id =
+            Number(
+              vehicle.id
+            );
+
+          if (!id) {
+            continue;
+          }
+
+          const vehicleNumber =
+            String(
+              vehicle.vehicle_number ??
+                ""
+            ).trim() ||
+            String(
+              vehicle.plate_number ??
+                ""
+            ).trim() ||
+            "-";
+
+          vehicleMap.set(
+            id,
+            {
+              vehicleId: id,
+
+              vehicleNumber,
+
+              area:
+                vehicle.area ||
+                "-",
+
+              days:
+                Array(
+                  daysInMonth
+                ).fill(0),
+
+              total: 0,
+            }
+          );
+        }
+
+        /**
+         * نوزع كل سجل صيانة
+         * على الأيام.
+         */
+        for (const record of monthlyRecords) {
+          const vehicleId =
+            Number(
+              record.vehicle_id
+            );
+
+          if (!vehicleId) {
+            continue;
+          }
+
+          const entryTime =
+            new Date(
+              record.entry_at
+            ).getTime();
+
+          if (
+            !Number.isFinite(
+              entryTime
+            )
+          ) {
+            continue;
+          }
+
+          /**
+           * إذا الصيانة مفتوحة:
+           * نحسب حتى الآن.
+           */
+          const exitTime =
+            record.exit_at
+              ? new Date(
+                  record.exit_at
+                ).getTime()
+              : Date.now();
+
+          if (
+            !Number.isFinite(
+              exitTime
+            )
+          ) {
+            continue;
+          }
+
+          /**
+           * تجاهل السجل إذا كان
+           * بالكامل خارج الشهر.
+           */
+          if (
+            exitTime <=
+              monthStart ||
+            entryTime >=
+              monthEnd
+          ) {
+            continue;
+          }
+
+          /**
+           * إذا المركبة غير موجودة
+           * في قائمة vehicles نضيفها
+           * من بيانات السجل.
+           */
+          if (
+            !vehicleMap.has(
+              vehicleId
+            )
+          ) {
+            const vehicleNumber =
+              String(
+                record.vehicle_number ??
+                  ""
+              ).trim() ||
+              String(
+                record.plate_number ??
+                  ""
+              ).trim() ||
+              "-";
+
+            vehicleMap.set(
+              vehicleId,
+              {
+                vehicleId,
+
+                vehicleNumber,
+
+                area:
+                  record.area ||
+                  "-",
+
+                days:
+                  Array(
+                    daysInMonth
+                  ).fill(0),
+
+                total: 0,
+              }
+            );
+          }
+
+          const row =
+            vehicleMap.get(
+              vehicleId
+            );
+
+          if (!row) {
+            continue;
+          }
+
+          /**
+           * توزيع المدة على كل يوم.
+           */
+          for (
+            let day = 1;
+            day <=
+            daysInMonth;
+            day++
+          ) {
+            const dayStart =
+              new Date(
+                year,
+                month - 1,
+                day,
+                0,
+                0,
+                0,
+                0
+              ).getTime();
+
+            const dayEnd =
+              dayStart +
+              DAY_MS;
+
+            /**
+             * بداية التداخل.
+             */
+            const overlapStart =
+              Math.max(
+                entryTime,
+                dayStart
+              );
+
+            /**
+             * نهاية التداخل.
+             */
+            const overlapEnd =
+              Math.min(
+                exitTime,
+                dayEnd
+              );
+
+            if (
+              overlapEnd <=
+              overlapStart
+            ) {
+              continue;
+            }
+
+            const durationMs =
+              overlapEnd -
+              overlapStart;
+
+            /**
+             * Excel يخزن الوقت
+             * كنسبة من اليوم.
+             *
+             * 1 ساعة =
+             * 1 / 24
+             */
+            const excelDuration =
+              durationMs /
+              DAY_MS;
+
+            row.days[
+              day - 1
+            ] +=
+              excelDuration;
+
+            row.total +=
+              excelDuration;
+          }
+        }
+
+        /**
+         * ترتيب المركبات.
+         */
+        const monthlyRows =
+          Array.from(
+            vehicleMap.values()
+          ).sort(
+            (a, b) =>
+              a.vehicleNumber.localeCompare(
+                b.vehicleNumber,
+                "ar",
+                {
+                  numeric: true,
+                  sensitivity:
+                    "base",
+                }
+              )
+          );
+
+        /**
+         * ====================================
+         * Excel Headers
+         * ====================================
+         */
+
+        const headers: string[] =
+          [
+            "رقم المركبة",
+            "المنطقة",
+          ];
+
+        for (
+          let day = 1;
+          day <=
+          daysInMonth;
+          day++
+        ) {
+          headers.push(
+            `${day}/${month}`
+          );
+        }
+
+        headers.push(
+          "الإجمالي"
+        );
+
+        /**
+         * ====================================
+         * Excel Rows
+         * ====================================
+         */
+
+        const excelRows: (
+          | string
+          | number
+        )[][] =
+          [];
+
+        for (const row of monthlyRows) {
+          excelRows.push([
+            row.vehicleNumber,
+
+            row.area,
+
+            ...row.days,
+
+            row.total,
+          ]);
+        }
+
+        /**
+         * ====================================
+         * Create Worksheet
+         * ====================================
+         */
+
+        const worksheet =
+          XLSX.utils.aoa_to_sheet([
+            headers,
+            ...excelRows,
+          ]);
+
+        /**
+         * RTL.
+         */
+        worksheet["!views"] =
+          [
+            {
+              RTL: true,
+            },
+          ];
+
+        /**
+         * Column widths.
+         */
+        worksheet["!cols"] =
+          [
+            {
+              wch: 18,
+            },
+            {
+              wch: 20,
+            },
+
+            ...Array.from(
+              {
+                length:
+                  daysInMonth,
+              },
+              () => ({
+                wch: 11,
+              })
+            ),
+
+            {
+              wch: 14,
+            },
+          ];
+
+        /**
+         * ====================================
+         * Header Style
+         * ====================================
+         */
+
+        const headerStyle = {
+          font: {
+            bold: true,
+            color: "FFFFFF",
+            sz: 12,
+          },
+
+          fill: {
+            fgColor: {
+              rgb: "1F4E78",
+            },
+          },
+
+          alignment: {
+            horizontal:
+              "center",
+            vertical:
+              "center",
+            wrapText: true,
+          },
+
+          border: {
+            top: {
+              style: "thin",
+              color: {
+                rgb: "D9E2F3",
+              },
+            },
+
+            bottom: {
+              style: "thin",
+              color: {
+                rgb: "D9E2F3",
+              },
+            },
+
+            left: {
+              style: "thin",
+              color: {
+                rgb: "D9E2F3",
+              },
+            },
+
+            right: {
+              style: "thin",
+              color: {
+                rgb: "D9E2F3",
+              },
+            },
+          },
+        };
+
+        for (
+          let col = 0;
+          col <
+          headers.length;
+          col++
+        ) {
+          const address =
+            XLSX.utils.encode_cell(
+              {
+                r: 0,
+                c: col,
+              }
+            );
+
+          if (
+            worksheet[address]
+          ) {
+            worksheet[
+              address
+            ].s =
+              headerStyle;
+          }
+        }
+
+        /**
+         * ====================================
+         * Data Cell Style
+         * ====================================
+         */
+
+        const dataStyle = {
+          alignment: {
+            horizontal:
+              "center",
+            vertical:
+              "center",
+          },
+
+          border: {
+            top: {
+              style: "thin",
+              color: {
+                rgb: "E5E7EB",
+              },
+            },
+
+            bottom: {
+              style: "thin",
+              color: {
+                rgb: "E5E7EB",
+              },
+            },
+
+            left: {
+              style: "thin",
+              color: {
+                rgb: "E5E7EB",
+              },
+            },
+
+            right: {
+              style: "thin",
+              color: {
+                rgb: "E5E7EB",
+              },
+            },
+          },
+        };
+
+        /**
+         * أول عمودين.
+         */
+        for (
+          let rowIndex = 1;
+          rowIndex <=
+          excelRows.length;
+          rowIndex++
+        ) {
+          for (
+            let col = 0;
+            col <= 1;
+            col++
+          ) {
+            const address =
+              XLSX.utils.encode_cell(
+                {
+                  r: rowIndex,
+                  c: col,
+                }
+              );
+
+            if (
+              worksheet[address]
+            ) {
+              worksheet[
+                address
+              ].s =
+                dataStyle;
+            }
+          }
+        }
+
+        /**
+         * خلايا المدة.
+         *
+         * [h]:mm مهم جدًا لأنه يسمح
+         * بعرض إجمالي أكبر من 24 ساعة.
+         */
+        for (
+          let rowIndex = 1;
+          rowIndex <=
+          excelRows.length;
+          rowIndex++
+        ) {
+          for (
+            let col = 2;
+            col <
+            headers.length;
+            col++
+          ) {
+            const address =
+              XLSX.utils.encode_cell(
+                {
+                  r: rowIndex,
+                  c: col,
+                }
+              );
+
+            const cell =
+              worksheet[
+                address
+              ];
+
+            if (!cell) {
+              continue;
+            }
+
+            cell.t = "n";
+
+            cell.z =
+              "[h]:mm";
+
+            cell.s =
+              dataStyle;
+          }
+        }
+
+        /**
+         * ارتفاع Header.
+         */
+        worksheet["!rows"] =
+          [
+            {
+              hpt: 30,
+            },
+          ];
+
+        /**
+         * ====================================
+         * Workbook
+         * ====================================
+         */
+
+        const workbook =
+          XLSX.utils.book_new();
+
+        XLSX.utils.book_append_sheet(
+          workbook,
+          worksheet,
+          "مدة الصيانة"
+        );
+
+        /**
+         * ====================================
+         * Filename
+         * ====================================
+         */
+
+        const monthFormatted =
+          String(
+            month
+          ).padStart(
+            2,
+            "0"
+          );
+
+        const fileName =
+          `تقرير_مدة_الصيانة_${year}-${monthFormatted}.xlsx`;
+
+        XLSX.writeFile(
+          workbook,
+          fileName
+        );
+
+        /**
+         * إغلاق النافذة بعد النجاح.
+         */
+        setMonthlyReportOpened(
+          false
+        );
+      } catch (err) {
+        console.error(
+          "Monthly maintenance report error:",
+          err
+        );
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "حدث خطأ أثناء إنشاء التقرير الشهري"
+        );
+      } finally {
+        setMonthlyReportLoading(
+          false
+        );
+      }
     };
 
   return (
@@ -1271,26 +2256,49 @@ export default function MaintenanceHistoryPage() {
             </Text>
           </div>
 
-          <Button
-            radius="xl"
-            color="green"
-            variant="light"
-            leftSection={
-              <IconFileDescription
-                size={18}
-              />
-            }
-            onClick={
-              handleExportExcel
-            }
-            disabled={
-              loading ||
-              filteredRecords.length ===
-                0
-            }
-          >
-            تصدير Excel
-          </Button>
+          <Group gap="sm">
+            <Button
+              radius="xl"
+              color="green"
+              variant="light"
+              leftSection={
+                <IconFileDescription
+                  size={18}
+                />
+              }
+              onClick={
+                handleExportExcel
+              }
+              disabled={
+                loading ||
+                filteredRecords.length ===
+                  0
+              }
+            >
+              تصدير Excel
+            </Button>
+
+            <Button
+              radius="xl"
+              color="blue"
+              variant="light"
+              leftSection={
+                <IconTimeline
+                  size={18}
+                />
+              }
+              onClick={() =>
+                setMonthlyReportOpened(
+                  true
+                )
+              }
+              disabled={
+                loading
+              }
+            >
+              تقرير مدة الصيانة الشهري
+            </Button>
+          </Group>
         </Group>
 
         {/* ================= Error ================= */}
@@ -1343,11 +2351,12 @@ export default function MaintenanceHistoryPage() {
                 md: 3,
               }}
             >
+
               {/* Search */}
 
               <Textarea
                 label="بحث"
-                placeholder="رقم المركبة، الموديل، المنطقة، نوع الصيانة..."
+                placeholder="رقم المركبة، الموديل، المنطقة، نوع الصيانة، مكان الصيانة..."
                 value={search}
                 onChange={(
                   event
@@ -1363,22 +2372,66 @@ export default function MaintenanceHistoryPage() {
                 maxRows={3}
               />
 
-              {/* Date */}
+              {/* Date From */}
 
               <Text
                 component="label"
                 size="sm"
                 fw={500}
               >
-                التاريخ
+                من تاريخ
 
                 <input
                   type="date"
-                  value={date}
+                  value={
+                    dateFrom
+                  }
                   onChange={(
                     event
                   ) =>
-                    setDate(
+                    setDateFrom(
+                      event
+                        .currentTarget
+                        .value
+                    )
+                  }
+                  style={{
+                    width:
+                      "100%",
+                    height: 36,
+                    marginTop: 5,
+                    borderRadius: 6,
+                    border:
+                      "1px solid #ced4da",
+                    padding:
+                      "0 10px",
+                    fontSize: 14,
+                  }}
+                />
+              </Text>
+
+              {/* Date To */}
+
+              <Text
+                component="label"
+                size="sm"
+                fw={500}
+              >
+                إلى تاريخ
+
+                <input
+                  type="date"
+                  value={
+                    dateTo
+                  }
+                  min={
+                    dateFrom ||
+                    undefined
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    setDateTo(
                       event
                         .currentTarget
                         .value
@@ -1506,6 +2559,31 @@ export default function MaintenanceHistoryPage() {
                 clearable
               />
             </SimpleGrid>
+
+            {(dateFrom ||
+              dateTo) && (
+              <Text
+                size="sm"
+                c="dimmed"
+              >
+                الفترة المحددة:{" "}
+                <Text
+                  component="span"
+                  fw={700}
+                >
+                  {dateFrom ||
+                    "البداية"}
+                </Text>{" "}
+                إلى{" "}
+                <Text
+                  component="span"
+                  fw={700}
+                >
+                  {dateTo ||
+                    "النهاية"}
+                </Text>
+              </Text>
+            )}
           </Stack>
         </Card>
 
@@ -1570,7 +2648,31 @@ export default function MaintenanceHistoryPage() {
                         "nowrap",
                     }}
                   >
+                    المنطقة
+                  </th>
+
+                  <th
+                    style={{
+                      padding: 14,
+                      textAlign:
+                        "right",
+                      whiteSpace:
+                        "nowrap",
+                    }}
+                  >
                     نوع الصيانة
+                  </th>
+
+                  <th
+                    style={{
+                      padding: 14,
+                      textAlign:
+                        "right",
+                      whiteSpace:
+                        "nowrap",
+                    }}
+                  >
+                    مكان الصيانة
                   </th>
 
                   <th
@@ -1639,7 +2741,7 @@ export default function MaintenanceHistoryPage() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={10}
                       style={{
                         padding:
                           40,
@@ -1656,7 +2758,7 @@ export default function MaintenanceHistoryPage() {
                   0 ? (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={10}
                       style={{
                         padding:
                           40,
@@ -1685,8 +2787,6 @@ export default function MaintenanceHistoryPage() {
                             "1px solid var(--mantine-color-gray-2)",
                         }}
                       >
-                        {/* Number */}
-
                         <td
                           style={{
                             padding:
@@ -1699,8 +2799,6 @@ export default function MaintenanceHistoryPage() {
                             index +
                             1}
                         </td>
-
-                        {/* Vehicle */}
 
                         <td
                           style={{
@@ -1739,7 +2837,22 @@ export default function MaintenanceHistoryPage() {
                           </Group>
                         </td>
 
-                        {/* Maintenance */}
+                        <td
+                          style={{
+                            padding:
+                              14,
+                            whiteSpace:
+                              "nowrap",
+                          }}
+                        >
+                          <Text
+                            size="sm"
+                            fw={600}
+                          >
+                            {record.area ||
+                              "-"}
+                          </Text>
+                        </td>
 
                         <td
                           style={{
@@ -1769,7 +2882,32 @@ export default function MaintenanceHistoryPage() {
                           </div>
                         </td>
 
-                        {/* Entry */}
+                        <td
+                          style={{
+                            padding:
+                              14,
+                            whiteSpace:
+                              "nowrap",
+                          }}
+                        >
+                          <Group
+                            gap={5}
+                            wrap="nowrap"
+                          >
+                            <IconMapPin
+                              size={
+                                16
+                              }
+                            />
+
+                            <Text
+                              size="sm"
+                            >
+                              {record.maintenance_location ||
+                                "-"}
+                            </Text>
+                          </Group>
+                        </td>
 
                         <td
                           style={{
@@ -1794,8 +2932,6 @@ export default function MaintenanceHistoryPage() {
                           </Group>
                         </td>
 
-                        {/* Exit */}
-
                         <td
                           style={{
                             padding:
@@ -1818,8 +2954,6 @@ export default function MaintenanceHistoryPage() {
                             </Text>
                           </Group>
                         </td>
-
-                        {/* Duration */}
 
                         <td
                           style={{
@@ -1845,8 +2979,6 @@ export default function MaintenanceHistoryPage() {
                           </Group>
                         </td>
 
-                        {/* Status */}
-
                         <td
                           style={{
                             padding:
@@ -1855,18 +2987,21 @@ export default function MaintenanceHistoryPage() {
                         >
                           {record.status ===
                           "open" ? (
-                            <Badge                               variant="light"
- color="orange">
+                            <Badge
+                              variant="light"
+                              color="orange"
+                            >
                               داخل الصيانة
                             </Badge>
                           ) : (
-                            <Badge  variant="light" color="green">
+                            <Badge
+                              variant="light"
+                              color="green"
+                            >
                               خارج الصيانة
                             </Badge>
                           )}
                         </td>
-
-                        {/* Actions */}
 
                         <td
                           style={{
@@ -1878,8 +3013,6 @@ export default function MaintenanceHistoryPage() {
                             gap="xs"
                             wrap="nowrap"
                           >
-                            {/* Details */}
-
                             <Button
                               size="xs"
                               variant="light"
@@ -1889,14 +3022,16 @@ export default function MaintenanceHistoryPage() {
                                 )
                               }
                             >
-                              <IconEye size={15}/>
+                              <IconEye
+                                size={
+                                  15
+                                }
+                              />
                             </Button>
-
-                            {/* Cost */}
 
                             <Button
                               size="xs"
-                              color= {
+                              color={
                                 record.cost !==
                                 null
                                   ? "red"
@@ -1909,18 +3044,20 @@ export default function MaintenanceHistoryPage() {
                                 )
                               }
                             >
-                              <IconReportMoney size ={15} stroke={2} />
+                              <IconReportMoney
+                                size={
+                                  15
+                                }
+                                stroke={
+                                  2
+                                }
+                              />
                             </Button>
-
-                            {/* Delete */}
 
                             <Button
                               size="xs"
                               color="red"
                               variant="light"
-                              
-                                
-                             
                               loading={
                                 deletingId ===
                                 record.id
@@ -1937,11 +3074,11 @@ export default function MaintenanceHistoryPage() {
                                 )
                               }
                             >
-                             <IconTrash
-                                  size={
-                                    15
-                                  }
-                                />
+                              <IconTrash
+                                size={
+                                  15
+                                }
+                              />
                             </Button>
                           </Group>
                         </td>
@@ -2001,6 +3138,204 @@ export default function MaintenanceHistoryPage() {
       </Stack>
 
       {/* ===================================================== */}
+      {/* Monthly Maintenance Report Modal */}
+      {/* ===================================================== */}
+
+      <Modal
+        dir="rtl"
+        opened={
+          monthlyReportOpened
+        }
+        onClose={() => {
+          if (
+            monthlyReportLoading
+          ) {
+            return;
+          }
+
+          setMonthlyReportOpened(
+            false
+          );
+        }}
+        centered
+        size="sm"
+        radius="lg"
+        title={
+          <Group gap="sm">
+            <ThemeIcon
+              size={40}
+              radius="md"
+              variant="light"
+              color="blue"
+            >
+              <IconTimeline
+                size={21}
+              />
+            </ThemeIcon>
+
+            <div>
+              <Text
+                fw={700}
+                size="md"
+              >
+                تقرير مدة الصيانة الشهري
+              </Text>
+
+              <Text
+                size="xs"
+                c="dimmed"
+                mt={2}
+              >
+                مدة الصيانة لكل مركبة حسب اليوم
+              </Text>
+            </div>
+          </Group>
+        }
+      >
+        <Stack gap="lg">
+
+          <Text
+            size="sm"
+            c="dimmed"
+            lh={1.7}
+          >
+            اختر الشهر المطلوب لإنشاء تقرير
+            يحتوي على مدة صيانة كل مركبة في
+            كل يوم من الشهر.
+          </Text>
+
+          <div>
+            <Text
+              size="sm"
+              fw={600}
+              mb={6}
+            >
+              الشهر
+            </Text>
+
+            <input
+              type="month"
+              value={
+                monthlyReportMonth
+              }
+              onChange={(
+                event
+              ) =>
+                setMonthlyReportMonth(
+                  event
+                    .currentTarget
+                    .value
+                )
+              }
+              style={{
+                width:
+                  "100%",
+                height: 42,
+                border:
+                  "1px solid #ced4da",
+                borderRadius: 8,
+                padding:
+                  "0 12px",
+                fontSize: 15,
+                boxSizing:
+                  "border-box",
+                direction:
+                  "ltr",
+              }}
+            />
+          </div>
+
+          <Alert
+            color="blue"
+            variant="light"
+            icon={
+              <IconInfoCircle
+                size={18}
+              />
+            }
+          >
+            <Text
+              size="sm"
+              lh={1.7}
+            >
+              سيتم تقسيم مدة الصيانة على
+              الأيام بشكل دقيق. إذا بدأت
+              الصيانة في يوم وانتهت في اليوم
+              التالي، سيتم توزيع الساعات بين
+              اليومين.
+            </Text>
+          </Alert>
+
+          <Card
+            withBorder
+            radius="md"
+            padding="md"
+          >
+            <Stack gap="xs">
+              <Text
+                size="xs"
+                c="dimmed"
+              >
+                شكل التقرير
+              </Text>
+
+              <Text
+                size="sm"
+                fw={700}
+              >
+                رقم المركبة | المنطقة | 1/10 |
+                2/10 | 3/10 | ... | الإجمالي
+              </Text>
+
+              <Text
+                size="xs"
+                c="dimmed"
+              >
+                القيم في Excel ستكون بصيغة
+                ساعات ودقائق ويمكن جمعها مباشرة.
+              </Text>
+            </Stack>
+          </Card>
+
+          <Group
+            justify="flex-end"
+            gap="sm"
+          >
+            <Button
+              variant="default"
+              onClick={() =>
+                setMonthlyReportOpened(
+                  false
+                )
+              }
+              disabled={
+                monthlyReportLoading
+              }
+            >
+              إلغاء
+            </Button>
+
+            <Button
+              color="blue"
+              onClick={
+                handleMonthlyMaintenanceReport
+              }
+              loading={
+                monthlyReportLoading
+              }
+              leftSection={
+                <IconFileDescription
+                  size={18}
+                />
+              }
+            >
+              إنشاء التقرير
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* ===================================================== */}
       {/* Details Modal */}
       {/* ===================================================== */}
 
@@ -2057,8 +3392,6 @@ export default function MaintenanceHistoryPage() {
       >
         {selectedRecord && (
           <Stack gap="lg">
-
-            {/* Vehicle Header */}
 
             <Card
               withBorder
@@ -2144,23 +3477,22 @@ export default function MaintenanceHistoryPage() {
                 >
                   {selectedRecord.status ===
                   "open"
-                    ? " داخل الصيانة"
-                    : " خارج الصيانة"}
+                    ? "داخل الصيانة"
+                    : "خارج الصيانة"}
                 </Badge>
               </Group>
             </Card>
 
-            {/* Maintenance Type */}
-
-            <Card
-              withBorder
-              radius="lg"
-              padding="lg"
+            <SimpleGrid
+              cols={{
+                base: 1,
+                sm: 2,
+              }}
             >
-              <Group
-                justify="space-between"
-                align="flex-start"
-                wrap="nowrap"
+              <Card
+                withBorder
+                radius="lg"
+                padding="lg"
               >
                 <Group
                   gap="md"
@@ -2206,25 +3538,50 @@ export default function MaintenanceHistoryPage() {
                     </Text>
                   </div>
                 </Group>
+              </Card>
 
-                <Badge
-                  variant="dot"
-                  color={
-                    selectedRecord.status ===
-                    "open"
-                      ? "orange"
-                      : "green"
-                  }
+              <Card
+                withBorder
+                radius="lg"
+                padding="lg"
+              >
+                <Group
+                  gap="md"
+                  align="flex-start"
+                  wrap="nowrap"
                 >
-                  {selectedRecord.status ===
-                  "open"
-                    ? "داخل الصيانة"
-                    : "خارج الصيانة"}
-                </Badge>
-              </Group>
-            </Card>
+                  <ThemeIcon
+                    size={42}
+                    radius="md"
+                    variant="light"
+                    color="blue"
+                  >
+                    <IconMapPin
+                      size={22}
+                    />
+                  </ThemeIcon>
 
-            {/* Maintenance Timeline */}
+                  <div>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      fw={500}
+                    >
+                      مكان الصيانة
+                    </Text>
+
+                    <Text
+                      fw={700}
+                      size="md"
+                      mt={2}
+                    >
+                      {selectedRecord.maintenance_location ||
+                        "-"}
+                    </Text>
+                  </div>
+                </Group>
+              </Card>
+            </SimpleGrid>
 
             <div>
               <Group
@@ -2250,46 +3607,39 @@ export default function MaintenanceHistoryPage() {
                 }}
                 spacing="md"
               >
-                {/* Entry */}
-
                 <Card
                   withBorder
                   radius="lg"
                   padding="lg"
                 >
-                  <Group
-                    justify="space-between"
-                    align="flex-start"
-                  >
-                    <Group gap="sm">
-                      <ThemeIcon
-                        size={40}
-                        radius="xl"
-                        variant="light"
-                        color="green"
+                  <Group gap="sm">
+                    <ThemeIcon
+                      size={40}
+                      radius="xl"
+                      variant="light"
+                      color="green"
+                    >
+                      <IconLogin
+                        size={20}
+                      />
+                    </ThemeIcon>
+
+                    <div>
+                      <Text
+                        size="xs"
+                        c="dimmed"
                       >
-                        <IconLogin
-                          size={20}
-                        />
-                      </ThemeIcon>
+                        وقت الدخول
+                      </Text>
 
-                      <div>
-                        <Text
-                          size="xs"
-                          c="dimmed"
-                        >
-                          وقت الدخول
-                        </Text>
-
-                        <Text
-                          fw={700}
-                          size="sm"
-                          mt={2}
-                        >
-                          دخول الصيانة
-                        </Text>
-                      </div>
-                    </Group>
+                      <Text
+                        fw={700}
+                        size="sm"
+                        mt={2}
+                      >
+                        دخول الصيانة
+                      </Text>
+                    </div>
                   </Group>
 
                   <Divider my="md" />
@@ -2304,46 +3654,39 @@ export default function MaintenanceHistoryPage() {
                   </Text>
                 </Card>
 
-                {/* Exit */}
-
                 <Card
                   withBorder
                   radius="lg"
                   padding="lg"
                 >
-                  <Group
-                    justify="space-between"
-                    align="flex-start"
-                  >
-                    <Group gap="sm">
-                      <ThemeIcon
-                        size={40}
-                        radius="xl"
-                        variant="light"
-                        color="red"
+                  <Group gap="sm">
+                    <ThemeIcon
+                      size={40}
+                      radius="xl"
+                      variant="light"
+                      color="red"
+                    >
+                      <IconLogout
+                        size={20}
+                      />
+                    </ThemeIcon>
+
+                    <div>
+                      <Text
+                        size="xs"
+                        c="dimmed"
                       >
-                        <IconLogout
-                          size={20}
-                        />
-                      </ThemeIcon>
+                        وقت الخروج
+                      </Text>
 
-                      <div>
-                        <Text
-                          size="xs"
-                          c="dimmed"
-                        >
-                          وقت الخروج
-                        </Text>
-
-                        <Text
-                          fw={700}
-                          size="sm"
-                          mt={2}
-                        >
-                          إخراج من الصيانة
-                        </Text>
-                      </div>
-                    </Group>
+                      <Text
+                        fw={700}
+                        size="sm"
+                        mt={2}
+                      >
+                        إخراج من الصيانة
+                      </Text>
+                    </div>
                   </Group>
 
                   <Divider my="md" />
@@ -2362,53 +3705,44 @@ export default function MaintenanceHistoryPage() {
               </SimpleGrid>
             </div>
 
-            {/* Duration */}
-
             <Card
               withBorder
               radius="lg"
               padding="lg"
             >
-              <Group
-                justify="space-between"
-                align="center"
-              >
-                <Group gap="sm">
-                  <ThemeIcon
-                    size={42}
-                    radius="md"
-                    variant="light"
-                    color="violet"
+              <Group gap="sm">
+                <ThemeIcon
+                  size={42}
+                  radius="md"
+                  variant="light"
+                  color="violet"
+                >
+                  <IconClock
+                    size={22}
+                  />
+                </ThemeIcon>
+
+                <div>
+                  <Text
+                    size="xs"
+                    c="dimmed"
                   >
-                    <IconClock
-                      size={22}
-                    />
-                  </ThemeIcon>
+                    مدة الصيانة
+                  </Text>
 
-                  <div>
-                    <Text
-                      size="xs"
-                      c="dimmed"
-                    >
-                      مدة الصيانة
-                    </Text>
-
-                    <Text
-                      fw={800}
-                      size="lg"
-                      mt={2}
-                    >
-                      {formatDuration(
-                        selectedRecord.entry_at,
-                        selectedRecord.exit_at
-                      )}
-                    </Text>
-                  </div>
-                </Group>
+                  <Text
+                    fw={800}
+                    size="lg"
+                    mt={2}
+                  >
+                    {formatDuration(
+                      selectedRecord.entry_at,
+                      selectedRecord.exit_at
+                    )}
+                  </Text>
+                </div>
               </Group>
             </Card>
-
-            {/* Maintenance Cost */}
 
             <Card
               withBorder
@@ -2474,8 +3808,6 @@ export default function MaintenanceHistoryPage() {
               </Group>
             </Card>
 
-            {/* Description & Notes */}
-
             {(selectedRecord.description ||
               selectedRecord.notes) && (
               <SimpleGrid
@@ -2485,8 +3817,6 @@ export default function MaintenanceHistoryPage() {
                 }}
                 spacing="md"
               >
-                {/* Description */}
-
                 {selectedRecord.description && (
                   <Card
                     withBorder
@@ -2527,8 +3857,6 @@ export default function MaintenanceHistoryPage() {
                     </Text>
                   </Card>
                 )}
-
-                {/* Notes */}
 
                 {selectedRecord.notes && (
                   <Card
@@ -2573,8 +3901,6 @@ export default function MaintenanceHistoryPage() {
               </SimpleGrid>
             )}
 
-            {/* Vehicle Information */}
-
             <div>
               <Group
                 gap="xs"
@@ -2600,7 +3926,7 @@ export default function MaintenanceHistoryPage() {
                 <SimpleGrid
                   cols={{
                     base: 2,
-                    sm: 4,
+                    sm: 5,
                   }}
                   spacing="lg"
                 >
@@ -2675,11 +4001,27 @@ export default function MaintenanceHistoryPage() {
                         "-"}
                     </Text>
                   </div>
+
+                  <div>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      mb={4}
+                    >
+                      مكان الصيانة
+                    </Text>
+
+                    <Text
+                      size="sm"
+                      fw={700}
+                    >
+                      {selectedRecord.maintenance_location ||
+                        "-"}
+                    </Text>
+                  </div>
                 </SimpleGrid>
               </Card>
             </div>
-
-            {/* Audit Information */}
 
             <div>
               <Group
@@ -2704,8 +4046,6 @@ export default function MaintenanceHistoryPage() {
                 padding="lg"
               >
                 <Stack gap="md">
-
-                  {/* Created */}
 
                   <Group
                     justify="space-between"
@@ -2764,8 +4104,6 @@ export default function MaintenanceHistoryPage() {
 
                   <Divider />
 
-                  {/* Updated */}
-
                   <Group
                     justify="space-between"
                     align="center"
@@ -2785,8 +4123,8 @@ export default function MaintenanceHistoryPage() {
                           size={17}
                         />
                       </ThemeIcon>
-                  <div>
-                       
+
+                      <div>
                         <Text
                           size="sm"
                           fw={600}
@@ -2794,33 +4132,31 @@ export default function MaintenanceHistoryPage() {
                           إخراج المركبة
                         </Text>
 
-                        {
-                          selectedRecord.status ===
-                          "open" ? (
+                        {selectedRecord.status ===
+                        "open" ? (
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                            mt={2}
+                          >
+                            لم يتم إخراج المركبة بعد
+                          </Text>
+                        ) : (
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                            mt={2}
+                          >
+                            بواسطة{" "}
                             <Text
-                              size="xs"
-                              c="dimmed"
-                              mt={2}
+                              component="span"
+                              fw={600}
                             >
-                              لم يتم إخراج المركبة بعد
+                              {selectedRecord.updated_by ||
+                                "-"}
                             </Text>
-                          ) : (
-                            <Text
-                              size="xs"
-                              c="dimmed"
-                              mt={2}
-                            >
-                              بواسطة{" "}
-                              <Text
-                                component="span"
-                                fw={600}
-                              >
-                                {selectedRecord.updated_by ||
-                                  "-"}
-                              </Text>
-                            </Text>
-                          ) 
-                        }
+                          </Text>
+                        )}
                       </div>
                     </Group>
 
@@ -2839,8 +4175,6 @@ export default function MaintenanceHistoryPage() {
                 </Stack>
               </Card>
             </div>
-
-            {/* Delete */}
 
             <Divider />
 
@@ -2935,8 +4269,6 @@ export default function MaintenanceHistoryPage() {
         {selectedCostRecord && (
           <Stack gap="lg">
 
-            {/* Vehicle */}
-
             <Card
               withBorder
               radius="lg"
@@ -3012,9 +4344,37 @@ export default function MaintenanceHistoryPage() {
                   selectedCostRecord.sub_kpi_name
                 }
               </Text>
-            </Card>
 
-            {/* Cost Input */}
+              <Text
+                size="xs"
+                c="dimmed"
+                mt="sm"
+              >
+                المنطقة:{" "}
+                <Text
+                  component="span"
+                  fw={600}
+                >
+                  {selectedCostRecord.area ||
+                    "-"}
+                </Text>
+              </Text>
+
+              <Text
+                size="xs"
+                c="dimmed"
+                mt={3}
+              >
+                مكان الصيانة:{" "}
+                <Text
+                  component="span"
+                  fw={600}
+                >
+                  {selectedCostRecord.maintenance_location ||
+                    "-"}
+                </Text>
+              </Text>
+            </Card>
 
             <div>
               <Text
@@ -3062,8 +4422,6 @@ export default function MaintenanceHistoryPage() {
                 }}
               />
             </div>
-
-            {/* Actions */}
 
             <Group
               justify="flex-end"

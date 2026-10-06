@@ -40,7 +40,6 @@ export async function DELETE(
       );
     }
 
-    // التأكد أن السجل موجود
     const existingRecord = await pool.query(
       `
       SELECT
@@ -51,6 +50,7 @@ export async function DELETE(
         cost
       FROM maintenance_records
       WHERE id = $1
+      LIMIT 1
       `,
       [maintenanceId]
     );
@@ -67,7 +67,6 @@ export async function DELETE(
       );
     }
 
-    // حذف سجل الصيانة
     const result = await pool.query(
       `
       DELETE FROM maintenance_records
@@ -79,7 +78,8 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "Maintenance record deleted successfully",
+      message:
+        "Maintenance record deleted successfully",
       id: result.rows[0].id,
     });
   } catch (error) {
@@ -91,7 +91,8 @@ export async function DELETE(
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to delete maintenance record",
+        error:
+          "Failed to delete maintenance record",
         details:
           error instanceof Error
             ? error.message
@@ -133,13 +134,6 @@ export async function PATCH(
 
     const rawCost = body?.cost;
 
-    /*
-     * السماح بـ:
-     * null       -> إزالة التكلفة
-     * ""         -> إزالة التكلفة
-     * رقم        -> حفظ التكلفة
-     */
-
     let cost: number | null;
 
     if (
@@ -167,7 +161,6 @@ export async function PATCH(
       }
     }
 
-    // التأكد أن سجل الصيانة موجود
     const existingRecord = await pool.query(
       `
       SELECT
@@ -176,6 +169,7 @@ export async function PATCH(
         cost
       FROM maintenance_records
       WHERE id = $1
+      LIMIT 1
       `,
       [maintenanceId]
     );
@@ -192,7 +186,6 @@ export async function PATCH(
       );
     }
 
-    // تحديث التكلفة
     const result = await pool.query(
       `
       UPDATE maintenance_records

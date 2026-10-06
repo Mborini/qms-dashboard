@@ -17,6 +17,7 @@ import {
   Stack,
   Text,
   Textarea,
+  TextInput,
   Title,
 } from "@mantine/core";
 
@@ -27,6 +28,8 @@ import {
   IconLogin,
   IconLogout,
   IconMapPin,
+  IconPlus,
+  IconTrash,
   IconTool,
   IconWeight,
 } from "@tabler/icons-react";
@@ -59,10 +62,20 @@ type KPI = {
 
 type SubKPI = {
   id: number | string;
+
   kpi_id?: number | string | null;
+
   name?: string | null;
   title?: string | null;
   sub_kpi_name?: string | null;
+};
+
+type MaintenanceTypeForm = {
+  id: string;
+
+  kpi_id: string | null;
+
+  sub_kpi_id: string | null;
 };
 
 type MaintenanceRecord = {
@@ -84,6 +97,8 @@ type MaintenanceRecord = {
 
   description?: string | null;
   notes?: string | null;
+
+  maintenance_location?: string | null;
 
   entry_at: string;
   exit_at?: string | null;
@@ -411,11 +426,23 @@ export default function MaintenancePage() {
   const [entryVehicle, setEntryVehicle] =
     useState<string | null>(null);
 
-  const [entryKpi, setEntryKpi] =
-    useState<string | null>(null);
+  // Multiple maintenance types
+  const [
+    maintenanceTypes,
+    setMaintenanceTypes,
+  ] = useState<MaintenanceTypeForm[]>([
+    {
+      id: crypto.randomUUID(),
+      kpi_id: null,
+      sub_kpi_id: null,
+    },
+  ]);
 
-  const [entrySubKpi, setEntrySubKpi] =
-    useState<string | null>(null);
+  // Maintenance location
+  const [
+    maintenanceLocation,
+    setMaintenanceLocation,
+  ] = useState("");
 
   const [entryDate, setEntryDate] =
     useState(getCurrentDate());
@@ -528,11 +555,6 @@ export default function MaintenancePage() {
       const vehiclesJson =
         await vehiclesRes.json();
 
-      console.log(
-        "VEHICLES API:",
-        vehiclesJson
-      );
-
       if (!vehiclesRes.ok) {
         throw new Error(
           vehiclesJson?.error ||
@@ -598,11 +620,6 @@ export default function MaintenancePage() {
               item.id !== null
           );
 
-      console.log(
-        "NORMALIZED VEHICLES:",
-        normalizedVehicles
-      );
-
       setVehicles(
         normalizedVehicles
       );
@@ -613,11 +630,6 @@ export default function MaintenancePage() {
 
       const kpisJson =
         await kpisRes.json();
-
-      console.log(
-        "KPIS API:",
-        kpisJson
-      );
 
       if (!kpisRes.ok) {
         throw new Error(
@@ -635,11 +647,6 @@ export default function MaintenancePage() {
             "results",
           ]
         );
-
-      console.log(
-        "KPI ROWS:",
-        kpiRows
-      );
 
       const kpiMap =
         new Map<string, KPI>();
@@ -712,10 +719,8 @@ export default function MaintenancePage() {
                 key,
                 {
                   id: subKpiId,
-
                   kpi_id:
                     parentKpiId,
-
                   name:
                     subKpiName ??
                     `Sub KPI ${subKpiId}`,
@@ -726,32 +731,16 @@ export default function MaintenancePage() {
         }
       );
 
-      const normalizedKpis =
+      setKpis(
         Array.from(
           kpiMap.values()
-        );
-
-      const normalizedSubKpis =
-        Array.from(
-          subKpiMap.values()
-        );
-
-      console.log(
-        "NORMALIZED KPIS:",
-        normalizedKpis
-      );
-
-      console.log(
-        "NORMALIZED SUB KPIS:",
-        normalizedSubKpis
-      );
-
-      setKpis(
-        normalizedKpis
+        )
       );
 
       setSubKpis(
-        normalizedSubKpis
+        Array.from(
+          subKpiMap.values()
+        )
       );
 
       // =================================================
@@ -760,11 +749,6 @@ export default function MaintenancePage() {
 
       const currentJson =
         await currentRes.json();
-
-      console.log(
-        "CURRENT API:",
-        currentJson
-      );
 
       if (!currentRes.ok) {
         throw new Error(
@@ -845,6 +829,11 @@ export default function MaintenancePage() {
               item.notes ??
               null,
 
+            maintenance_location:
+              item.maintenance_location ??
+              item.location ??
+              null,
+
             entry_at:
               item.entry_at,
 
@@ -919,6 +908,9 @@ export default function MaintenancePage() {
 
   // ===================================================
   // Vehicle options
+  // IMPORTANT:
+  // Vehicle can no longer be disabled because
+  // multiple maintenance types are allowed.
   // ===================================================
 
   const vehicleOptions = useMemo(() => {
@@ -974,12 +966,13 @@ export default function MaintenancePage() {
         map.set(value, {
           value,
 
-          // Mantine سيستخدم هذا النص في البحث
-          // وبالتالي لا نحتاج filter مخصص
           label: `${vehicleNumber} ${capacity} ${area}`,
 
-          disabled:
-            isInMaintenance,
+          // مهم:
+          // لا نعطل المركبة إذا كانت موجودة
+          // في الصيانة لأننا نسمح بإضافة
+          // أكثر من نوع صيانة لنفس الآلية.
+          disabled: false,
 
           vehicleNumber:
             String(vehicleNumber),
@@ -1003,7 +996,6 @@ export default function MaintenancePage() {
 
   // ===================================================
   // Vehicle lookup map
-  // Important for search/render performance
   // ===================================================
 
   const vehicleOptionsMap = useMemo(() => {
@@ -1071,76 +1063,74 @@ export default function MaintenancePage() {
     }, [kpis]);
 
   // ===================================================
-  // Sub KPI options
+  // Get Sub KPI options
   // ===================================================
 
-  const subKpiOptions =
-    useMemo(() => {
-      if (!entryKpi) {
-        return [];
-      }
+  const getSubKpiOptions = (
+    kpiId: string | null
+  ) => {
+    if (!kpiId) {
+      return [];
+    }
 
-      const map =
-        new Map<
-          string,
-          {
-            value: string;
-            label: string;
-          }
-        >();
-
-      subKpis.forEach(
-        (subKpi) => {
-          if (
-            subKpi.id ===
-              undefined ||
-            subKpi.id === null
-          ) {
-            return;
-          }
-
-          if (
-            subKpi.kpi_id ===
-              undefined ||
-            subKpi.kpi_id === null
-          ) {
-            return;
-          }
-
-          if (
-            String(
-              subKpi.kpi_id
-            ) !==
-            String(entryKpi)
-          ) {
-            return;
-          }
-
-          const value =
-            String(subKpi.id);
-
-          const label =
-            subKpi.name ||
-            subKpi.title ||
-            subKpi.sub_kpi_name ||
-            `Sub KPI ${value}`;
-
-          if (!map.has(value)) {
-            map.set(value, {
-              value,
-              label: String(label),
-            });
-          }
+    const map =
+      new Map<
+        string,
+        {
+          value: string;
+          label: string;
         }
-      );
+      >();
 
-      return Array.from(
-        map.values()
-      );
-    }, [
-      subKpis,
-      entryKpi,
-    ]);
+    subKpis.forEach(
+      (subKpi) => {
+        if (
+          subKpi.id ===
+            undefined ||
+          subKpi.id === null
+        ) {
+          return;
+        }
+
+        if (
+          subKpi.kpi_id ===
+            undefined ||
+          subKpi.kpi_id === null
+        ) {
+          return;
+        }
+
+        if (
+          String(
+            subKpi.kpi_id
+          ) !==
+          String(kpiId)
+        ) {
+          return;
+        }
+
+        const value =
+          String(subKpi.id);
+
+        const label =
+          subKpi.name ||
+          subKpi.title ||
+          subKpi.sub_kpi_name ||
+          `Sub KPI ${value}`;
+
+        if (!map.has(value)) {
+          map.set(value, {
+            value,
+            label: String(label),
+          });
+        }
+      }
+    );
+
+    return Array.from(
+      map.values()
+    );
+  };
 
   // ===================================================
   // Validation
@@ -1193,8 +1183,16 @@ export default function MaintenancePage() {
       new Date();
 
     setEntryVehicle(null);
-    setEntryKpi(null);
-    setEntrySubKpi(null);
+
+    setMaintenanceTypes([
+      {
+        id: crypto.randomUUID(),
+        kpi_id: null,
+        sub_kpi_id: null,
+      },
+    ]);
+
+    setMaintenanceLocation("");
 
     setEntryDate(
       getCurrentDate(current)
@@ -1229,14 +1227,84 @@ export default function MaintenancePage() {
   };
 
   // ===================================================
-  // KPI change
+  // Add maintenance type
   // ===================================================
 
-  const handleKpiChange = (
+  const addMaintenanceType = () => {
+    setMaintenanceTypes(
+      (current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          kpi_id: null,
+          sub_kpi_id: null,
+        },
+      ]
+    );
+  };
+
+  // ===================================================
+  // Remove maintenance type
+  // ===================================================
+
+  const removeMaintenanceType = (
+    id: string
+  ) => {
+    setMaintenanceTypes(
+      (current) => {
+        if (current.length <= 1) {
+          return current;
+        }
+
+        return current.filter(
+          (item) =>
+            item.id !== id
+        );
+      }
+    );
+  };
+
+  // ===================================================
+  // Change maintenance KPI
+  // ===================================================
+
+  const handleMaintenanceKpiChange = (
+    id: string,
     value: string | null
   ) => {
-    setEntryKpi(value);
-    setEntrySubKpi(null);
+    setMaintenanceTypes(
+      (current) =>
+        current.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                kpi_id: value,
+                sub_kpi_id: null,
+              }
+            : item
+        )
+    );
+  };
+
+  // ===================================================
+  // Change maintenance Sub KPI
+  // ===================================================
+
+  const handleMaintenanceSubKpiChange = (
+    id: string,
+    value: string | null
+  ) => {
+    setMaintenanceTypes(
+      (current) =>
+        current.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                sub_kpi_id: value,
+              }
+            : item
+        )
+    );
   };
 
   // ===================================================
@@ -1255,20 +1323,62 @@ export default function MaintenancePage() {
       return;
     }
 
-    if (!entryKpi) {
+    if (
+      maintenanceTypes.length === 0
+    ) {
       setMessage({
         type: "error",
-        text: "يرجى اختيار مؤشر الصيانة",
+        text:
+          "يرجى إضافة نوع صيانة واحد على الأقل",
       });
 
       return;
     }
 
-    if (!entrySubKpi) {
+    const invalidType =
+      maintenanceTypes.find(
+        (item) =>
+          !item.kpi_id ||
+          !item.sub_kpi_id
+      );
+
+    if (invalidType) {
       setMessage({
         type: "error",
         text:
-          "يرجى اختيار المؤشر الفرعي",
+          "يرجى اختيار مؤشر الصيانة والمؤشر الفرعي لجميع أنواع الصيانة",
+      });
+
+      return;
+    }
+
+    // Prevent duplicate KPI/Sub KPI combinations
+    const combinations =
+      maintenanceTypes.map(
+        (item) =>
+          `${item.kpi_id}-${item.sub_kpi_id}`
+      );
+
+    if (
+      new Set(combinations).size !==
+      combinations.length
+    ) {
+      setMessage({
+        type: "error",
+        text:
+          "لا يمكن إضافة نفس نوع الصيانة أكثر من مرة",
+      });
+
+      return;
+    }
+
+    if (
+      !maintenanceLocation.trim()
+    ) {
+      setMessage({
+        type: "error",
+        text:
+          "يرجى إدخال موقع الصيانة",
       });
 
       return;
@@ -1315,18 +1425,29 @@ export default function MaintenancePage() {
       return;
     }
 
-    console.log(
-      "LOCAL ENTRY:",
-      `${entryDate}T${entryTime}:00`
-    );
-
-    console.log(
-      "UTC ENTRY:",
-      entryAt
-    );
-
     try {
       setSavingEntry(true);
+
+      // =================================================
+      // Prepare maintenance types
+      // =================================================
+
+      const preparedTypes =
+        maintenanceTypes.map(
+          (item) => ({
+            kpi_id:
+              Number(item.kpi_id),
+
+            sub_kpi_id:
+              Number(
+                item.sub_kpi_id
+              ),
+          })
+        );
+
+      // =================================================
+      // API
+      // =================================================
 
       const response =
         await fetch(
@@ -1343,11 +1464,12 @@ export default function MaintenancePage() {
               vehicle_id:
                 Number(entryVehicle),
 
-              kpi_id:
-                Number(entryKpi),
+              // New structure
+              maintenance_types:
+                preparedTypes,
 
-              sub_kpi_id:
-                Number(entrySubKpi),
+              maintenance_location:
+                maintenanceLocation.trim(),
 
               entry_at:
                 entryAt,
@@ -1379,7 +1501,7 @@ export default function MaintenancePage() {
       setMessage({
         type: "success",
         text:
-          "تم إدخال المركبة إلى الصيانة بنجاح",
+          "تم إدخال المركبة إلى الصيانة وتسجيل جميع أنواع الصيانة بنجاح",
       });
 
       setEntryModalOpened(
@@ -1389,8 +1511,17 @@ export default function MaintenancePage() {
       await loadData(false);
 
       setEntryVehicle(null);
-      setEntryKpi(null);
-      setEntrySubKpi(null);
+
+      setMaintenanceTypes([
+        {
+          id: crypto.randomUUID(),
+          kpi_id: null,
+          sub_kpi_id: null,
+        },
+      ]);
+
+      setMaintenanceLocation("");
+
       setEntryDescription("");
       setEntryNotes("");
     } catch (error) {
@@ -1503,6 +1634,18 @@ export default function MaintenancePage() {
       return;
     }
 
+    if (
+      exitDateTimeError
+    ) {
+      setMessage({
+        type: "error",
+        text:
+          exitDateTimeError,
+      });
+
+      return;
+    }
+
     const exitAt =
       localDateTimeToISOString(
         exitDate,
@@ -1550,11 +1693,6 @@ export default function MaintenancePage() {
 
     try {
       setSavingExit(true);
-
-      console.log(
-        "EXIT USERNAME:",
-        username
-      );
 
       const response =
         await fetch(
@@ -1611,7 +1749,9 @@ export default function MaintenancePage() {
         getCurrentDate()
       );
 
-      setExitTime("");
+      setExitTime(
+        getCurrentTime()
+      );
 
       setExitNotes("");
 
@@ -1636,7 +1776,6 @@ export default function MaintenancePage() {
 
   // ===================================================
   // Vehicle option renderer
-  // Optimized for mobile
   // ===================================================
 
   const renderVehicleOption: SelectProps["renderOption"] =
@@ -1667,7 +1806,7 @@ export default function MaintenancePage() {
 
               background:
                 vehicle.isInMaintenance
-                  ? "var(--mantine-color-red-0)"
+                  ? "var(--mantine-color-orange-0)"
                   : "var(--mantine-color-blue-0)",
             }}
           >
@@ -1701,7 +1840,7 @@ export default function MaintenancePage() {
 
               {vehicle.isInMaintenance && (
                 <Badge
-                  color="red"
+                  color="orange"
                   variant="light"
                   size="xs"
                   radius="sm"
@@ -1806,9 +1945,7 @@ export default function MaintenancePage() {
     >
       <Stack gap="xl">
 
-        {/* ============================================
-            Header
-        ============================================ */}
+        {/* Header */}
 
         <Group
           justify="space-between"
@@ -1858,9 +1995,7 @@ export default function MaintenancePage() {
           </Group>
         </Group>
 
-        {/* ============================================
-            Message
-        ============================================ */}
+        {/* Message */}
 
         {message && (
           <Alert
@@ -1884,9 +2019,7 @@ export default function MaintenancePage() {
           </Alert>
         )}
 
-        {/* ============================================
-            Stats
-        ============================================ */}
+        {/* Stats */}
 
         <SimpleGrid
           cols={{
@@ -1958,9 +2091,7 @@ export default function MaintenancePage() {
 
         <Divider />
 
-        {/* ============================================
-            Current Maintenance
-        ============================================ */}
+        {/* Current Maintenance */}
 
         <Group
           justify="space-between"
@@ -2140,6 +2271,33 @@ export default function MaintenancePage() {
                         </Text>
                       </div>
 
+                      {record.maintenance_location && (
+                        <div>
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                          >
+                            موقع الصيانة
+                          </Text>
+
+                          <Group
+                            gap={5}
+                          >
+                            <IconMapPin
+                              size={16}
+                            />
+
+                            <Text
+                              fw={600}
+                            >
+                              {
+                                record.maintenance_location
+                              }
+                            </Text>
+                          </Group>
+                        </div>
+                      )}
+
                       {record.description && (
                         <div>
                           <Text
@@ -2198,23 +2356,21 @@ export default function MaintenancePage() {
                         </div>
                       </Group>
 
-                      <Stack gap={3}>
-                        {record.created_at && (
-                          <Text
-                            size="xs"
-                            c="dimmed"
-                          >
-                            تم إنشاء السجل:{" "}
-                            {formatDateTime(
-                              record.created_at
-                            )}
+                      {record.created_at && (
+                        <Text
+                          size="xs"
+                          c="dimmed"
+                        >
+                          تم إنشاء السجل:{" "}
+                          {formatDateTime(
+                            record.created_at
+                          )}
 
-                            {record.created_by
-                              ? ` بواسطة ${record.created_by}`
-                              : ""}
-                          </Text>
-                        )}
-                      </Stack>
+                          {record.created_by
+                            ? ` بواسطة ${record.created_by}`
+                            : ""}
+                        </Text>
+                      )}
 
                       <Button
                         color="red"
@@ -2240,9 +2396,9 @@ export default function MaintenancePage() {
           </SimpleGrid>
         )}
 
-        {/* ============================================
-            Entry Modal
-        ============================================ */}
+        {/* =================================================
+            ENTRY MODAL
+        ================================================= */}
 
         <Modal
           dir="rtl"
@@ -2265,7 +2421,6 @@ export default function MaintenancePage() {
           }
           centered
           size="lg"
-          fullScreen={false}
           lockScroll
           overlayProps={{
             backgroundOpacity: 0.55,
@@ -2290,7 +2445,8 @@ export default function MaintenancePage() {
             body: {
               overflowY: "auto",
               overflowX: "hidden",
-              overscrollBehavior: "contain",
+              overscrollBehavior:
+                "contain",
               WebkitOverflowScrolling:
                 "touch",
               paddingBottom:
@@ -2308,7 +2464,9 @@ export default function MaintenancePage() {
               placeholder="ابحث عن رقم المركبة أو المنطقة..."
               data={vehicleOptions}
               value={entryVehicle}
-              onChange={setEntryVehicle}
+              onChange={
+                setEntryVehicle
+              }
               searchable
               clearable
               nothingFoundMessage="لا توجد مركبات مطابقة"
@@ -2327,52 +2485,234 @@ export default function MaintenancePage() {
               }}
             />
 
-            {/* KPI */}
+            {/* Vehicle already in maintenance */}
 
-            <Select
-              label="مؤشر الصيانة"
-              placeholder="اختر مؤشر الصيانة"
-              data={kpiOptions}
-              value={entryKpi}
-              onChange={
-                handleKpiChange
+            {entryVehicle &&
+              vehiclesInMaintenance.has(
+                String(entryVehicle)
+              ) && (
+                <Alert
+                  color="orange"
+                  icon={
+                    <IconAlertCircle
+                      size={18}
+                    />
+                  }
+                >
+                  هذه المركبة موجودة حاليا
+                  في الصيانة. يمكنك إضافة
+                  أنواع صيانة أخرى لها.
+                </Alert>
+              )}
+
+            {/* Maintenance Location */}
+
+            <TextInput
+              label="موقع الصيانة"
+              description="أدخل الموقع الذي سيتم فيه تنفيذ الصيانة"
+              placeholder="مثال: ورشة الجبيهة، كراج ماركا، الورشة الرئيسية..."
+              value={
+                maintenanceLocation
               }
-              clearable
-              
-              nothingFoundMessage="لا توجد مؤشرات صيانة"
-              comboboxProps={{
-                withinPortal: true,
-                zIndex: 1100,
-                shadow: "md",
-                offset: 4,
-              }}
+              onChange={(event) =>
+                setMaintenanceLocation(
+                  event.currentTarget
+                    .value
+                )
+              }
+              leftSection={
+                <IconMapPin
+                  size={18}
+                />
+              }
+              required
             />
 
-            {/* Sub KPI */}
+            {/* Maintenance Types */}
 
-            <Select
-              label="المؤشر الفرعي"
-              placeholder={
-                entryKpi
-                  ? "اختر المؤشر الفرعي"
-                  : "اختر مؤشر الصيانة أولا"
-              }
-              data={subKpiOptions}
-              value={entrySubKpi}
-              onChange={
-                setEntrySubKpi
-              }
-              clearable
-              
-              disabled={!entryKpi}
-              nothingFoundMessage="لا توجد مؤشرات فرعية"
-              comboboxProps={{
-                withinPortal: true,
-                zIndex: 1100,
-                shadow: "md",
-                offset: 4,
-              }}
-            />
+            <Card
+              withBorder
+              radius="lg"
+              p="md"
+            >
+              <Stack gap="md">
+
+                <Group
+                  justify="space-between"
+                  align="center"
+                >
+                  <div>
+                    <Text fw={700}>
+                      أنواع الصيانة
+                    </Text>
+
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                    >
+                      يمكنك إضافة أكثر من
+                      نوع صيانة لنفس المركبة
+                    </Text>
+                  </div>
+
+                  <Badge
+                    size="lg"
+                    variant="light"
+                  >
+                    {
+                      maintenanceTypes.length
+                    }{" "}
+                    نوع
+                  </Badge>
+                </Group>
+
+                <Divider />
+
+                {maintenanceTypes.map(
+                  (
+                    item,
+                    index
+                  ) => {
+                    const subOptions =
+                      getSubKpiOptions(
+                        item.kpi_id
+                      );
+
+                    return (
+                      <Card
+                        key={item.id}
+                        withBorder
+                        radius="md"
+                        p="md"
+                      >
+                        <Stack gap="sm">
+
+                          <Group
+                            justify="space-between"
+                            align="center"
+                          >
+                            <Badge
+                              variant="light"
+                            >
+                              نوع الصيانة{" "}
+                              {index +
+                                1}
+                            </Badge>
+
+                            {maintenanceTypes.length >
+                              1 && (
+                              <Button
+                                color="red"
+                                variant="subtle"
+                                size="xs"
+                                leftSection={
+                                  <IconTrash
+                                    size={16}
+                                  />
+                                }
+                                onClick={() =>
+                                  removeMaintenanceType(
+                                    item.id
+                                  )
+                                }
+                              >
+                                حذف
+                              </Button>
+                            )}
+                          </Group>
+
+                          <Select
+                            label="مؤشر الصيانة"
+                            placeholder="اختر مؤشر الصيانة"
+                            data={
+                              kpiOptions
+                            }
+                            value={
+                              item.kpi_id
+                            }
+                            onChange={(
+                              value
+                            ) =>
+                              handleMaintenanceKpiChange(
+                                item.id,
+                                value
+                              )
+                            }
+                            searchable
+                            clearable
+                            required
+                            nothingFoundMessage="لا توجد مؤشرات صيانة"
+                            comboboxProps={{
+                              withinPortal:
+                                true,
+                              zIndex:
+                                1100,
+                              shadow:
+                                "md",
+                              offset: 4,
+                            }}
+                          />
+
+                          <Select
+                            label="المؤشر الفرعي"
+                            placeholder={
+                              item.kpi_id
+                                ? "اختر المؤشر الفرعي"
+                                : "اختر مؤشر الصيانة أولا"
+                            }
+                            data={
+                              subOptions
+                            }
+                            value={
+                              item.sub_kpi_id
+                            }
+                            onChange={(
+                              value
+                            ) =>
+                              handleMaintenanceSubKpiChange(
+                                item.id,
+                                value
+                              )
+                            }
+                            searchable
+                            clearable
+                            disabled={
+                              !item.kpi_id
+                            }
+                            required
+                            nothingFoundMessage="لا توجد مؤشرات فرعية"
+                            comboboxProps={{
+                              withinPortal:
+                                true,
+                              zIndex:
+                                1100,
+                              shadow:
+                                "md",
+                              offset: 4,
+                            }}
+                          />
+                        </Stack>
+                      </Card>
+                    );
+                  }
+                )}
+
+                <Button
+                  variant="light"
+                  leftSection={
+                    <IconPlus
+                      size={18}
+                    />
+                  }
+                  onClick={
+                    addMaintenanceType
+                  }
+                  fullWidth
+                >
+                  إضافة نوع صيانة آخر
+                </Button>
+              </Stack>
+            </Card>
 
             {/* Entry Date / Time */}
 
@@ -2540,7 +2880,9 @@ export default function MaintenancePage() {
                   savingEntry
                 }
                 disabled={
-                  !!entryDateTimeError
+                  !!entryDateTimeError ||
+                  !entryVehicle ||
+                  !maintenanceLocation.trim()
                 }
                 onClick={
                   handleEntry
@@ -2552,9 +2894,9 @@ export default function MaintenancePage() {
           </Stack>
         </Modal>
 
-        {/* ============================================
-            Exit Modal
-        ============================================ */}
+        {/* =================================================
+            EXIT MODAL
+        ================================================= */}
 
         <Modal
           dir="rtl"
@@ -2577,7 +2919,6 @@ export default function MaintenancePage() {
           }
           centered
           size="lg"
-          fullScreen={false}
           lockScroll
           overlayProps={{
             backgroundOpacity: 0.55,
@@ -2602,7 +2943,8 @@ export default function MaintenancePage() {
             body: {
               overflowY: "auto",
               overflowX: "hidden",
-              overscrollBehavior: "contain",
+              overscrollBehavior:
+                "contain",
               WebkitOverflowScrolling:
                 "touch",
               paddingBottom:
@@ -2660,6 +3002,25 @@ export default function MaintenancePage() {
                         ? ` - ${selectedExitRecord.sub_kpi_name}`
                         : ""}
                     </Text>
+
+                    {selectedExitRecord.maintenance_location && (
+                      <Group
+                        gap={5}
+                        mt={5}
+                      >
+                        <IconMapPin
+                          size={15}
+                        />
+
+                        <Text
+                          size="sm"
+                        >
+                          {
+                            selectedExitRecord.maintenance_location
+                          }
+                        </Text>
+                      </Group>
+                    )}
                   </div>
                 </Group>
 

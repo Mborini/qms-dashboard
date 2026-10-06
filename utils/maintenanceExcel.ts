@@ -39,6 +39,8 @@ type ExportFilters = {
   kpi?: string;
   subKpi?: string;
   status?: string;
+  dateFrom?: any;
+  dateTo?: any;
 };
 
 // =========================================================

@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
     const values: string[] = [];
     const conditions: string[] = [];
 
+    // =====================================================
     // Vehicle filter
+    // =====================================================
+
     if (vehicleId) {
       values.push(vehicleId);
 
@@ -20,12 +23,18 @@ export async function GET(request: NextRequest) {
       `);
     }
 
+    // =====================================================
     // Only currently open maintenance
+    // =====================================================
+
     conditions.push(`
       mr.exit_at IS NULL
     `);
 
+    // =====================================================
     // Optional date filter
+    // =====================================================
+
     if (date) {
       values.push(date);
 
@@ -40,28 +49,41 @@ export async function GET(request: NextRequest) {
         ? `WHERE ${conditions.join(" AND ")}`
         : "";
 
+    // =====================================================
+    // Query
+    // =====================================================
+
     const result = await pool.query(
       `
       SELECT
         mr.id,
 
+        -- Vehicle
         v.id AS vehicle_id,
         v.plate_number,
         v.weight,
         v.capacity,
         v.manufacture_year,
         v.model,
+
+        -- Area
         ar.name AS area,
 
+        -- Maintenance type
         k.id AS kpi_id,
         k.name AS kpi_name,
 
         sk.id AS sub_kpi_id,
         sk.name AS sub_kpi_name,
 
+        -- Dates
         mr.entry_at,
         mr.exit_at,
 
+        -- Location
+        mr.maintenance_location,
+
+        -- Duration
         CASE
           WHEN mr.exit_at IS NULL
             THEN NOW() - mr.entry_at
@@ -69,9 +91,11 @@ export async function GET(request: NextRequest) {
             mr.exit_at - mr.entry_at
         END AS duration,
 
+        -- Details
         mr.description,
         mr.notes,
 
+        -- Audit
         mr.created_by,
         mr.updated_by,
 
@@ -95,7 +119,8 @@ export async function GET(request: NextRequest) {
       ${whereClause}
 
       ORDER BY
-        mr.entry_at DESC
+        mr.entry_at DESC,
+        mr.id DESC
       `,
       values
     );

@@ -14,15 +14,22 @@ export async function GET(request: NextRequest) {
 
     if (vehicleId) {
       values.push(Number(vehicleId));
-      conditions.push(`mr.vehicle_id = $${values.length}`);
+
+      conditions.push(
+        `mr.vehicle_id = $${values.length}`
+      );
     }
 
     if (status === "open") {
-      conditions.push(`mr.exit_at IS NULL`);
+      conditions.push(`
+        mr.exit_at IS NULL
+      `);
     }
 
     if (status === "closed") {
-      conditions.push(`mr.exit_at IS NOT NULL`);
+      conditions.push(`
+        mr.exit_at IS NOT NULL
+      `);
     }
 
     if (date) {
@@ -44,6 +51,7 @@ export async function GET(request: NextRequest) {
       `
       SELECT
         mr.id,
+
         mr.vehicle_id,
         mr.kpi_id,
         mr.sub_kpi_id,
@@ -54,17 +62,23 @@ export async function GET(request: NextRequest) {
         mr.description,
         mr.notes,
 
-        -- Created information
+        mr.maintenance_location,
+
         mr.created_by,
         mr.created_at,
 
-        -- Updated information
         mr.updated_by,
         mr.updated_at,
 
-        v.vehicle_number,
-        v.vehicle_type,
+        v.plate_number,
+        v.type as vehicle_type,
+        v.plate_number,
+        v.weight,
+        v.capacity,
+        v.manufacture_year,
         v.model,
+
+        ar.name AS area,
 
         k.name AS kpi_name,
 
@@ -82,6 +96,9 @@ export async function GET(request: NextRequest) {
       LEFT JOIN vehicles v
         ON v.id = mr.vehicle_id
 
+      LEFT JOIN areas ar
+        ON ar.id = v.area_id
+
       LEFT JOIN maintenance_kpis k
         ON k.id = mr.kpi_id
 
@@ -90,7 +107,9 @@ export async function GET(request: NextRequest) {
 
       ${whereClause}
 
-      ORDER BY mr.entry_at DESC
+      ORDER BY
+        mr.entry_at DESC,
+        mr.id DESC
       `,
       values
     );
@@ -100,7 +119,10 @@ export async function GET(request: NextRequest) {
       data: result.rows,
     });
   } catch (error: any) {
-    console.error("GET /api/maintenance error:", error);
+    console.error(
+      "GET /api/maintenance error:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -109,7 +131,9 @@ export async function GET(request: NextRequest) {
           error?.message ||
           "Failed to load maintenance records",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
@@ -122,17 +146,17 @@ export async function POST(request: NextRequest) {
 
     const {
       vehicle_id,
-      kpi_id,
-      sub_kpi_id,
+      maintenance_types,
       entry_at,
+      maintenance_location,
       description,
       notes,
       created_by,
     } = body;
 
-    // =========================
+    // =====================================================
     // Validation
-    // =========================
+    // =====================================================
 
     if (!vehicle_id) {
       return NextResponse.json(
@@ -144,11 +168,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!kpi_id) {
+    if (
+      !Array.isArray(maintenance_types) ||
+      maintenance_types.length === 0
+    ) {
       return NextResponse.json(
         {
           success: false,
-          error: "kpi_id is required",
+          error:
+            "maintenance_types must contain at least one maintenance type",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!maintenance_location?.trim()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "maintenance_location is required",
         },
         { status: 400 }
       );
@@ -164,9 +202,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // =========================
+    // =====================================================
     // Parse entry date
-    // =========================
+    // =====================================================
 
     const entryDate = new Date(entry_at);
 
@@ -180,35 +218,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    /*
-      entry_at يأتي من Frontend كـ ISO UTC.
-
-      مثال:
-      2026-09-09T05:00:00.000Z
-
-      لذلك نستخدم Date لمقارنة الـ instant
-      مع وقت السيرفر الحالي.
-    */
-
     if (entryDate.getTime() > Date.now()) {
       return NextResponse.json(
         {
           success: false,
-          error: "Entry date/time cannot be in the future",
+          error:
+            "Entry date/time cannot be in the future",
         },
         { status: 400 }
       );
     }
 
-    // =========================
+    // =====================================================
+    // Validate maintenance types structure
+    // =====================================================
+
+    for (const type of maintenance_types) {
+      if (!type?.kpi_id) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "kpi_id is required for every maintenance type",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (!type?.sub_kpi_id) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "sub_kpi_id is required for every maintenance type",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // =====================================================
+    // Prevent duplicate types inside same request
+    // =====================================================
+
+    const combinations = maintenance_types.map(
+      (type: any) =>
+        `${Number(type.kpi_id)}-${Number(type.sub_kpi_id)}`
+    );
+
+    if (
+      new Set(combinations).size !==
+      combinations.length
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Duplicate maintenance types are not allowed",
+        },
+        { status: 409 }
+      );
+    }
+
+    // =====================================================
     // Start transaction
-    // =========================
+    // =====================================================
 
     await client.query("BEGIN");
 
-    // =========================
+    // =====================================================
     // Check vehicle
-    // =========================
+    // =====================================================
 
     const vehicleResult = await client.query(
       `
@@ -234,86 +314,70 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // =========================
-    // Check existing open maintenance
-    // =========================
+    // =====================================================
+    // Validate every KPI + Sub KPI
+    // =====================================================
 
-    const openMaintenanceResult = await client.query(
-      `
-      SELECT
-        id,
-        entry_at
-      FROM maintenance_records
-      WHERE vehicle_id = $1
-        AND exit_at IS NULL
-      LIMIT 1
-      `,
-      [Number(vehicle_id)]
-    );
+    const validatedTypes: {
+      kpi_id: number;
+      sub_kpi_id: number;
+      kpi_name: string | null;
+      sub_kpi_name: string | null;
+    }[] = [];
 
-    if (openMaintenanceResult.rows.length > 0) {
-      await client.query("ROLLBACK");
+    for (const type of maintenance_types) {
+      const kpiId = Number(type.kpi_id);
+      const subKpiId = Number(type.sub_kpi_id);
 
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Vehicle is already in maintenance",
-          maintenance_id:
-            openMaintenanceResult.rows[0].id,
-        },
-        { status: 409 }
-      );
-    }
+      // -----------------------------------------------
+      // Check KPI
+      // -----------------------------------------------
 
-    // =========================
-    // Check KPI
-    // =========================
-
-    const kpiResult = await client.query(
-      `
-      SELECT
-        id,
-        name
-      FROM maintenance_kpis
-      WHERE id = $1
-      LIMIT 1
-      `,
-      [Number(kpi_id)]
-    );
-
-    if (kpiResult.rows.length === 0) {
-      await client.query("ROLLBACK");
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: "KPI not found",
-        },
-        { status: 404 }
-      );
-    }
-
-    // =========================
-    // Check Sub KPI
-    // =========================
-
-    if (sub_kpi_id) {
-      const subKpiResult = await client.query(
+      const kpiResult = await client.query(
         `
         SELECT
           id,
-          name,
-          kpi_id
-        FROM maintenance_sub_kpis
+          name
+        FROM maintenance_kpis
         WHERE id = $1
-          AND kpi_id = $2
         LIMIT 1
         `,
-        [
-          Number(sub_kpi_id),
-          Number(kpi_id),
-        ]
+        [kpiId]
       );
+
+      if (kpiResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: `KPI ${kpiId} not found`,
+          },
+          { status: 404 }
+        );
+      }
+
+      // -----------------------------------------------
+      // Check Sub KPI
+      // -----------------------------------------------
+
+      const subKpiResult =
+        await client.query(
+          `
+          SELECT
+            id,
+            name,
+            kpi_id
+          FROM maintenance_sub_kpis
+          WHERE id = $1
+            AND kpi_id = $2
+          LIMIT 1
+          `,
+          [
+            subKpiId,
+            kpiId,
+          ]
+        );
 
       if (subKpiResult.rows.length === 0) {
         await client.query("ROLLBACK");
@@ -322,96 +386,165 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             error:
-              "Sub KPI does not belong to selected KPI",
+              `Sub KPI ${subKpiId} does not belong to KPI ${kpiId}`,
           },
           { status: 400 }
         );
       }
+
+      validatedTypes.push({
+        kpi_id: kpiId,
+        sub_kpi_id: subKpiId,
+        kpi_name:
+          kpiResult.rows[0].name ?? null,
+        sub_kpi_name:
+          subKpiResult.rows[0].name ?? null,
+      });
     }
 
-    // =========================
-    // Insert
-    // =========================
+    // =====================================================
+    // Check existing exact open maintenance
     //
-    // created_at:
-    //     يتم تحديده من Database
+    // Same vehicle + same KPI + same Sub KPI +
+    // same location cannot be opened twice.
     //
-    // updated_at:
-    //     يتم تحديده من Database
-    //
-    // created_by:
-    //     يأتي من المستخدم الحالي
-    //
-    // updated_by:
-    //     يبقى NULL عند الإنشاء
-    //
-    // =========================
+    // BUT:
+    // Different maintenance types ARE allowed.
+    // =====================================================
 
-    const insertResult = await client.query(
-      `
-      INSERT INTO maintenance_records (
-        vehicle_id,
-        kpi_id,
-        sub_kpi_id,
-        entry_at,
-        description,
-        notes,
-        created_by
-      )
-      VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7
-      )
-      RETURNING
-        id,
-        vehicle_id,
-        kpi_id,
-        sub_kpi_id,
-        entry_at,
-        exit_at,
-        description,
-        notes,
+    for (const type of validatedTypes) {
+      const duplicateResult =
+        await client.query(
+          `
+          SELECT
+            id
+          FROM maintenance_records
+          WHERE vehicle_id = $1
+            AND kpi_id = $2
+            AND sub_kpi_id = $3
+            AND maintenance_location = $4
+            AND exit_at IS NULL
+          LIMIT 1
+          `,
+          [
+            Number(vehicle_id),
+            type.kpi_id,
+            type.sub_kpi_id,
+            maintenance_location.trim(),
+          ]
+        );
 
-        created_by,
-        created_at,
+      if (duplicateResult.rows.length > 0) {
+        await client.query("ROLLBACK");
 
-        updated_by,
-        updated_at
-      `,
-      [
-        Number(vehicle_id),
-        Number(kpi_id),
-        sub_kpi_id
-          ? Number(sub_kpi_id)
-          : null,
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "This maintenance type is already open for this vehicle at the same location",
+            maintenance_id:
+              duplicateResult.rows[0].id,
+            kpi_id: type.kpi_id,
+            sub_kpi_id: type.sub_kpi_id,
+          },
+          { status: 409 }
+        );
+      }
+    }
 
-        // entry_at من Frontend كـ ISO UTC
-        entryDate.toISOString(),
+    // =====================================================
+    // Insert all maintenance types
+    // =====================================================
 
-        description?.trim() || null,
-        notes?.trim() || null,
+    const createdRecords = [];
 
-        // المستخدم الذي أنشأ السجل
-        created_by?.trim() || null,
-      ]
-    );
+    for (const type of validatedTypes) {
+      const insertResult =
+        await client.query(
+          `
+          INSERT INTO maintenance_records (
+            vehicle_id,
+            kpi_id,
+            sub_kpi_id,
+            entry_at,
+            maintenance_location,
+            description,
+            notes,
+            created_by
+          )
+          VALUES (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8
+          )
+          RETURNING
+            id,
+            vehicle_id,
+            kpi_id,
+            sub_kpi_id,
+            entry_at,
+            exit_at,
+            maintenance_location,
+            description,
+            notes,
+            created_by,
+            created_at,
+            updated_by,
+            updated_at
+          `,
+          [
+            Number(vehicle_id),
+
+            type.kpi_id,
+
+            type.sub_kpi_id,
+
+            entryDate.toISOString(),
+
+            maintenance_location.trim(),
+
+            description?.trim() || null,
+
+            notes?.trim() || null,
+
+            created_by?.trim() || null,
+          ]
+        );
+
+      createdRecords.push(
+        insertResult.rows[0]
+      );
+    }
+
+    // =====================================================
+    // Commit
+    // =====================================================
 
     await client.query("COMMIT");
+
+    // =====================================================
+    // Success
+    // =====================================================
 
     return NextResponse.json(
       {
         success: true,
-        message:
-          "Maintenance record created successfully",
 
-        data: insertResult.rows[0],
+        message:
+          "Maintenance records created successfully",
+
+        count: createdRecords.length,
+
+        data: createdRecords,
       },
-      { status: 201 }
+      {
+        status: 201,
+      }
     );
   } catch (error: any) {
     try {
@@ -423,25 +556,17 @@ export async function POST(request: NextRequest) {
       error
     );
 
-    // Duplicate
-    if (error?.code === "23505") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Vehicle is already in maintenance",
-        },
-        { status: 409 }
-      );
-    }
-
     return NextResponse.json(
       {
         success: false,
+
         error:
           error?.message ||
-          "Failed to create maintenance record",
+          "Failed to create maintenance records",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   } finally {
     client.release();
