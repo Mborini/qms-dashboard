@@ -44,6 +44,18 @@ export async function POST(request, { params }) {
       token = process.env.NAYF_AVTR_TOKEN;
       user = "nayf";
     }
+    else if (password === process.env.MAJDI_PASSWORD) {
+      token = process.env.MAJDI_AVTR_TOKEN;
+      user = "majdi";
+    }
+    else if (password === process.env.KHALAILEH_PASSWORD) {
+      token = process.env.KHALAILEH_AVTR_TOKEN;
+      user = "khalaileh";
+    }
+    else if (password === process.env.DEMA_PASSWORD) {
+      token = process.env.DEMA_AVTR_TOKEN;
+      user = "dema";
+    }
 
     // =============================
     // الباسوورد غير صحيح
