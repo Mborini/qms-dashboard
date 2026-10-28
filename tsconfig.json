@@ -30,6 +30,6 @@
     "**/*.mts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
-, "app/failures/stats/page.tsx"  ],
+, "app/failures/stats/page.tsx", "app/DailyReport/page.js"  ],
   "exclude": ["node_modules"]
 }

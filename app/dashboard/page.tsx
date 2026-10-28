@@ -36,6 +36,7 @@ import {
   IconShield,
   IconLock,
   IconArrowsExchange,
+  IconFileText,
 } from "@tabler/icons-react";
 
 import { bungee } from "../layout";
@@ -671,6 +672,24 @@ const adminCount = adminPermissions.filter(can).length;
     description=" عرض وتحليل احصائيات المخالفات، المؤشرات والبيانات التشغيلية."
     footer=" فتح الاحصائيات"
     icon={<IconChartBar size={28} />}
+color="#2563EB"  />
+)}
+{can("statistics") && (
+  <ModuleCard
+    href="/DailyReport"
+    title="التقرير اليومي"
+    description="التقرير اليومي، المؤشرات والبيانات التشغيلية."
+    footer=" فتح التقرير اليومي"
+    icon={<IconFileText size={28} />}
+color="#2563EB"  />
+)}
+{can("statistics") && (
+  <ModuleCard
+    href="/FuelReport"
+    title="تقرير الوقود"
+    description="تقرير الوقود، المؤشرات والبيانات التشغيلية."
+    footer=" فتح تقرير الوقود"
+    icon={<IconFileText size={28} />}
 color="#2563EB"  />
 )}
 {can("vehicle_movements_history") && (
