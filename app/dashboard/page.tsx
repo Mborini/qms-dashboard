@@ -685,10 +685,19 @@ color="#2563EB"  />
 )}
 {can("statistics") && (
   <ModuleCard
-    href="/FuelReport"
-    title="تقرير الوقود"
-    description="تقرير الوقود، المؤشرات والبيانات التشغيلية."
-    footer=" فتح تقرير الوقود"
+    href="/ًWBReport"
+    title="تقرير الاوزان اليومي "
+    description="تقرير الاوزان اليومي ."
+    footer=" فتح تقرير الاوزان"
+    icon={<IconFileText size={28} />}
+color="#2563EB"  />
+)}
+{can("statistics") && (
+  <ModuleCard
+    href="/analyzedWBReport"
+    title="تقرير الاوزان المحلل "
+    description="تقرير الاوزان المحلل ."
+    footer=" فتح محلل تقرير الاوزان"
     icon={<IconFileText size={28} />}
 color="#2563EB"  />
 )}
