@@ -9,10 +9,10 @@ import {
   Badge,
   Checkbox,
   Button,
-  Divider,
   ActionIcon,
   Box,
   Center,
+  ScrollArea,
 } from "@mantine/core";
 
 import {
@@ -27,6 +27,94 @@ import {
 import { useMemo, useState } from "react";
 
 import * as XLSX from "xlsx";
+
+/* =========================================================
+   DESIGN TOKENS  (Navy + Champagne Gold)
+   نفس القيم الموجودة في FailureStats
+   الأفضل تنقلها لملف مشترك مثل theme.ts وتستوردها من الاثنين
+========================================================= */
+
+const INK = "#1A2A4A";
+const SURFACE = "#213459";
+const SURFACE_2 = "#2A4070";
+const SURFACE_3 = "#324D84";
+const GOLD = "#C9A66B";
+const GOLD_LIGHT = "#E6CF9D";
+const SUCCESS = "#8FE0B0";
+const TEXT = "#F3F6FC";
+const MUTED = "rgba(240,244,252,.72)";
+const FAINT = "rgba(240,244,252,.5)";
+const LINE = "rgba(255,255,255,.12)";
+const LINE_STRONG = "rgba(255,255,255,.22)";
+
+const FONT =
+  '"IBM Plex Sans Arabic", "Cairo", "Tajawal", "Segoe UI", system-ui, sans-serif';
+
+const tabular = { fontVariantNumeric: "tabular-nums" as const };
+
+const hexA = (hex: string, a: number) =>
+  `${hex}${Math.round(a * 255)
+    .toString(16)
+    .padStart(2, "0")}`;
+
+const cornerGlow = (hex: string, a = 0.25) =>
+  `radial-gradient(75% 95% at 100% 0%, ${hexA(hex, a)} 0%, transparent 70%)`;
+
+const ghostBtn = {
+  background: "transparent",
+  border: `1px solid ${LINE_STRONG}`,
+  color: TEXT,
+  fontWeight: 600,
+  fontFamily: FONT,
+};
+
+const goldOutlineBtn = {
+  background: hexA(GOLD, 0.1),
+  border: `1px solid ${hexA(GOLD, 0.6)}`,
+  color: GOLD_LIGHT,
+  fontWeight: 600,
+  fontFamily: FONT,
+};
+
+const goldSolidBtn = {
+  background: `linear-gradient(135deg, ${GOLD_LIGHT}, ${GOLD})`,
+  border: "none",
+  color: INK,
+  fontWeight: 700,
+  fontFamily: FONT,
+};
+
+const iconBoxStyle = {
+  display: "grid",
+  placeItems: "center",
+  color: GOLD_LIGHT,
+  background: hexA(GOLD, 0.1),
+  border: `1px solid ${hexA(GOLD, 0.45)}`,
+};
+
+const iconBtnStyle = {
+  background: "rgba(255,255,255,.06)",
+  border: `1px solid ${LINE_STRONG}`,
+  color: GOLD_LIGHT,
+};
+
+const modalStyles = {
+  content: {
+    background: SURFACE,
+    border: `1px solid ${LINE_STRONG}`,
+    boxShadow: "0 40px 80px -30px rgba(10,20,45,.7)",
+    fontFamily: FONT,
+    overflow: "hidden",
+  },
+  header: {
+    background: SURFACE,
+    borderBottom: `1px solid ${LINE}`,
+    padding: "18px 20px 12px",
+  },
+  title: { flex: 1, minWidth: 0, color: TEXT },
+  close: { color: MUTED },
+  body: { padding: "14px 20px 20px" },
+};
 
 /* =========================================================
    TYPES
@@ -334,48 +422,30 @@ export default function FailureListModal({
         onClose={onClose}
         centered
         size="lg"
-        radius="xl"
+        radius={22}
         padding="md"
-        shadow="xl"
         overlayProps={{
-          backgroundOpacity: 0.55,
-          blur: 5,
+          backgroundOpacity: 0.7,
+          blur: 6,
+          color: INK,
         }}
-        styles={{
-          content: {
-            overflow: "hidden",
-          },
-          header: {
-            padding: "18px 20px 12px",
-            borderBottom: "1px solid #edf0f2",
-          },
-          body: {
-            padding: "14px 20px 20px",
-          },
-        }}
+        styles={modalStyles}
         title={
           <Group gap="sm" wrap="nowrap" w="100%">
             <Box
-              w={38}
-              h={38}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 12,
-                background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
-                border: "1px solid #bfdbfe",
-              }}
+              w={40}
+              h={40}
+              style={{ ...iconBoxStyle, borderRadius: 12, flexShrink: 0 }}
             >
-              <IconAlertCircle size={21} stroke={2} color="#2563eb" />
+              <IconAlertCircle size={21} stroke={1.7} />
             </Box>
 
             <Box style={{ flex: 1, minWidth: 0 }}>
-              <Text fw={850} size="md" c="#172033" truncate>
+              <Text fw={700} size="md" c={TEXT} truncate>
                 {title}
               </Text>
 
-              <Text size="xs" c="dimmed" mt={2}>
+              <Text size="xs" c={MUTED} mt={2}>
                 تفاصيل المخالفات المسجلة
               </Text>
             </Box>
@@ -389,41 +459,45 @@ export default function FailureListModal({
           ================================================== */}
 
           <Card
-            radius="xl"
+            radius={18}
             p="md"
-            withBorder
             style={{
-              background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-              border: "1px solid #e7ebf0",
-              boxShadow: "0 8px 30px rgba(15,23,42,.05)",
+              position: "relative",
+              overflow: "hidden",
+              background: `${cornerGlow(GOLD, 0.2)}, ${SURFACE_2}`,
+              border: `1px solid ${LINE_STRONG}`,
+              fontFamily: FONT,
             }}
           >
+            <Box
+              style={{
+                position: "absolute",
+                insetInline: 0,
+                top: 0,
+                height: 2,
+                background: `linear-gradient(90deg, ${GOLD}, ${hexA(GOLD, 0)})`,
+              }}
+            />
+
             <Group justify="space-between" align="center" gap="md">
               {/* العدد */}
               <Group gap="sm" wrap="nowrap">
                 <Box
-                  w={46}
-                  h={46}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 14,
-                    background: "linear-gradient(135deg, #fff7ed, #ffedd5)",
-                    border: "1px solid #fed7aa",
-                  }}
+                  w={48}
+                  h={48}
+                  style={{ ...iconBoxStyle, borderRadius: 14 }}
                 >
-                  <Text fw={900} size="lg" c="#ea580c">
+                  <Text fw={800} size="lg" c={GOLD_LIGHT} style={tabular}>
                     {failures.length}
                   </Text>
                 </Box>
 
                 <Stack gap={1}>
-                  <Text size="xs" fw={700} c="dimmed">
+                  <Text size="xs" fw={600} c={MUTED}>
                     إجمالي المخالفات
                   </Text>
 
-                  <Text size="sm" fw={850} c="#172033">
+                  <Text size="sm" fw={700} c={TEXT}>
                     {failures.length === 1
                       ? "مخالفة واحدة"
                       : `${failures.length} مخالفة`}
@@ -432,10 +506,9 @@ export default function FailureListModal({
               </Group>
 
               {/* الأدوات */}
-              <Group gap={7} wrap="nowrap">
+              <Group gap={8} wrap="nowrap">
                 <ActionIcon
-                  variant="light"
-                  color={copied ? "green" : "blue"}
+                  variant="default"
                   size={38}
                   radius="xl"
                   onClick={copyViolations}
@@ -445,44 +518,43 @@ export default function FailureListModal({
                       : "نسخ جميع المخالفات"
                   }
                   style={{
-                    border: "1px solid rgba(37,99,235,.12)",
+                    ...iconBtnStyle,
+                    color: copied ? SUCCESS : GOLD_LIGHT,
+                    borderColor: copied ? hexA(SUCCESS, 0.6) : LINE_STRONG,
                   }}
                 >
                   {copied ? (
-                    <IconCheck size={19} stroke={2.5} />
+                    <IconCheck size={19} stroke={2.2} />
                   ) : (
-                    <IconCopy size={19} />
+                    <IconCopy size={19} stroke={1.7} />
                   )}
                 </ActionIcon>
 
                 <ActionIcon
-                  variant="light"
-                  color="green"
+                  variant="default"
                   size={38}
                   radius="xl"
                   onClick={exportExcel}
                   title="تصدير Excel"
-                  style={{
-                    border: "1px solid rgba(22,163,74,.12)",
-                  }}
+                  style={iconBtnStyle}
                 >
-                  <IconFileSpreadsheet size={19} />
+                  <IconFileSpreadsheet size={19} stroke={1.7} />
                 </ActionIcon>
 
                 {allowPayment && (
                   <Button
                     size="xs"
                     radius="xl"
-                    variant={allSelected ? "filled" : "light"}
-                    color={allSelected ? "red" : "blue"}
+                    variant="default"
                     leftSection={
                       allSelected ? (
-                        <IconX size={15} />
+                        <IconX size={15} stroke={2} />
                       ) : (
-                        <IconCheck size={15} />
+                        <IconCheck size={15} stroke={2} />
                       )
                     }
                     onClick={selectAll}
+                    style={allSelected ? ghostBtn : goldOutlineBtn}
                   >
                     {allSelected ? "إلغاء التحديد" : "تحديد الكل"}
                   </Button>
@@ -500,27 +572,27 @@ export default function FailureListModal({
               style={{
                 padding: "10px 14px",
                 borderRadius: 14,
-                background: "linear-gradient(135deg, #eff6ff, #f0f9ff)",
-                border: "1px solid #bfdbfe",
+                background: hexA(GOLD, 0.1),
+                border: `1px solid ${hexA(GOLD, 0.5)}`,
               }}
             >
               <Group justify="space-between" align="center">
                 <Group gap="xs">
-                  <IconCheck size={17} color="#2563eb" />
+                  <IconCheck size={17} color={GOLD_LIGHT} stroke={2} />
 
-                  <Text size="xs" fw={750} c="#1e40af">
+                  <Text size="xs" fw={700} c={GOLD_LIGHT} style={tabular}>
                     تم تحديد {selectedIds.length} مخالفة
                   </Text>
                 </Group>
 
-                <Text size="xs" c="dimmed">
+                <Text size="xs" c={MUTED}>
                   جاهزة للإجراء
                 </Text>
               </Group>
             </Box>
           )}
 
-          <Divider />
+          <Box style={{ height: 1, background: LINE }} />
 
           {/* ==================================================
               FAILURES LIST
@@ -529,37 +601,40 @@ export default function FailureListModal({
           <Box style={{ position: "relative" }}>
             {sortedFailures.length === 0 ? (
               <Card
-                radius="xl"
+                radius={18}
                 p="xl"
-                withBorder
                 style={{
-                  background: "#f8fafc",
-                  border: "1px dashed #d9dee7",
+                  background: SURFACE_2,
+                  border: `1px dashed ${LINE_STRONG}`,
                 }}
               >
                 <Center>
                   <Stack align="center" gap="xs">
-                    <IconAlertCircle size={32} color="#94a3b8" />
+                    <Box
+                      w={56}
+                      h={56}
+                      style={{ ...iconBoxStyle, borderRadius: 18 }}
+                    >
+                      <IconAlertCircle size={28} stroke={1.5} />
+                    </Box>
 
-                    <Text fw={750} c="#475569">
+                    <Text fw={700} c={TEXT}>
                       لا توجد مخالفات
                     </Text>
 
-                    <Text size="xs" c="dimmed">
+                    <Text size="xs" c={MUTED}>
                       لا توجد بيانات لعرضها
                     </Text>
                   </Stack>
                 </Center>
               </Card>
             ) : (
-              <Stack
-                gap="xs"
-                style={{
-                  overflowY: "auto",
-                  maxHeight: "min(52vh, 520px)",
-                  padding: "2px 4px 4px 2px",
-                }}
+              <ScrollArea.Autosize
+                mah="min(52vh, 520px)"
+                type="never"
+                offsetScrollbars={false}
               >
+              <Stack gap="xs" style={{ padding: "2px 4px 4px 2px" }}>
                 {sortedFailures.map((item, index) => {
                   const district = item.districtName ?? item.district ?? "";
                   const block = item.blockName ?? item.block ?? "";
@@ -576,21 +651,18 @@ export default function FailureListModal({
                     <Card
                       key={`${item.id ?? "failure"}-${index}`}
                       dir="rtl"
-                      withBorder
-                      radius="lg"
+                      radius={16}
                       p={0}
                       mih={58}
                       style={{
                         overflow: "hidden",
                         background: isSelected
-                          ? "linear-gradient(135deg, #eff6ff, #ffffff)"
-                          : "#ffffff",
-                        border: isSelected
-                          ? "1px solid #93c5fd"
-                          : "1px solid #e7ebf0",
+                          ? `${cornerGlow(GOLD, 0.22)}, ${SURFACE_2}`
+                          : SURFACE_2,
+                        border: `1px solid ${isSelected ? GOLD : LINE}`,
                         boxShadow: isSelected
-                          ? "0 5px 18px rgba(37,99,235,.10)"
-                          : "0 3px 12px rgba(15,23,42,.035)",
+                          ? `0 0 0 3px ${hexA(GOLD, 0.16)}`
+                          : "none",
                         transition: "all .18s ease",
                       }}
                     >
@@ -615,8 +687,7 @@ export default function FailureListModal({
                             <Badge
                               size="md"
                               radius="md"
-                              color="blue"
-                              variant={isSelected ? "filled" : "light"}
+                              variant="default"
                               styles={{
                                 root: {
                                   minWidth: 82,
@@ -625,8 +696,17 @@ export default function FailureListModal({
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
-                                  fontWeight: 850,
+                                  fontWeight: 800,
                                   letterSpacing: ".2px",
+                                  fontFamily: FONT,
+                                  fontVariantNumeric: "tabular-nums",
+                                  color: isSelected ? INK : GOLD_LIGHT,
+                                  background: isSelected
+                                    ? `linear-gradient(135deg, ${GOLD_LIGHT}, ${GOLD})`
+                                    : hexA(GOLD, 0.1),
+                                  border: isSelected
+                                    ? "none"
+                                    : `1px solid ${hexA(GOLD, 0.45)}`,
                                 },
                               }}
                             >
@@ -639,7 +719,9 @@ export default function FailureListModal({
                             w={1}
                             h={25}
                             style={{
-                              background: isSelected ? "#bfdbfe" : "#e5e7eb",
+                              background: isSelected
+                                ? hexA(GOLD, 0.5)
+                                : LINE_STRONG,
                               flexShrink: 0,
                             }}
                           />
@@ -648,28 +730,28 @@ export default function FailureListModal({
                           <Box style={{ minWidth: 0, flex: 1 }}>
                             <Group gap={6} align="center" wrap="nowrap">
                               {showDistrict && (
-                                <Text size="sm" fw={750} c="#334155" truncate>
+                                <Text size="sm" fw={600} c={MUTED} truncate>
                                   {district}
                                 </Text>
                               )}
 
                               {showDistrict && block && (
-                                <Text size="sm" fw={600} c="#94a3b8">
+                                <Text size="sm" fw={600} c={FAINT}>
                                   -
                                 </Text>
                               )}
 
                               <Text
                                 size="sm"
-                                fw={850}
-                                c={isSelected ? "#1d4ed8" : "#172033"}
+                                fw={700}
+                                c={isSelected ? GOLD_LIGHT : TEXT}
                                 truncate
                               >
                                 {block || "غير محدد"}
                               </Text>
                             </Group>
 
-                            <Text size="10px" c="dimmed" mt={2}>
+                            <Text size="10px" c={FAINT} mt={2}>
                               مخالفة رقم {item.id ?? "—"}
                             </Text>
                           </Box>
@@ -680,12 +762,16 @@ export default function FailureListModal({
                           <Checkbox
                             size="sm"
                             radius="sm"
+                            color={GOLD}
+                            iconColor={INK}
                             checked={isSelected}
                             disabled={item.id === undefined || item.id === null}
                             onChange={() => toggleSelect(item.id)}
                             styles={{
                               input: {
                                 cursor: "pointer",
+                                background: isSelected ? GOLD : SURFACE_3,
+                                borderColor: isSelected ? GOLD : LINE_STRONG,
                               },
                             }}
                           />
@@ -695,6 +781,7 @@ export default function FailureListModal({
                   );
                 })}
               </Stack>
+              </ScrollArea.Autosize>
             )}
           </Box>
 
@@ -704,36 +791,29 @@ export default function FailureListModal({
 
           {allowPayment && (
             <Card
-              radius="xl"
+              radius={18}
               p="sm"
-              withBorder
               style={{
-                background: "linear-gradient(135deg, #f0fdf4, #ffffff)",
-                border: "1px solid #bbf7d0",
+                background: `${cornerGlow(GOLD, 0.2)}, ${SURFACE_2}`,
+                border: `1px solid ${hexA(GOLD, 0.45)}`,
               }}
             >
               <Group justify="space-between" align="center" gap="sm">
                 <Group gap="sm" wrap="nowrap">
                   <Box
-                    w={38}
-                    h={38}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: 12,
-                      background: "#dcfce7",
-                    }}
+                    w={40}
+                    h={40}
+                    style={{ ...iconBoxStyle, borderRadius: 12 }}
                   >
-                    <IconShieldCheck size={20} color="#16a34a" />
+                    <IconShieldCheck size={20} stroke={1.7} />
                   </Box>
 
                   <Stack gap={0}>
-                    <Text size="xs" fw={800} c="#166534">
+                    <Text size="xs" fw={700} c={GOLD_LIGHT}>
                       جاهز للتسديد
                     </Text>
 
-                    <Text size="xs" c="dimmed">
+                    <Text size="xs" c={MUTED}>
                       {selectedIds.length > 0
                         ? `تم تحديد ${selectedIds.length} مخالفة`
                         : "حدد المخالفات المطلوبة أولًا"}
@@ -744,10 +824,14 @@ export default function FailureListModal({
                 <Button
                   size="sm"
                   radius="xl"
-                  color="green"
+                  variant="default"
                   disabled={selectedIds.length === 0}
-                  leftSection={<IconShieldCheck size={17} />}
+                  leftSection={<IconShieldCheck size={17} stroke={1.8} />}
                   onClick={() => setConfirmOpened(true)}
+                  style={{
+                    ...goldSolidBtn,
+                    opacity: selectedIds.length === 0 ? 0.45 : 1,
+                  }}
                 >
                   تسديد المحدد
                   {selectedIds.length > 0 && ` (${selectedIds.length})`}
@@ -767,64 +851,73 @@ export default function FailureListModal({
         onClose={closeConfirm}
         centered
         size="sm"
-        radius="xl"
-        shadow="xl"
+        radius={22}
+        overlayProps={{
+          backgroundOpacity: 0.7,
+          blur: 6,
+          color: INK,
+        }}
+        styles={modalStyles}
         title={
-          <Group gap="sm">
+          <Group gap="sm" wrap="nowrap">
             <Box
-              w={38}
-              h={38}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 12,
-                background: "#dcfce7",
-              }}
+              w={40}
+              h={40}
+              style={{ ...iconBoxStyle, borderRadius: 12, flexShrink: 0 }}
             >
-              <IconShieldCheck size={20} color="#16a34a" />
+              <IconShieldCheck size={20} stroke={1.7} />
             </Box>
 
             <Stack gap={0}>
-              <Text fw={850} size="sm">
+              <Text fw={700} size="sm" c={TEXT}>
                 تأكيد التسديد
               </Text>
 
-              <Text size="xs" c="dimmed">
+              <Text size="xs" c={MUTED}>
                 تحقق من العملية قبل التنفيذ
               </Text>
             </Stack>
           </Group>
         }
-        styles={{
-          header: {
-            borderBottom: "1px solid #edf0f2",
-          },
-        }}
         dir="rtl"
       >
         <Stack gap="md">
           <Card
-            radius="lg"
+            radius={16}
             p="md"
-            withBorder
             style={{
-              background: "linear-gradient(135deg, #f0fdf4, #ffffff)",
-              border: "1px solid #bbf7d0",
+              background: `${cornerGlow(GOLD, 0.22)}, ${SURFACE_2}`,
+              border: `1px solid ${hexA(GOLD, 0.45)}`,
             }}
           >
             <Group justify="space-between" align="center">
               <Stack gap={2}>
-                <Text size="xs" c="dimmed" fw={650}>
+                <Text size="xs" c={MUTED} fw={600}>
                   عدد المخالفات المحددة
                 </Text>
 
-                <Text size="xl" fw={900} c="#166534">
+                <Text
+                  fw={800}
+                  c={GOLD_LIGHT}
+                  style={{ fontSize: 30, lineHeight: 1.1, ...tabular }}
+                >
                   {selectedIds.length}
                 </Text>
               </Stack>
 
-              <Badge size="lg" radius="xl" color="green" variant="light">
+              <Badge
+                size="lg"
+                radius="xl"
+                variant="default"
+                styles={{
+                  root: {
+                    fontFamily: FONT,
+                    color: GOLD_LIGHT,
+                    background: hexA(GOLD, 0.1),
+                    border: `1px solid ${hexA(GOLD, 0.5)}`,
+                  },
+                }}
+              >
                 جاهز للتسديد
               </Badge>
             </Group>
@@ -832,21 +925,22 @@ export default function FailureListModal({
 
           <Group grow gap="sm">
             <Button
-              variant="light"
-              color="gray"
+              variant="default"
               radius="xl"
               disabled={loading}
               onClick={closeConfirm}
+              style={ghostBtn}
             >
               إلغاء
             </Button>
 
             <Button
-              color="green"
+              variant="default"
               loading={loading}
               radius="xl"
-              leftSection={!loading && <IconShieldCheck size={18} />}
+              leftSection={!loading && <IconShieldCheck size={18} stroke={1.8} />}
               onClick={validateFailures}
+              style={goldSolidBtn}
             >
               تأكيد التسديد
             </Button>

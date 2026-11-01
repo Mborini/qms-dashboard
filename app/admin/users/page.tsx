@@ -12,6 +12,7 @@ import {
   Group,
   Loader,
   Modal,
+  MultiSelect,
   PasswordInput,
   Select,
   Stack,
@@ -36,6 +37,7 @@ type User = {
   username: string;
   password: string;
   role_id: number;
+  district_names: string[];
 };
 
 type Role = {
@@ -49,13 +51,27 @@ type UserForm = {
   username: string;
   password: string;
   role_id: number;
+  district_names: string[];
 };
+
+// قائمة المناطق الثابتة
+const DISTRICT_OPTIONS = [
+  "الجبيهة",
+  "طارق",
+  "شفا بدران",
+  "ماركا",
+  "ابو نصير",
+  "النصر",
+  "تلاع العلي وام السماق وخلدا",
+  "احد",
+];
 
 const emptyForm: UserForm = {
   name: "",
   username: "",
   password: "",
   role_id: 0,
+  district_names: [],
 };
 
 export default function UsersPage() {
@@ -69,11 +85,9 @@ export default function UsersPage() {
 
   const [modalOpened, setModalOpened] = useState(false);
 
-  const [editingUser, setEditingUser] =
-    useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  const [form, setForm] =
-    useState<UserForm>(emptyForm);
+  const [form, setForm] = useState<UserForm>(emptyForm);
 
   const [error, setError] = useState("");
 
@@ -86,19 +100,14 @@ export default function UsersPage() {
       setLoading(true);
       setError("");
 
-      const response = await fetch(
-        "/api/users",
-        {
-          cache: "no-store",
-        }
-      );
+      const response = await fetch("/api/users", {
+        cache: "no-store",
+      });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.error || "Failed to load users"
-        );
+        throw new Error(data.error || "Failed to load users");
       }
 
       setUsers(data.users || []);
@@ -106,9 +115,7 @@ export default function UsersPage() {
       console.error(error);
 
       setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load users"
+        error instanceof Error ? error.message : "Failed to load users"
       );
     } finally {
       setLoading(false);
@@ -121,19 +128,14 @@ export default function UsersPage() {
 
   const loadRoles = async () => {
     try {
-      const response = await fetch(
-        "/api/roles",
-        {
-          cache: "no-store",
-        }
-      );
+      const response = await fetch("/api/roles", {
+        cache: "no-store",
+      });
 
       const data = await response.json();
 
       if (!response.ok || !Array.isArray(data)) {
-        throw new Error(
-          data?.error || "Failed to load roles"
-        );
+        throw new Error(data?.error || "Failed to load roles");
       }
 
       setRoles(data);
@@ -141,9 +143,7 @@ export default function UsersPage() {
       console.error(error);
 
       setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load roles"
+        error instanceof Error ? error.message : "Failed to load roles"
       );
     }
   };
@@ -168,10 +168,7 @@ export default function UsersPage() {
       ...emptyForm,
 
       // أول Role موجود في قاعدة البيانات
-      role_id:
-        roles.length > 0
-          ? roles[0].id
-          : 0,
+      role_id: roles.length > 0 ? roles[0].id : 0,
     });
 
     setError("");
@@ -191,6 +188,7 @@ export default function UsersPage() {
       username: user.username,
       password: user.password,
       role_id: user.role_id,
+      district_names: user.district_names ?? [],
     });
 
     setError("");
@@ -227,9 +225,7 @@ export default function UsersPage() {
       setSaving(true);
       setError("");
 
-      const method = editingUser
-        ? "PUT"
-        : "POST";
+      const method = editingUser ? "PUT" : "POST";
 
       const body = editingUser
         ? {
@@ -238,26 +234,20 @@ export default function UsersPage() {
           }
         : form;
 
-      const response = await fetch(
-        "/api/users",
-        {
-          method,
+      const response = await fetch("/api/users", {
+        method,
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+        headers: {
+          "Content-Type": "application/json",
+        },
 
-          body: JSON.stringify(body),
-        }
-      );
+        body: JSON.stringify(body),
+      });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.error || "Failed to save user"
-        );
+        throw new Error(data.error || "Failed to save user");
       }
 
       setModalOpened(false);
@@ -271,9 +261,7 @@ export default function UsersPage() {
       console.error(error);
 
       setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to save user"
+        error instanceof Error ? error.message : "Failed to save user"
       );
     } finally {
       setSaving(false);
@@ -296,19 +284,14 @@ export default function UsersPage() {
     try {
       setError("");
 
-      const response = await fetch(
-        `/api/users?id=${user.id}`,
-        {
-          method: "DELETE",
-        }
-      );
+      const response = await fetch(`/api/users?id=${user.id}`, {
+        method: "DELETE",
+      });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.error || "Failed to delete user"
-        );
+        throw new Error(data.error || "Failed to delete user");
       }
 
       await loadUsers();
@@ -316,9 +299,7 @@ export default function UsersPage() {
       console.error(error);
 
       setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to delete user"
+        error instanceof Error ? error.message : "Failed to delete user"
       );
     }
   };
@@ -328,9 +309,7 @@ export default function UsersPage() {
   ===================================================== */
 
   const getRole = (roleId: number) => {
-    return roles.find(
-      (role) => role.id === roleId
-    );
+    return roles.find((role) => role.id === roleId);
   };
 
   /* =====================================================
@@ -400,8 +379,7 @@ export default function UsersPage() {
 
           borderRadius: "50%",
 
-          backgroundColor:
-            "rgba(72,84,255,0.10)",
+          backgroundColor: "rgba(72,84,255,0.10)",
 
           filter: "blur(110px)",
 
@@ -421,8 +399,7 @@ export default function UsersPage() {
 
           borderRadius: "50%",
 
-          backgroundColor:
-            "rgba(18,184,134,0.08)",
+          backgroundColor: "rgba(18,184,134,0.08)",
 
           filter: "blur(110px)",
 
@@ -449,11 +426,7 @@ export default function UsersPage() {
             HEADER
         ================================================= */}
 
-        <Group
-          justify="space-between"
-          align="center"
-          mb={30}
-        >
+        <Group justify="space-between" align="center" mb={30}>
           <Group gap="md">
             <Box
               style={{
@@ -468,11 +441,9 @@ export default function UsersPage() {
 
                 justifyContent: "center",
 
-                backgroundColor:
-                  "rgba(72,84,255,0.10)",
+                backgroundColor: "rgba(72,84,255,0.10)",
 
-                border:
-                  "1px solid rgba(72,84,255,0.18)",
+                border: "1px solid rgba(72,84,255,0.18)",
 
                 color: "#4c6ef5",
               }}
@@ -490,11 +461,7 @@ export default function UsersPage() {
                 User Management
               </Title>
 
-              <Text
-                size="sm"
-                c="dimmed"
-                mt={4}
-              >
+              <Text size="sm" c="dimmed" mt={4}>
                 Manage system users and roles
               </Text>
             </Box>
@@ -516,9 +483,7 @@ export default function UsersPage() {
             </Tooltip>
 
             <Button
-              leftSection={
-                <IconPlus size={18} />
-              }
+              leftSection={<IconPlus size={18} />}
               color="indigo"
               radius="xl"
               onClick={openAddModal}
@@ -538,17 +503,12 @@ export default function UsersPage() {
             mb="lg"
             withBorder
             style={{
-              borderColor:
-                "rgba(250,82,82,0.25)",
+              borderColor: "rgba(250,82,82,0.25)",
 
-              backgroundColor:
-                "rgba(250,82,82,0.06)",
+              backgroundColor: "rgba(250,82,82,0.06)",
             }}
           >
-            <Text
-              c="red"
-              fw={700}
-            >
+            <Text c="red" fw={700}>
               {error}
             </Text>
           </Card>
@@ -563,20 +523,15 @@ export default function UsersPage() {
           padding="lg"
           withBorder
           style={{
-            backgroundColor:
-              "rgba(255,255,255,0.70)",
+            backgroundColor: "rgba(255,255,255,0.70)",
 
-            backdropFilter:
-              "blur(18px)",
+            backdropFilter: "blur(18px)",
 
-            WebkitBackdropFilter:
-              "blur(18px)",
+            WebkitBackdropFilter: "blur(18px)",
 
-            border:
-              "1px solid rgba(255,255,255,0.85)",
+            border: "1px solid rgba(255,255,255,0.85)",
 
-            boxShadow:
-              "0 20px 60px rgba(40,70,90,0.12)",
+            boxShadow: "0 20px 60px rgba(40,70,90,0.12)",
           }}
         >
           {loading ? (
@@ -605,27 +560,14 @@ export default function UsersPage() {
                 justifyContent: "center",
               }}
             >
-              <Stack
-                align="center"
-                gap="xs"
-              >
-                <IconUsers
-                  size={42}
-                  stroke={1.5}
-                  color="gray"
-                />
+              <Stack align="center" gap="xs">
+                <IconUsers size={42} stroke={1.5} color="gray" />
 
-                <Text
-                  fw={700}
-                  c="dimmed"
-                >
+                <Text fw={700} c="dimmed">
                   No users found
                 </Text>
 
-                <Button
-                  variant="light"
-                  onClick={openAddModal}
-                >
+                <Button variant="light" onClick={openAddModal}>
                   Add First User
                 </Button>
               </Stack>
@@ -643,21 +585,15 @@ export default function UsersPage() {
 
                   <Table.Th>Name</Table.Th>
 
-                  <Table.Th>
-                    Username
-                  </Table.Th>
+                  <Table.Th>Username</Table.Th>
 
-                  <Table.Th>
-                    Password
-                  </Table.Th>
+                  <Table.Th>Password</Table.Th>
 
-                  <Table.Th>
-                    Role ID
-                  </Table.Th>
+                  <Table.Th>Role ID</Table.Th>
 
-                  <Table.Th>
-                    Role
-                  </Table.Th>
+                  <Table.Th>Role</Table.Th>
+
+                  <Table.Th>Districts</Table.Th>
 
                   <Table.Th
                     style={{
@@ -673,22 +609,15 @@ export default function UsersPage() {
                 {users.map((user) => (
                   <Table.Tr key={user.id}>
                     <Table.Td>
-                      <Text fw={700}>
-                        {user.id}
-                      </Text>
+                      <Text fw={700}>{user.id}</Text>
                     </Table.Td>
 
                     <Table.Td>
-                      <Text fw={700}>
-                        {user.name}
-                      </Text>
+                      <Text fw={700}>{user.name}</Text>
                     </Table.Td>
 
                     <Table.Td>
-                      <Text
-                        fw={600}
-                        c="indigo"
-                      >
+                      <Text fw={600} c="indigo">
                         {user.username}
                       </Text>
                     </Table.Td>
@@ -696,8 +625,7 @@ export default function UsersPage() {
                     <Table.Td>
                       <Text
                         style={{
-                          fontFamily:
-                            "monospace",
+                          fontFamily: "monospace",
                         }}
                       >
                         {user.password}
@@ -705,10 +633,7 @@ export default function UsersPage() {
                     </Table.Td>
 
                     <Table.Td>
-                      <Badge
-                        variant="light"
-                        color="dark"
-                      >
+                      <Badge variant="light" color="dark">
                         {user.role_id}
                       </Badge>
                     </Table.Td>
@@ -716,35 +641,43 @@ export default function UsersPage() {
                     <Table.Td>
                       <Badge
                         variant="light"
-                        color={getRoleColor(
-                          user.role_id
-                        )}
+                        color={getRoleColor(user.role_id)}
                       >
-                        {getRoleLabel(
-                          user.role_id
-                        )}
+                        {getRoleLabel(user.role_id)}
                       </Badge>
                     </Table.Td>
 
                     <Table.Td>
-                      <Group
-                        justify="center"
-                        gap="xs"
-                      >
+                      <Group gap={4}>
+                        {(user.district_names ?? []).length === 0 ? (
+                          <Text size="xs" c="dimmed">
+                            —
+                          </Text>
+                        ) : (
+                          user.district_names.map((district) => (
+                            <Badge
+                              key={district}
+                              variant="light"
+                              color="teal"
+                              size="sm"
+                            >
+                              {district}
+                            </Badge>
+                          ))
+                        )}
+                      </Group>
+                    </Table.Td>
+
+                    <Table.Td>
+                      <Group justify="center" gap="xs">
                         <Tooltip label="Edit">
                           <ActionIcon
                             variant="light"
                             color="blue"
                             radius="xl"
-                            onClick={() =>
-                              openEditModal(
-                                user
-                              )
-                            }
+                            onClick={() => openEditModal(user)}
                           >
-                            <IconEdit
-                              size={17}
-                            />
+                            <IconEdit size={17} />
                           </ActionIcon>
                         </Tooltip>
 
@@ -753,15 +686,9 @@ export default function UsersPage() {
                             variant="light"
                             color="red"
                             radius="xl"
-                            onClick={() =>
-                              handleDelete(
-                                user
-                              )
-                            }
+                            onClick={() => handleDelete(user)}
                           >
-                            <IconTrash
-                              size={17}
-                            />
+                            <IconTrash size={17} />
                           </ActionIcon>
                         </Tooltip>
                       </Group>
@@ -785,11 +712,7 @@ export default function UsersPage() {
             setModalOpened(false);
           }
         }}
-        title={
-          editingUser
-            ? "Edit User"
-            : "Add User"
-        }
+        title={editingUser ? "Edit User" : "Add User"}
         centered
         radius="xl"
         size="md"
@@ -802,9 +725,7 @@ export default function UsersPage() {
             onChange={(event) =>
               setForm({
                 ...form,
-                name:
-                  event.currentTarget
-                    .value,
+                name: event.currentTarget.value,
               })
             }
           />
@@ -816,9 +737,7 @@ export default function UsersPage() {
             onChange={(event) =>
               setForm({
                 ...form,
-                username:
-                  event.currentTarget
-                    .value,
+                username: event.currentTarget.value,
               })
             }
           />
@@ -830,9 +749,7 @@ export default function UsersPage() {
             onChange={(event) =>
               setForm({
                 ...form,
-                password:
-                  event.currentTarget
-                    .value,
+                password: event.currentTarget.value,
               })
             }
           />
@@ -842,17 +759,11 @@ export default function UsersPage() {
           <Select
             label="Role"
             placeholder="Select role"
-            value={
-              form.role_id
-                ? String(form.role_id)
-                : null
-            }
+            value={form.role_id ? String(form.role_id) : null}
             onChange={(value) =>
               setForm({
                 ...form,
-                role_id: value
-                  ? Number(value)
-                  : 0,
+                role_id: value ? Number(value) : 0,
               })
             }
             data={roles.map((role) => ({
@@ -865,46 +776,47 @@ export default function UsersPage() {
           />
 
           {roles.length === 0 && (
-            <Text
-              size="sm"
-              c="red"
-            >
+            <Text size="sm" c="red">
               No roles available. Please create a role first.
             </Text>
           )}
 
+          {/* DISTRICTS */}
+
+          <MultiSelect
+            label="Districts"
+            placeholder="اختر المناطق"
+            data={DISTRICT_OPTIONS}
+            value={form.district_names}
+            onChange={(value) =>
+              setForm({
+                ...form,
+                district_names: value,
+              })
+            }
+            searchable
+            clearable
+            hidePickedOptions
+            nothingFoundMessage="لا توجد مناطق"
+          />
+
           {error && (
-            <Text
-              size="sm"
-              c="red"
-              fw={600}
-            >
+            <Text size="sm" c="red" fw={600}>
               {error}
             </Text>
           )}
 
-          <Group
-            justify="flex-end"
-            mt="md"
-          >
+          <Group justify="flex-end" mt="md">
             <Button
               variant="default"
               disabled={saving}
-              onClick={() =>
-                setModalOpened(false)
-              }
+              onClick={() => setModalOpened(false)}
             >
               Cancel
             </Button>
 
-            <Button
-              color="indigo"
-              loading={saving}
-              onClick={handleSubmit}
-            >
-              {editingUser
-                ? "Save Changes"
-                : "Create User"}
+            <Button color="indigo" loading={saving} onClick={handleSubmit}>
+              {editingUser ? "Save Changes" : "Create User"}
             </Button>
           </Group>
         </Stack>
@@ -917,7 +829,7 @@ export default function UsersPage() {
       <style>{`
         @media (max-width: 768px) {
           .mantine-Table-table {
-            min-width: 850px;
+            min-width: 950px;
           }
         }
       `}</style>

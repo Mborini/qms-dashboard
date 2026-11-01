@@ -26,6 +26,7 @@ type AuthUser = User & {
   role: string;
   roleId: number;
   permissions: string[];
+  districtNames: string[];
   avtrToken?: string | null;
   avtrTokenExpiresAt?: string | null;
   avtrMainToken?: string | null;
@@ -38,6 +39,7 @@ type AuthToken = JWT & {
   role?: string;
   roleId?: number;
   permissions?: string[];
+  districtNames?: string[];
   avtrToken?: string | null;
   avtrTokenExpiresAt?: string | null;
   avtrMainToken?: string | null;
@@ -69,6 +71,7 @@ export const authOptions: NextAuthOptions = {
                 u.password,
                 u.avtr_email,
                 u.avtr_pass,
+                u.district_names,
 
                 r.id AS role_id,
                 r.name AS role_name,
@@ -99,6 +102,7 @@ export const authOptions: NextAuthOptions = {
                 u.password,
                 u.avtr_email,
                 u.avtr_pass,
+                u.district_names,
                 r.id,
                 r.name
 
@@ -119,7 +123,6 @@ export const authOptions: NextAuthOptions = {
           }
 
           // 1) توكن اليوزر: يجيبه ويسجله بالجدول الرئيسي
-          //    (تم إضافة user.id كوسيط ثاني، هذا كان سبب المشكلة)
           const avtr = await refreshAvtrToken(
             pool,
             user.id,
@@ -137,6 +140,7 @@ export const authOptions: NextAuthOptions = {
             role: user.role_name,
             roleId: Number(user.role_id),
             permissions: user.permissions || [],
+            districtNames: (user.district_names as string[]) || [],
             avtrToken: avtr?.token ?? null,
             avtrTokenExpiresAt: avtr?.expiresAt ?? null,
             avtrMainToken: main?.token ?? null,
@@ -164,6 +168,7 @@ export const authOptions: NextAuthOptions = {
         token.role = authUser.role;
         token.roleId = authUser.roleId;
         token.permissions = authUser.permissions || [];
+        token.districtNames = authUser.districtNames || [];
         token.avtrToken = authUser.avtrToken ?? null;
         token.avtrTokenExpiresAt = authUser.avtrTokenExpiresAt ?? null;
         token.avtrMainToken = authUser.avtrMainToken ?? null;
@@ -204,6 +209,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         session.user.roleId = token.roleId;
         session.user.permissions = token.permissions || [];
+        session.user.districtNames = token.districtNames || [];
 
         // ملاحظة: هذه القيم تصل للمتصفح. إن لم تكن بحاجتها في الواجهة،
         // احذف الأسطر الأربعة التالية واقرأها من getToken() في الـ API routes.

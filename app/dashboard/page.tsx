@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -12,8 +11,6 @@ import {
   Text,
   Group,
   ThemeIcon,
-  Badge,
-  Button,
   Divider,
 } from "@mantine/core";
 
@@ -43,6 +40,33 @@ import { bungee } from "../layout";
 import { hasPermission } from "../lib/permissions";
 
 /* =========================================================
+   DESIGN TOKENS  (نفس ألوان DistrictCard: Navy + Champagne Gold)
+========================================================= */
+
+const INK = "#1A2A4A"; // الهيدر
+const SURFACE = "#213459"; // خلفية الصفحة
+const SURFACE_2 = "#2A4070"; // البطاقات
+const SURFACE_3 = "#324D84";
+const GOLD = "#C9A66B";
+const GOLD_LIGHT = "#E6CF9D";
+const TEXT = "#F3F6FC";
+const MUTED = "rgba(240,244,252,.72)";
+const FAINT = "rgba(240,244,252,.5)";
+const LINE = "rgba(255,255,255,.12)";
+const LINE_STRONG = "rgba(255,255,255,.22)";
+
+const FONT =
+  '"IBM Plex Sans Arabic", "Cairo", "Tajawal", "Segoe UI", system-ui, sans-serif';
+
+/** شفافية للون hex */
+const hexA = (hex: string, a: number) =>
+  `${hex}${Math.round(a * 255)
+    .toString(16)
+    .padStart(2, "0")}`;
+
+const tabular = { fontVariantNumeric: "tabular-nums" as const };
+
+/* =========================================================
    SECTION HEADER
 ========================================================= */
 
@@ -50,7 +74,6 @@ function SectionHeader({
   icon,
   title,
   description,
-  color,
   count,
   collapsible = false,
   opened = true,
@@ -59,7 +82,6 @@ function SectionHeader({
   icon: ReactNode;
   title: string;
   description: string;
-  color: string;
   count: number;
   collapsible?: boolean;
   opened?: boolean;
@@ -80,15 +102,11 @@ function SectionHeader({
             width: 52,
             height: 52,
             borderRadius: 16,
-
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-
-            background: `${color}0d`,
-            border: `1px solid ${color}18`,
-
-            color,
+            display: "grid",
+            placeItems: "center",
+            color: GOLD_LIGHT,
+            background: hexA(GOLD, 0.1),
+            border: `1px solid ${hexA(GOLD, 0.45)}`,
           }}
         >
           {icon}
@@ -96,54 +114,51 @@ function SectionHeader({
 
         <Box>
           <Group justify="center" align="center" gap={8}>
-            <Text
-              fw={850}
-              style={{
-                fontSize: 23,
-                color: "#243746",
-                letterSpacing: "-0.4px",
-              }}
-            >
+            <Text fw={800} c={TEXT} style={{ fontSize: 22, letterSpacing: "-0.3px" }}>
               {title}
             </Text>
 
-            <Badge
-              size="sm"
-              radius="xl"
-              variant="light"
+            <Box
+              component="span"
               style={{
-                background: `${color}0d`,
-                color,
-                fontWeight: 800,
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "1px 10px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 700,
+                lineHeight: "18px",
+                color: GOLD_LIGHT,
+                background: hexA(GOLD, 0.1),
+                border: `1px solid ${hexA(GOLD, 0.45)}`,
+                ...tabular,
               }}
             >
               {count}
-            </Badge>
+            </Box>
 
             {collapsible && (
-              <ThemeIcon
-                size={28}
-                radius="xl"
-                variant="light"
-                color="gray"
+              <Box
+                style={{
+                  width: 28,
+                  height: 28,
+                  display: "grid",
+                  placeItems: "center",
+                  borderRadius: "50%",
+                  color: MUTED,
+                  border: `1px solid ${LINE_STRONG}`,
+                }}
               >
                 {opened ? (
                   <IconChevronUp size={15} />
                 ) : (
                   <IconChevronDown size={15} />
                 )}
-              </ThemeIcon>
+              </Box>
             )}
           </Group>
 
-          <Text
-            size="xs"
-            mt={4}
-            style={{
-              color: "#82909a",
-              fontWeight: 500,
-            }}
-          >
+          <Text size="xs" mt={4} c={MUTED} fw={500}>
             {description}
           </Text>
         </Box>
@@ -155,8 +170,8 @@ function SectionHeader({
           height: 2,
           margin: "14px auto 0",
           borderRadius: 10,
-          background: color,
-          opacity: 0.55,
+          background: `linear-gradient(90deg, ${GOLD}, ${GOLD_LIGHT})`,
+          opacity: 0.8,
         }}
       />
     </Box>
@@ -165,6 +180,7 @@ function SectionHeader({
 
 /* =========================================================
    MODULE CARD
+   لون الوحدة يظهر كتكحيلة (زاوية + حد جانبي) فقط، مثل لون المنطقة
 ========================================================= */
 
 function ModuleCard({
@@ -196,138 +212,68 @@ function ModuleCard({
         className="module-card"
         style={{
           position: "relative",
-
-          minHeight: 245,
-
-          padding: 24,
-
+          minHeight: 235,
+          padding: 22,
           borderRadius: 20,
-
-          background: "rgba(255,255,255,0.78)",
-
-          border: "1px solid rgba(35,55,70,0.07)",
-
-          boxShadow: "0 8px 30px rgba(35,55,70,0.055)",
-
           overflow: "hidden",
-
-          transition: "all 180ms ease",
-
           display: "flex",
           flexDirection: "column",
+          fontFamily: FONT,
+          background: `radial-gradient(55% 60% at 100% 0%, ${hexA(
+            color,
+            0.3
+          )} 0%, transparent 70%), ${SURFACE_2}`,
+          border: `1px solid ${LINE}`,
+          borderInlineStart: `3px solid ${color}`,
         }}
       >
-        {/* TOP ACCENT */}
-
-        <Box
-          className="card-accent"
-          style={{
-            position: "absolute",
-
-            top: 0,
-            left: 0,
-            right: 0,
-
-            height: 3,
-
-            background: color,
-
-            opacity: 0.75,
-
-            transform: "scaleX(0.35)",
-
-            transformOrigin: "center",
-
-            transition: "transform 180ms ease",
-          }}
-        />
-
-        {/* ICON */}
-
         <Group justify="space-between" align="flex-start">
-          <ThemeIcon
-            size={56}
-            radius={17}
-            variant="light"
+          <Box
             style={{
-              background: `${color}0d`,
-              color,
-              border: `1px solid ${color}14`,
+              width: 52,
+              height: 52,
+              display: "grid",
+              placeItems: "center",
+              borderRadius: 16,
+              color: GOLD_LIGHT,
+              background: hexA(GOLD, 0.1),
+              border: `1px solid ${hexA(GOLD, 0.45)}`,
             }}
           >
             {icon}
-          </ThemeIcon>
+          </Box>
 
           <Box
-            className="card-number"
+            className="card-arrow"
             style={{
               width: 30,
               height: 30,
-
               borderRadius: "50%",
-
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-
-              background: "rgba(35,55,70,0.035)",
-
-              color: "#a0abb2",
-
+              display: "grid",
+              placeItems: "center",
               fontSize: 12,
               fontWeight: 800,
+              color: FAINT,
+              border: `1px solid ${LINE}`,
             }}
           >
             ↗
           </Box>
         </Group>
 
-        {/* CONTENT */}
-
-        <Box mt={30}>
-          <Text
-            fw={850}
-            style={{
-              color: "#263a49",
-              fontSize: 18,
-              letterSpacing: "-0.2px",
-            }}
-          >
+        <Box mt={26}>
+          <Text fw={700} c={TEXT} style={{ fontSize: 18, lineHeight: 1.3 }}>
             {title}
           </Text>
 
-          <Text
-            size="sm"
-            mt={8}
-            lh={1.65}
-            style={{
-              color: "#87949d",
-            }}
-          >
+          <Text size="sm" mt={8} lh={1.65} c={MUTED}>
             {description}
           </Text>
         </Box>
 
-        {/* FOOTER */}
-
-        <Text
-          size="xs"
-          fw={800}
-          mt="auto"
-          pt={20}
-          style={{
-            color,
-          }}
-        >
+        <Text size="xs" fw={700} mt="auto" pt={18} style={{ color: GOLD_LIGHT }}>
           {footer}
-
-          <span
-            style={{
-              marginRight: 5,
-            }}
-          >
-            →
-          </span>
+          <span style={{ marginInlineStart: 5 }}>→</span>
         </Text>
       </Box>
     </Link>
@@ -343,30 +289,19 @@ export default function Page() {
 
   const [maintenanceOpen, setMaintenanceOpen] = useState(true);
 
-  /* =======================================================
-     PERMISSIONS
-  ======================================================= */
+  /* PERMISSIONS */
 
-  const permissions = session?.user?.permissions  || [];
+  const permissions = session?.user?.permissions || [];
 
-  const can = (permission: string) => {
-    return hasPermission(permissions, permission);
-  };
+  const can = (permission: string) => hasPermission(permissions, permission);
 
-  /* =======================================================
-     LOGOUT
-  ======================================================= */
+  /* LOGOUT */
 
   const handleLogout = async () => {
-    await signOut({
-      redirect: true,
-      callbackUrl: "/",
-    });
+    await signOut({ redirect: true, callbackUrl: "/" });
   };
 
-  /* =======================================================
-     LOADING
-  ======================================================= */
+  /* LOADING */
 
   if (status === "loading") {
     return (
@@ -374,102 +309,76 @@ export default function Page() {
         dir="rtl"
         style={{
           minHeight: "100vh",
-
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-
-          background: "#f7f9fb",
+          background: SURFACE,
+          fontFamily: FONT,
         }}
       >
-        <Box
-          style={{
-            textAlign: "center",
-          }}
-        >
-          <ThemeIcon
-            size={55}
-            radius={17}
-            variant="light"
-            color="blue"
+        <Box style={{ textAlign: "center" }}>
+          <Box
             mx="auto"
+            style={{
+              width: 55,
+              height: 55,
+              display: "grid",
+              placeItems: "center",
+              borderRadius: 17,
+              color: GOLD_LIGHT,
+              background: hexA(GOLD, 0.1),
+              border: `1px solid ${hexA(GOLD, 0.45)}`,
+            }}
           >
-            <IconRefresh
-              size={26}
-              className="loading-icon"
-            />
-          </ThemeIcon>
+            <IconRefresh size={26} className="loading-icon" />
+          </Box>
 
-          <Text
-            mt={12}
-            size="sm"
-            fw={700}
-            c="dimmed"
-          >
+          <Text mt={12} size="sm" fw={700} c={MUTED}>
             جاري التحميل...
           </Text>
         </Box>
+
+        <style>{`
+          .loading-icon { animation: spin 1s linear infinite; }
+          @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        `}</style>
       </Box>
     );
   }
 
-  /* =======================================================
-     VISIBILITY
-  ======================================================= */
+  /* PERMISSION GROUPS */
 
-  /* =======================================================
-   PERMISSION GROUPS
-======================================================= */
+  const operationsPermissions = [
+    "statistics",
+    "map",
+    "route_notes",
+    "bins",
+    "collection_areas",
+    "bin_export",
+    "vehicle_movements_history",
+  ];
 
-const operationsPermissions = [
-  "statistics",
-  "map",
-  "route_notes",
-  "bins",
-  "collection_areas",
-  "bin_export",
-  
-];
-const ReportingPermissions =[
-  
-]
+  const maintenancePermissions = [
+    "maintenance",
+    "maintenance_history",
+    "maintenance_types",
+    "vehicles",
+  ];
 
-const maintenancePermissions = [
-  "maintenance",
-  "maintenance_history",
-  "maintenance_types",
-  "vehicles",
-];
+  const adminPermissions = ["users", "roles", "permissions"];
 
-const adminPermissions = [
-  "users",
-  "roles",
-  "permissions",
-   "vehicle_movements_history",
-];
+  /* VISIBILITY */
 
+  const showOperations = operationsPermissions.some(can);
+  const showMaintenance = maintenancePermissions.some(can);
+  const showAdmin = adminPermissions.some(can);
 
-/* =======================================================
-   VISIBILITY
-======================================================= */
+  /* COUNTS */
 
-const showOperations = operationsPermissions.some(can);
+  const operationsCount = operationsPermissions.filter(can).length;
+  const maintenanceCount = maintenancePermissions.filter(can).length;
+  const adminCount = adminPermissions.filter(can).length;
 
-const showMaintenance = maintenancePermissions.some(can);
-
-const showAdmin = adminPermissions.some(can);
-
-/* =======================================================
-   COUNTS
-======================================================= */
-
-const operationsCount = operationsPermissions.filter(can).length;
-
-const maintenanceCount = maintenancePermissions.filter(can).length;
-
-const adminCount = adminPermissions.filter(can).length;
-
- 
   /* =======================================================
      RETURN
   ======================================================= */
@@ -479,165 +388,115 @@ const adminCount = adminPermissions.filter(can).length;
       dir="rtl"
       style={{
         minHeight: "100vh",
-
-        background:
-          "linear-gradient(135deg, #f8fafc 0%, #f4f7f9 50%, #f8fafb 100%)",
-
-        color: "#263746",
+        color: TEXT,
+        fontFamily: FONT,
+        background: `radial-gradient(45% 35% at 0% 100%, ${hexA(
+          "#74A7FF",
+          0.14
+        )} 0%, transparent 70%), ${SURFACE}`,
       }}
     >
       {/* ===================================================
-          HEADER
+          GLASS NAVBAR
       =================================================== */}
 
-      <Container size={1150} pt={25}>
-        <Group justify="space-between" align="center">
-          {/* USER */}
+      <Box className="glass-nav-wrap">
+        <Box className="glass-nav">
+          {/* USER (right in RTL) */}
+          <Group gap={10} wrap="nowrap" className="glass-nav-user">
+            <Box
+              style={{
+                width: 38,
+                height: 38,
+                flexShrink: 0,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: "50%",
+                color: INK,
+                fontWeight: 800,
+                fontSize: 15,
+                background: `linear-gradient(145deg, ${GOLD_LIGHT}, ${GOLD})`,
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,.6)",
+              }}
+            >
+              {(session?.user?.name || "?").trim().charAt(0)}
+            </Box>
 
-          <Box>
-  {session?.user?.name && (
-    <>
-      <Text
-        size="sm"
-        fw={800}
-        style={{
-          color: "#354957",
-        }}
-      >
-        مرحباً، {session.user.name}
-      </Text>
+            {session?.user?.name && (
+              <Box style={{ minWidth: 0 }}>
+                <Text size="sm" fw={700} c={TEXT} truncate>
+                  {session.user.name}
+                </Text>
 
-      <Text
-        size="xs"
-        mt={2}
-        style={{
-          color: "#9aa5ac",
-        }}
-      >
-        {session.user.role}
-      </Text>
-    </>
-  )}
-</Box>
+                <Text size="10px" c={MUTED} fw={500} truncate>
+                  {session.user.role}
+                </Text>
+              </Box>
+            )}
+          </Group>
 
-          {/* LOGOUT */}
-
-          <Button
-            variant="subtle"
-            color="red"
-            radius="xl"
-            size="sm"
-            leftSection={<IconLogout size={16} />}
-            onClick={handleLogout}
-          >
-            تسجيل الخروج
-          </Button>
-        </Group>
-      </Container>
-
-      {/* ===================================================
-          MAIN
-      =================================================== */}
-
-      <Container dir="ltr" size={1150} py={45}>
-        {/* =================================================
-            BRAND
-        ================================================= */}
-
-        <Box
-          style={{
-            textAlign: "center",
-            marginBottom: 65,
-          }}
-        >
+          {/* BRAND (center) */}
           <Box
+            dir="ltr"
             style={{
               display: "inline-flex",
               alignItems: "baseline",
-              justifyContent: "center",
-              gap: 6,
+              gap: 5,
+              justifySelf: "center",
             }}
           >
-            <Text
-              component="span"
-              style={{
-                fontFamily: "Inter, sans-serif",
-
-                fontSize: "clamp(42px, 5vw, 58px)",
-
-                fontWeight: 600,
-
-                letterSpacing: "-2px",
-
-                color: "#344955",
-
-                lineHeight: 1,
-              }}
-            >
-              Ops
-            </Text>
+           
 
             <Text
               component="span"
               className={bungee.className}
               style={{
-                fontSize: "clamp(40px, 4.5vw, 55px)",
-
+                fontSize: 24,
                 lineHeight: 1,
-
-                background:
-                  "linear-gradient(110deg, #1971c2, #228be6, #12b886)",
+                background:                   "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
 
                 WebkitBackgroundClip: "text",
-
                 WebkitTextFillColor: "transparent",
-
                 backgroundClip: "text",
               }}
             >
               Matrix
             </Text>
-          </Box>
-
-          <Text
-            mt={13}
-            size="xs"
-            fw={700}
-            style={{
-              letterSpacing: "2.5px",
-
-              color: "#9aa5ac",
-
-              textTransform: "uppercase",
-            }}
-          >
-            Operations Intelligence
-          </Text>
-
-          <Group justify="center" gap={7} mt={14}>
-            <Box
+             <Text
+              component="span"
               style={{
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                background: "#20c997",
-                boxShadow:
-                  "0 0 0 4px rgba(32,201,151,0.10)",
-              }}
-            />
-
-            <Text
-              size="xs"
-              fw={700}
-              style={{
-                color: "#8e9ba3",
+                fontFamily: "Inter, sans-serif",
+                fontSize: 18,
+                fontWeight: 600,
+                letterSpacing: "-1px",
+                color: TEXT,
+                lineHeight: 1,
               }}
             >
-              System Online
+              Ops
             </Text>
-          </Group>
-        </Box>
+          </Box>
 
+          {/* LOGOUT (left in RTL) */}
+          <Box style={{ justifySelf: "end" }}>
+            <button
+              type="button"
+              className="glass-logout"
+              onClick={handleLogout}
+              aria-label="تسجيل الخروج"
+            >
+              <IconLogout size={16} />
+              <span className="glass-logout-label">تسجيل الخروج</span>
+            </button>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* ===================================================
+          MAIN
+      =================================================== */}
+
+      <Container dir="ltr" size={1150} pt={40} pb={45}>
         {/* =================================================
             OPERATIONS
         ================================================= */}
@@ -645,131 +504,111 @@ const adminCount = adminPermissions.filter(can).length;
         {showOperations && (
           <Box dir="rtl" className="dashboard-section" mb={60}>
             <SectionHeader
-              icon={
-                <IconMap2
-                  size={27}
-                  stroke={1.8}
-                />
-              }
+              icon={<IconMap2 size={27} stroke={1.6} />}
               title="العمليات"
               description="إدارة العمليات، الملاحظات، المخالفات, الخرائط، المناطق وادارة الحاويات."
-              color="#228be6"
               count={operationsCount}
             />
 
-            <SimpleGrid
-              cols={{
-                base: 1,
-                sm: 2,
-                lg: 3,
-              }}
-              spacing="lg"
-            >
-          
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+              {can("statistics") && (
+                <ModuleCard
+                  href="/failures/stats"
+                  title="احصائيات المخالفات"
+                  description="عرض وتحليل احصائيات المخالفات، المؤشرات والبيانات التشغيلية."
+                  footer="فتح الاحصائيات"
+                  icon={<IconChartBar size={28} stroke={1.6} />}
+                  color="#2563EB"
+                />
+              )}
 
-{/* STATISTICS */}
+              {can("statistics") && (
+                <ModuleCard
+                  href="/DailyReport"
+                  title="التقرير اليومي"
+                  description="التقرير اليومي، المؤشرات والبيانات التشغيلية."
+                  footer="فتح التقرير اليومي"
+                  icon={<IconFileText size={28} stroke={1.6} />}
+                  color="#2563EB"
+                />
+              )}
 
-{can("statistics") && (
-  <ModuleCard
-    href="/failures/stats"
-    title="احصائيات المخالفات"
-    description=" عرض وتحليل احصائيات المخالفات، المؤشرات والبيانات التشغيلية."
-    footer=" فتح الاحصائيات"
-    icon={<IconChartBar size={28} />}
-color="#2563EB"  />
-)}
-{can("statistics") && (
-  <ModuleCard
-    href="/DailyReport"
-    title="التقرير اليومي"
-    description="التقرير اليومي، المؤشرات والبيانات التشغيلية."
-    footer=" فتح التقرير اليومي"
-    icon={<IconFileText size={28} />}
-color="#2563EB"  />
-)}
-{can("statistics") && (
-  <ModuleCard
-    href="/ًWBReport"
-    title="تقرير الاوزان اليومي "
-    description="تقرير الاوزان اليومي ."
-    footer=" فتح تقرير الاوزان"
-    icon={<IconFileText size={28} />}
-color="#2563EB"  />
-)}
-{can("statistics") && (
-  <ModuleCard
-    href="/analyzedWBReport"
-    title="تقرير الاوزان المحلل "
-    description="تقرير الاوزان المحلل ."
-    footer=" فتح محلل تقرير الاوزان"
-    icon={<IconFileText size={28} />}
-color="#2563EB"  />
-)}
-{can("vehicle_movements_history") && (
-  <ModuleCard
-    href="/vehicle-movements/history"
-    title="سجل حركة المركبات"
-    description="مراجعة وتحليل سجلات حركة المركبات التاريخية والنشاط التشغيلي."
-    footer="فتح سجل الحركة"
-    icon={<IconHistory size={28} />}
-    color="#7C3AED"
-  />
-)}
-{/* VEHICLE MOVEMENTS */}
+              {can("statistics") && (
+                <ModuleCard
+                  href="/WBReport"
+                  title="تقرير الاوزان اليومي"
+                  description="تقرير الاوزان اليومي."
+                  footer="فتح تقرير الاوزان"
+                  icon={<IconFileText size={28} stroke={1.6} />}
+                  color="#2563EB"
+                />
+              )}
 
-{can("statistics") && (
-  <ModuleCard
-    href="/vehicle-movements"
-    title="حركة المركبات"
-    description="مراقبة حركة المركبات، النشاط اليومي وسجلات الحركة التشغيلية."
-    footer="فتح حركة المركبات"
-    icon={<IconArrowsExchange size={28} />}
-    color="#DB2777"
-  />
-)}
+              {can("statistics") && (
+                <ModuleCard
+                  href="/analyzedWBReport"
+                  title="تقرير الاوزان المحلل"
+                  description="تقرير الاوزان المحلل."
+                  footer="فتح محلل تقرير الاوزان"
+                  icon={<IconFileText size={28} stroke={1.6} />}
+                  color="#2563EB"
+                />
+              )}
 
+              {can("vehicle_movements_history") && (
+                <ModuleCard
+                  href="/vehicle-movements/history"
+                  title="سجل حركة المركبات"
+                  description="مراجعة وتحليل سجلات حركة المركبات التاريخية والنشاط التشغيلي."
+                  footer="فتح سجل الحركة"
+                  icon={<IconHistory size={28} stroke={1.6} />}
+                  color="#7C3AED"
+                />
+              )}
 
-
-              {/* MAP */}
+              {can("statistics") && (
+                <ModuleCard
+                  href="/vehicle-movements"
+                  title="حركة المركبات"
+                  description="مراقبة حركة المركبات، النشاط اليومي وسجلات الحركة التشغيلية."
+                  footer="فتح حركة المركبات"
+                  icon={<IconArrowsExchange size={28} stroke={1.6} />}
+                  color="#DB2777"
+                />
+              )}
 
               {can("map") && (
                 <ModuleCard
                   href="/failures/osm"
                   title="خرائط المخالفات"
-                  description=" عرض المخالفات على الخرائط، مراجعة المواقع وتحليل البيانات الجغرافية."
-                  footer=" فتح الخرائط"
-                  icon={<IconMap size={28} />}
-                 color="#DC2626"
+                  description="عرض المخالفات على الخرائط، مراجعة المواقع وتحليل البيانات الجغرافية."
+                  footer="فتح الخرائط"
+                  icon={<IconMap size={28} stroke={1.6} />}
+                  color="#F76707"
                 />
               )}
-
-              {/* ROUTE NOTES */}
 
               {can("route_notes") && (
                 <ModuleCard
                   href="/route-notes"
                   title="ملاحظات تتبع المركبات"
-                  description=" عرض وإدارة ملاحظات تتبع المركبات، الملاحظات التشغيلية والمواقع."
-                  footer=" فتح ملاحظات التتبع"
-                  icon={<IconRoute size={28} />}
-                  color="#EA580C"
+                  description="عرض وإدارة ملاحظات تتبع المركبات، الملاحظات التشغيلية والمواقع."
+                  footer="فتح ملاحظات التتبع"
+                  icon={<IconRoute size={28} stroke={1.6} />}
+                  color="#FA5252"
                 />
               )}
-
-              {/* BIN MAP */}
 
               {can("bins") && (
                 <ModuleCard
                   href="/binCollection/map"
                   title="اداة جمع مواقع الحاويات"
-                  description=" عرض مواقع الحاويات على الخرائط، مراجعة المواقع وتحليل البيانات الجغرافية."
-                  footer=" فتح خريطة الجمع"
-                  icon={<IconMapPin size={28} />}
-                  color="#D97706"
+                  description="عرض مواقع الحاويات على الخرائط، مراجعة المواقع وتحليل البيانات الجغرافية."
+                  footer="فتح خريطة الجمع"
+                  icon={<IconMapPin size={28} stroke={1.6} />}
+                  color="#FCC419"
                 />
               )}
-
-              {/* COLLECTION AREAS */}
 
               {can("collection_areas") && (
                 <ModuleCard
@@ -777,36 +616,27 @@ color="#2563EB"  />
                   title="مناطق الجمع"
                   description="إدارة مناطق الجمع، المناطق والحدود التشغيلية."
                   footer="إدارة المناطق"
-                  icon={<IconMap2 size={28} />}
-                  color="#CA8A04"
+                  icon={<IconMap2 size={28} stroke={1.6} />}
+                  color="#A1887F"
                 />
               )}
-
-              {/* EXPORT BINS */}
 
               {can("bin_export") && (
                 <ModuleCard
                   href="/binCollection/export-bins"
                   title="تصدير بيانات الحاويات"
-                  description=" تصدير بيانات الحاويات، المواقع والمعلومات التشغيلية."
+                  description="تصدير بيانات الحاويات، المواقع والمعلومات التشغيلية."
                   footer="تصدير البيانات"
-                  icon={<IconFileTypeXls size={28} />}
-                  color="#65A30D"
+                  icon={<IconFileTypeXls size={28} stroke={1.6} />}
+                  color="#40C057"
                 />
               )}
             </SimpleGrid>
           </Box>
         )}
 
-        {/* =================================================
-            DIVIDER
-        ================================================= */}
-
         {showOperations && showMaintenance && (
-          <Divider
-            mb={60}
-            color="rgba(35,55,70,0.06)"
-          />
+          <Divider mb={60} color={LINE} />
         )}
 
         {/* =================================================
@@ -816,46 +646,27 @@ color="#2563EB"  />
         {showMaintenance && (
           <Box dir="rtl" className="dashboard-section" mb={60}>
             <SectionHeader
-              icon={
-                <IconTool
-                  size={27}
-                  stroke={1.8}
-                />
-              }
+              icon={<IconTool size={27} stroke={1.6} />}
               title="الصيانة"
               description="ادخال و اخراج المركبات من والى الصيانة، إدارة أنواع الصيانة والمركبات."
-              color="#e03131"
               count={maintenanceCount}
               collapsible
               opened={maintenanceOpen}
-              onToggle={() =>
-                setMaintenanceOpen((value) => !value)
-              }
+              onToggle={() => setMaintenanceOpen((value) => !value)}
             />
 
             {maintenanceOpen && (
-              <SimpleGrid
-                cols={{
-                  base: 1,
-                  sm: 2,
-                  lg: 4,
-                }}
-                spacing="lg"
-              >
-                {/* MANAGEMENT */}
-
+              <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg">
                 {can("maintenance") && (
                   <ModuleCard
                     href="/maintenance/management"
                     title="ادارة الصيانة"
                     description="ادخال و اخراج المركبات من والى الصيانة"
                     footer="فتح إدارة الصيانة"
-                    icon={<IconTool size={28} />}
-                   color="#16A34A"
+                    icon={<IconTool size={28} stroke={1.6} />}
+                    color="#40C057"
                   />
                 )}
-
-                {/* HISTORY */}
 
                 {can("maintenance_history") && (
                   <ModuleCard
@@ -863,12 +674,10 @@ color="#2563EB"  />
                     title="سجلات الصيانة"
                     description="مشاهدة وتحليل سجلات الصيانة، الأعمال السابقة والتقارير."
                     footer="فتح سجلات الصيانة"
-                    icon={<IconHistory size={28} />}
-                    color="#059669"
+                    icon={<IconHistory size={28} stroke={1.6} />}
+                    color="#20C997"
                   />
                 )}
-
-                {/* TYPES */}
 
                 {can("maintenance_types") && (
                   <ModuleCard
@@ -876,21 +685,19 @@ color="#2563EB"  />
                     title="انواع الصيانة"
                     description="ادارة أنواع الصيانة، الفئات والإعدادات الخاصة بها."
                     footer="فتح إعدادات الصيانة"
-                    icon={<IconSettings size={28} />}
-                  color="#0D9488" 
+                    icon={<IconSettings size={28} stroke={1.6} />}
+                    color="#22B8CF"
                   />
                 )}
-
-                {/* VEHICLES */}
 
                 {can("vehicles") && (
                   <ModuleCard
                     href="/maintenance/vehicles"
                     title="المركبات"
-                    description="إدارة المركبات ومعلوماتها ."
+                    description="إدارة المركبات ومعلوماتها."
                     footer="فتح إدارة المركبات"
-                    icon={<IconTruck size={28} />}
-                    color="#0891B2"
+                    icon={<IconTruck size={28} stroke={1.6} />}
+                    color="#74A7FF"
                   />
                 )}
               </SimpleGrid>
@@ -898,103 +705,63 @@ color="#2563EB"  />
           </Box>
         )}
 
-        {/* =================================================
-            DIVIDER
-        ================================================= */}
-
-        {showMaintenance && showAdmin && (
-          <Divider
-            mb={60}
-            color="rgba(35,55,70,0.06)"
-          />
-        )}
+        {showMaintenance && showAdmin && <Divider mb={60} color={LINE} />}
 
         {/* =================================================
             ADMINISTRATION
         ================================================= */}
 
-       {showAdmin && (
-  <Box className="dashboard-section" mb={20}>
-    <SectionHeader
-      icon={
-        <IconUsers
-          size={27}
-          stroke={1.8}
-        />
-      }
-      title="Administration"
-      description="Users, roles and system access"
-      color="#4c6ef5"
-      count={adminCount}
-    />
+        {showAdmin && (
+          <Box className="dashboard-section" mb={20}>
+            <SectionHeader
+              icon={<IconUsers size={27} stroke={1.6} />}
+              title="Administration"
+              description="Users, roles and system access"
+              count={adminCount}
+            />
 
-    <SimpleGrid
-      cols={{
-        base: 1,
-        sm: 2,
-        lg: 3,
-      }}
-      spacing="lg"
-    >
-      {/* USERS */}
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+              {can("users") && (
+                <ModuleCard
+                  href="/admin/users"
+                  title="User Management"
+                  description="Create, edit and manage system users and their roles."
+                  footer="Manage Users"
+                  icon={<IconUsers size={28} stroke={1.6} />}
+                  color="#228BE6"
+                />
+              )}
 
-      {can("users") && (
-        <ModuleCard
-          href="admin/users"
-          title="User Management"
-          description="Create, edit and manage system users and their roles."
-          footer="Manage Users"
-          icon={<IconUsers size={28} />}
-         color="#0284C7"
-        />
-      )}
+              {can("roles") && (
+                <ModuleCard
+                  href="/admin/roles"
+                  title="Roles Management"
+                  description="Create, edit and manage system roles and access levels."
+                  footer="Manage Roles"
+                  icon={<IconShield size={28} stroke={1.6} />}
+                  color="#845EF7"
+                />
+              )}
 
-      {/* ROLES */}
-
-      {can("roles") && (
-        <ModuleCard
-          href="/admin/roles"
-          title="Roles Management"
-          description="Create, edit and manage system roles and access levels."
-          footer="Manage Roles"
-          icon={<IconShield size={28} />}
-          color="#4F46E5"
-        />
-      )}
-
-      {/* PERMISSIONS */}
-
-      {can("permissions") && (
-        <ModuleCard
-          href="/admin/permissions"
-          title="Permissions Management"
-          description="Assign permissions to roles and control system access."
-          footer="Manage Permissions"
-          icon={<IconLock size={28} />}
-         color="#9333EA" 
-        />
-      )}
-    </SimpleGrid>
-  </Box>
-)}
+              {can("permissions") && (
+                <ModuleCard
+                  href="/admin/permissions"
+                  title="Permissions Management"
+                  description="Assign permissions to roles and control system access."
+                  footer="Manage Permissions"
+                  icon={<IconLock size={28} stroke={1.6} />}
+                  color="#F06595"
+                />
+              )}
+            </SimpleGrid>
+          </Box>
+        )}
       </Container>
 
-      {/* =====================================================
-          FOOTER
-      ===================================================== */}
+      {/* FOOTER */}
 
-      <Box
-        style={{
-          textAlign: "center",
-          paddingBottom: 30,
-        }}
-      >
-        <Text
-          size="xs"
-          style={{
-            color: "#b0b9bf",
-          }}
-        >
+      <Box style={{ textAlign: "center", paddingBottom: 30 }}>
+        <Text size="xs" c={FAINT}>
           Ops Matrix · Operations Intelligence
         </Text>
       </Box>
@@ -1005,122 +772,132 @@ color="#2563EB"  />
 
       <style>{`
         /* ================================================
-           CARD HOVER
+           LIQUID GLASS NAVBAR
         ================================================ */
+
+        .glass-nav-wrap {
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          padding: 14px 16px 0;
+        }
+
+       .glass-nav {
+  position: relative;
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 9px 14px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+
+  background: rgba(255,255,255,.04);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.30),
+    inset 0 -1px 0 rgba(255,255,255,.05),
+    0 10px 28px -14px rgba(10,20,45,.5);
+}
+
+/* specular highlight */
+.glass-nav::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 55% 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0));
+  pointer-events: none;
+}
+
+        .glass-nav > * { position: relative; }
+
+        .glass-logout {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 8px 14px;
+          border-radius: 999px;
+          cursor: pointer;
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 600;
+          color: ${TEXT};
+          background: rgba(255,255,255,.10);
+          border: 1px solid rgba(255,255,255,.28);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+          transition: background .18s ease, border-color .18s ease;
+        }
+
+        .glass-logout:hover {
+          background: rgba(255,255,255,.20);
+          border-color: ${hexA(GOLD, 0.6)};
+        }
+
+        .glass-logout:focus-visible {
+          outline: 2px solid ${GOLD_LIGHT};
+          outline-offset: 2px;
+        }
+
+        @media (max-width: 576px) {
+          .glass-logout-label { display: none; }
+          .glass-logout { padding: 9px; }
+          .glass-nav { padding: 8px 10px; }
+        }
+
+        .module-card {
+          transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        }
 
         .module-card:hover {
-          transform: translateY(-5px);
-
-          background: rgba(255,255,255,0.96) !important;
-
-          border-color: rgba(35,55,70,0.10) !important;
-
-          box-shadow:
-            0 18px 42px
-            rgba(35,55,70,0.10) !important;
+          transform: translateY(-2px);
+          box-shadow: 0 16px 32px -16px rgba(10,20,45,.6);
+          border-color: ${hexA(GOLD, 0.5)} !important;
         }
 
-        .module-card:hover
-        .card-accent {
-          transform: scaleX(1);
+        .module-card:hover .card-arrow {
+          color: ${GOLD_LIGHT};
+          border-color: ${hexA(GOLD, 0.5)};
         }
 
-        .module-card:hover
-        .card-number {
-          background: rgba(35,55,70,0.06);
+        .module-card:focus-visible {
+          outline: 2px solid ${GOLD_LIGHT};
+          outline-offset: 2px;
         }
-
-        /* ================================================
-           SECTION ANIMATION
-        ================================================ */
 
         .dashboard-section {
-          animation:
-            sectionIn
-            420ms
-            ease
-            both;
+          animation: sectionIn 420ms ease both;
         }
 
         @keyframes sectionIn {
-          from {
-            opacity: 0;
-
-            transform:
-              translateY(12px);
-          }
-
-          to {
-            opacity: 1;
-
-            transform:
-              translateY(0);
-          }
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-
-        /* ================================================
-           LOADING
-        ================================================ */
-
-        .loading-icon {
-          animation:
-            spin
-            1s
-            linear
-            infinite;
-        }
-
-        @keyframes spin {
-          from {
-            transform:
-              rotate(0deg);
-          }
-
-          to {
-            transform:
-              rotate(360deg);
-          }
-        }
-
-        /* ================================================
-           MOBILE
-        ================================================ */
 
         @media (max-width: 576px) {
           .module-card {
-            min-height:
-              225px !important;
-
-            padding:
-              21px !important;
-
-            border-radius:
-              18px !important;
+            min-height: 215px !important;
+            padding: 20px !important;
+            border-radius: 18px !important;
           }
         }
 
-        /* ================================================
-           REDUCED MOTION
-        ================================================ */
-
         @media (prefers-reduced-motion: reduce) {
           .module-card,
-          .dashboard-section,
-          .loading-icon {
-            animation:
-              none !important;
-
-            transition:
-              none !important;
+          .dashboard-section {
+            animation: none !important;
+            transition: none !important;
           }
 
           .module-card:hover {
-            transform:
-              none !important;
+            transform: none !important;
           }
         }
       `}</style>
     </Box>
   );
 }
-

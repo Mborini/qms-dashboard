@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 import {
   Box,
@@ -9,11 +10,9 @@ import {
   Text,
   Stack,
   SimpleGrid,
-  Badge,
   Button,
   Modal,
   TextInput,
-  Loader,
   Progress,
 } from "@mantine/core";
 
@@ -26,6 +25,8 @@ import {
   IconChartBar,
   IconRefresh,
   IconCalendarStats,
+  IconSum,
+  IconCircleCheck,
 } from "@tabler/icons-react";
 
 import * as XLSX from "xlsx-js-style";
@@ -99,6 +100,127 @@ type SourceDistrictData = {
 };
 
 /* =========================================================
+   DESIGN TOKENS  (Navy + Champagne Gold)
+========================================================= */
+
+const INK = "#1A2A4A";
+const SURFACE = "#213459";
+const SURFACE_2 = "#2A4070";
+const SURFACE_3 = "#324D84";
+const PAGE = "#182646";
+const GOLD = "#C9A66B";
+const GOLD_LIGHT = "#E6CF9D";
+const TEXT = "#F3F6FC";
+const MUTED = "rgba(240,244,252,.72)";
+const FAINT = "rgba(240,244,252,.5)";
+const LINE = "rgba(255,255,255,.12)";
+const LINE_STRONG = "rgba(255,255,255,.22)";
+
+const FONT =
+  '"IBM Plex Sans Arabic", "Cairo", "Tajawal", "Segoe UI", system-ui, sans-serif';
+
+const tabular = { fontVariantNumeric: "tabular-nums" as const };
+
+const isHex = (c: string) => c.startsWith("#");
+
+const hexA = (hex: string, a: number) =>
+  `${hex}${Math.round(a * 255)
+    .toString(16)
+    .padStart(2, "0")}`;
+
+/** لون بشفافية (يدعم hex وأسماء ألوان Mantine) */
+const tint = (c: string, a: number) =>
+  isHex(c)
+    ? hexA(c, a)
+    : `color-mix(in srgb, var(--mantine-color-${c}-5) ${Math.round(
+        a * 100
+      )}%, transparent)`;
+
+const bright = (c: string) => (isHex(c) ? c : `var(--mantine-color-${c}-3)`);
+
+/** توحيد اسم المنطقة للمقارنة (يتجاهل "منطقة" والهمزات والفراغات) */
+const normalizeAr = (s: string) =>
+  s
+    .replace(/^\s*منطقة\s+/, "")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+
+/** تكحيلة الزاوية */
+const cornerGlow = (c: string, a = 0.3) =>
+  `radial-gradient(75% 95% at 100% 0%, ${tint(c, a)} 0%, transparent 70%)`;
+
+const panelStyle = {
+  position: "relative" as const,
+  overflow: "hidden",
+  background: SURFACE,
+  color: TEXT,
+  fontFamily: FONT,
+  border: `1px solid ${LINE_STRONG}`,
+  boxShadow: "0 30px 60px -30px rgba(10,20,45,.55)",
+};
+
+const ghostBtn = {
+  background: "transparent",
+  border: `1px solid ${LINE_STRONG}`,
+  color: TEXT,
+  fontWeight: 600,
+  fontFamily: FONT,
+};
+
+const goldOutlineBtn = {
+  background: hexA(GOLD, 0.1),
+  border: `1px solid ${hexA(GOLD, 0.6)}`,
+  color: GOLD_LIGHT,
+  fontWeight: 600,
+  fontFamily: FONT,
+};
+
+const goldSolidBtn = {
+  background: `linear-gradient(135deg, ${GOLD_LIGHT}, ${GOLD})`,
+  border: "none",
+  color: INK,
+  fontWeight: 700,
+  fontFamily: FONT,
+};
+
+const modalStyles = {
+  content: {
+    background: SURFACE,
+    border: `1px solid ${LINE_STRONG}`,
+    boxShadow: "0 40px 80px -30px rgba(10,20,45,.7)",
+    fontFamily: FONT,
+  },
+  header: { background: SURFACE, borderBottom: `1px solid ${LINE}` },
+  title: { fontWeight: 700, fontSize: 18, color: TEXT },
+  close: { color: MUTED },
+};
+
+const dateInputStyles = {
+  label: { color: MUTED, fontWeight: 600, marginBottom: 6 },
+  input: {
+    background: SURFACE_2,
+    border: `1px solid ${LINE_STRONG}`,
+    color: TEXT,
+    colorScheme: "dark" as const,
+    borderRadius: 12,
+  },
+};
+
+const liftHandlers = {
+  onMouseEnter: (e: MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.transform = "translateY(-2px)";
+    e.currentTarget.style.borderColor = hexA(GOLD, 0.55);
+  },
+  onMouseLeave: (e: MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.transform = "none";
+    e.currentTarget.style.borderColor = LINE;
+  },
+};
+
+/* =========================================================
    STATUS HELPERS
 ========================================================= */
 
@@ -119,28 +241,28 @@ const SOURCE_OPTIONS = [
     key: "all",
     label: "الكل",
     description: "جميع مصادر المخالفات",
-    icon: <IconChartBar size={20} />,
+    icon: <IconChartBar size={20} stroke={1.6} />,
     color: "blue",
   },
   {
     key: "call-center",
     label: "Call Center",
     description: "مخالفات مركز الاتصال",
-    icon: <IconPhone size={20} />,
+    icon: <IconPhone size={20} stroke={1.6} />,
     color: "cyan",
   },
   {
     key: "citizen-portal",
     label: "بوابة المواطن",
     description: "المخالفات الواردة من البوابة",
-    icon: <IconWorld size={20} />,
+    icon: <IconWorld size={20} stroke={1.6} />,
     color: "green",
   },
   {
     key: "avtr-team",
     label: "AVTR Team",
     description: "المخالفات التابعة لفريق AVTR",
-    icon: <IconUsers size={20} />,
+    icon: <IconUsers size={20} stroke={1.6} />,
     color: "violet",
   },
 ];
@@ -152,43 +274,51 @@ const SOURCE_OPTIONS = [
 export default function FailureStats({ items = [] }: FailureStatsProps) {
   const [complaintSourceFilter, setComplaintSourceFilter] = useState("all");
   const [cumulativeModalOpened, setCumulativeModalOpened] = useState(false);
-
   const [cumulativeFromDate, setCumulativeFromDate] = useState("");
-
   const [cumulativeToDate, setCumulativeToDate] = useState("");
-
   const [cumulativeExporting, setCumulativeExporting] = useState(false);
-  const { data: session, status } = useSession();
-  const isAdmin = session?.user?.roleId === 1;
 
-  /* =========================================================
-     FILTER
-  ========================================================= */
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.roleId === 1;
+   const userDistricts = (session?.user as any)?.districtNames as string[] | undefined;
+  /* SCOPE: المناطق المسندة للمستخدم (الأدمن يشوف الكل) */
+
+  const scopedItems = useMemo(() => {
+    if (isAdmin) return items;
+
+    const allowed = new Set((userDistricts ?? []).map(normalizeAr));
+
+    return items.filter(
+      (item) =>
+        !!item.districtName?.trim() &&
+        allowed.has(normalizeAr(item.districtName))
+    );
+  }, [items, isAdmin, userDistricts]);
+
+  /* FILTER */
 
   const filteredItems = useMemo(() => {
     if (complaintSourceFilter === "all") {
-      return items;
+      return scopedItems;
     }
 
-    return items.filter((item) => {
+    return scopedItems.filter((item) => {
       if (complaintSourceFilter === "avtr-team") {
         return item.complaintSource == null;
       }
 
       return item.complaintSource === complaintSourceFilter;
     });
-  }, [items, complaintSourceFilter]);
+  }, [scopedItems, complaintSourceFilter]);
 
-  /* =========================================================
-     SOURCE COUNTS
-  ========================================================= */
+  /* SOURCE COUNTS */
 
   const sourceCounts = useMemo(() => {
     let callCenter = 0;
     let citizenPortal = 0;
     let avtrTeam = 0;
 
-    items.forEach((item) => {
+    scopedItems.forEach((item) => {
       if (item.complaintSource === "call-center") {
         callCenter++;
       } else if (item.complaintSource === "citizen-portal") {
@@ -199,16 +329,14 @@ export default function FailureStats({ items = [] }: FailureStatsProps) {
     });
 
     return {
-      all: items.length,
+      all: scopedItems.length,
       "call-center": callCenter,
       "citizen-portal": citizenPortal,
       "avtr-team": avtrTeam,
     };
-  }, [items]);
+  }, [scopedItems]);
 
-  /* =========================================================
-     STATS
-  ========================================================= */
+  /* STATS */
 
   const stats = useMemo<Stats>(() => {
     const result: Stats = {};
@@ -288,9 +416,7 @@ export default function FailureStats({ items = [] }: FailureStatsProps) {
     return result;
   }, [filteredItems]);
 
-  /* =========================================================
-     TOTAL STATUSES
-  ========================================================= */
+  /* TOTAL STATUSES */
 
   const totalStatuses = useMemo<Record<string, number>>(() => {
     const result: Record<string, number> = {};
@@ -308,31 +434,22 @@ export default function FailureStats({ items = [] }: FailureStatsProps) {
     return result;
   }, [filteredItems]);
 
-  /* =========================================================
-     KPIs
-  ========================================================= */
+  /* KPIs */
 
   const kpis = useMemo(() => {
     const total = filteredItems.length;
 
     const field = totalStatuses.PendingFieldMonitorVerification || 0;
-
     const resolved = totalStatuses.Resolved || 0;
-
     const supervisorReview = totalStatuses.PendingSupervisorReview || 0;
-
     const rejected = totalStatuses.Rejected || 0;
 
-const acceptedRejection =
-  totalStatuses.ResolutionRejected || 0;
+    // المنجز = تم الحل + قيد التحقق الميداني + مرفوض + قيد مراجعة AVTR
+    const completedCount = resolved + field + rejected + supervisorReview;
 
-const achievementCount =
-  acceptedRejection +
-  field +
-  resolved +
-  supervisorReview;
+    // نسبة الإنجاز = المنجز ÷ الكلي
     const achievementPercentage = total
-      ? ((achievementCount / total) * 100).toFixed(1)
+      ? ((completedCount / total) * 100).toFixed(1)
       : "0.0";
 
     return {
@@ -341,28 +458,24 @@ const achievementCount =
       resolved,
       supervisorReview,
       rejected,
-      achievementCount,
+      completedCount,
       achievementPercentage,
     };
   }, [filteredItems, totalStatuses]);
 
   const achievement = kpis.achievementPercentage;
 
-  /* =========================================================
-     ACTIVE SOURCE
-  ========================================================= */
+  /* ACTIVE SOURCE */
 
   const activeSource =
     SOURCE_OPTIONS.find((source) => source.key === complaintSourceFilter) ??
     SOURCE_OPTIONS[0];
 
-  /* =========================================================
-     FOCUS DISTRICT
-  ========================================================= */
+  /* FOCUS DISTRICT */
 
   const focusDistrict = (district: string) => {
     const element = document.getElementById(
-      `district-${encodeURIComponent(district)}`,
+      `district-${encodeURIComponent(district)}`
     );
 
     if (element) {
@@ -381,17 +494,11 @@ const achievementCount =
   const exportExcel = () => {
     const STATUS = {
       PENDING_ACCEPTANCE: "PendingSpValidation",
-
       IN_PROGRESS: "InProgress",
-
       FIELD_VERIFICATION: "PendingFieldMonitorVerification",
-
       RESOLVED: "Resolved",
-
       AVTR_REVIEW: "PendingSupervisorReview",
-
       AVTR_ACCEPTED_REJECTION: "ResolutionRejected",
-
       AVTR_REJECTED_SOLUTION: "Rejected",
     };
 
@@ -408,7 +515,7 @@ const achievementCount =
 
     const addStatus = (
       target: ReturnType<typeof createEmptyStats>,
-      status: string,
+      status: string
     ) => {
       target.total++;
 
@@ -446,16 +553,18 @@ const achievementCount =
       }
     };
 
+    // تصحيح: النسبة = (مجموع حالات الإنجاز ÷ الإجمالي) × 100
     const getAchievement = (data: ReturnType<typeof createEmptyStats>) => {
       if (!data.total) {
         return "0.0";
       }
 
       return (
-        (data.avtrAcceptedRejection +
-  data.fieldVerification +
-  data.resolved +
-  data.avtrReview) *
+        ((data.avtrAcceptedRejection +
+          data.fieldVerification +
+          data.resolved +
+          data.avtrReview) /
+          data.total) *
         100
       ).toFixed(1);
     };
@@ -467,7 +576,7 @@ const achievementCount =
           item.createdAt ||
           item.created_at ||
           item.violationDate ||
-          item.failureDate,
+          item.failureDate
       );
 
       if (!firstItem) {
@@ -595,7 +704,7 @@ const achievementCount =
     });
 
     const sortedDistricts = Object.entries(hierarchy).sort(
-      ([, a], [, b]) => b.stats.total - a.stats.total,
+      ([, a], [, b]) => b.stats.total - a.stats.total
     );
 
     const worksheet = XLSX.utils.aoa_to_sheet([]);
@@ -613,174 +722,74 @@ const achievementCount =
       border: "B7C9D6",
     };
 
+    const side = { style: "thin", color: { rgb: COLORS.border } };
+
     const border = {
-      top: {
-        style: "thin",
-        color: {
-          rgb: COLORS.border,
-        },
-      },
-      bottom: {
-        style: "thin",
-        color: {
-          rgb: COLORS.border,
-        },
-      },
-      left: {
-        style: "thin",
-        color: {
-          rgb: COLORS.border,
-        },
-      },
-      right: {
-        style: "thin",
-        color: {
-          rgb: COLORS.border,
-        },
-      },
+      top: side,
+      bottom: side,
+      left: side,
+      right: side,
     };
 
+    const center = {
+      horizontal: "center",
+      vertical: "center",
+    };
+
+    const centerWrap = { ...center, wrapText: true };
+
+    const fontOf = (sz: number, bold: boolean, rgb: string) => ({
+      name: "Arial",
+      sz,
+      bold,
+      color: { rgb },
+    });
+
+    const fillOf = (rgb: string) => ({ fgColor: { rgb } });
+
     const titleStyle = {
-      font: {
-        name: "Arial",
-        sz: 20,
-        bold: true,
-        color: {
-          rgb: COLORS.white,
-        },
-      },
-      fill: {
-        fgColor: {
-          rgb: COLORS.primaryDark,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-      },
+      font: fontOf(20, true, COLORS.white),
+      fill: fillOf(COLORS.primaryDark),
+      alignment: center,
     };
 
     const subtitleStyle = {
-      font: {
-        name: "Arial",
-        sz: 11,
-        bold: true,
-        color: {
-          rgb: COLORS.text,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-      },
+      font: fontOf(11, true, COLORS.text),
+      alignment: center,
     };
 
     const headerStyle = {
-      font: {
-        name: "Arial",
-        sz: 11,
-        bold: true,
-        color: {
-          rgb: COLORS.white,
-        },
-      },
-      fill: {
-        fgColor: {
-          rgb: COLORS.primary,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-        wrapText: true,
-      },
+      font: fontOf(11, true, COLORS.white),
+      fill: fillOf(COLORS.primary),
+      alignment: centerWrap,
       border,
     };
 
     const districtStyle = {
-      font: {
-        name: "Arial",
-        sz: 11,
-        bold: true,
-        color: {
-          rgb: COLORS.text,
-        },
-      },
-      fill: {
-        fgColor: {
-          rgb: COLORS.district,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-        wrapText: true,
-      },
+      font: fontOf(11, true, COLORS.text),
+      fill: fillOf(COLORS.district),
+      alignment: centerWrap,
       border,
     };
 
     const blockStyle = {
-      font: {
-        name: "Arial",
-        sz: 10,
-        bold: true,
-        color: {
-          rgb: COLORS.text,
-        },
-      },
-      fill: {
-        fgColor: {
-          rgb: COLORS.block,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-        wrapText: true,
-      },
+      font: fontOf(10, true, COLORS.text),
+      fill: fillOf(COLORS.block),
+      alignment: centerWrap,
       border,
     };
 
     const userStyle = {
-      font: {
-        name: "Arial",
-        sz: 10,
-        color: {
-          rgb: COLORS.text,
-        },
-      },
-      fill: {
-        fgColor: {
-          rgb: COLORS.user,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-        wrapText: true,
-      },
+      font: { name: "Arial", sz: 10, color: { rgb: COLORS.text } },
+      fill: fillOf(COLORS.user),
+      alignment: centerWrap,
       border,
     };
 
     const totalStyle = {
-      font: {
-        name: "Arial",
-        sz: 10,
-        bold: true,
-        color: {
-          rgb: COLORS.text,
-        },
-      },
-      fill: {
-        fgColor: {
-          rgb: COLORS.total,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-        wrapText: true,
-      },
+      font: fontOf(10, true, COLORS.text),
+      fill: fillOf(COLORS.total),
+      alignment: centerWrap,
       border,
     };
 
@@ -790,14 +799,12 @@ const achievementCount =
         ["تقرير المخالفات"],
         [
           `اليوم: ${getArabicDayName(reportDate)} | التاريخ: ${formatArabicDate(
-            reportDate,
+            reportDate
           )}`,
         ],
         [],
       ],
-      {
-        origin: "A1",
-      },
+      { origin: "A1" }
     );
 
     const headers = [
@@ -815,31 +822,11 @@ const achievementCount =
       "نسبة الإنجاز",
     ];
 
-    XLSX.utils.sheet_add_aoa(worksheet, [headers], {
-      origin: "A4",
-    });
+    XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: "A4" });
 
     worksheet["!merges"] = [
-      {
-        s: {
-          r: 0,
-          c: 0,
-        },
-        e: {
-          r: 0,
-          c: 11,
-        },
-      },
-      {
-        s: {
-          r: 1,
-          c: 0,
-        },
-        e: {
-          r: 1,
-          c: 11,
-        },
-      },
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } },
     ];
 
     worksheet["A1"].s = titleStyle;
@@ -847,18 +834,22 @@ const achievementCount =
     worksheet["A2"].s = subtitleStyle;
 
     for (let c = 0; c < headers.length; c++) {
-      const cell =
-        worksheet[
-          XLSX.utils.encode_cell({
-            r: 3,
-            c,
-          })
-        ];
+      const cell = worksheet[XLSX.utils.encode_cell({ r: 3, c })];
 
       if (cell) {
         cell.s = headerStyle;
       }
     }
+
+    const styleRow = (row: number, style: any) => {
+      for (let c = 0; c < 12; c++) {
+        const cell = worksheet[XLSX.utils.encode_cell({ r: row, c })];
+
+        if (cell) {
+          cell.s = style;
+        }
+      }
+    };
 
     let currentRow = 4;
 
@@ -887,29 +878,15 @@ const achievementCount =
             `${getAchievement(districtData.stats)}%`,
           ],
         ],
-        {
-          origin: `A${currentRow + 1}`,
-        },
+        { origin: `A${currentRow + 1}` }
       );
 
-      for (let c = 0; c < 12; c++) {
-        const cell =
-          worksheet[
-            XLSX.utils.encode_cell({
-              r: currentRow,
-              c,
-            })
-          ];
-
-        if (cell) {
-          cell.s = totalStyle;
-        }
-      }
+      styleRow(currentRow, totalStyle);
 
       currentRow++;
 
       const sortedBlocks = Object.entries(districtData.blocks).sort(
-        ([, a], [, b]) => b.stats.total - a.stats.total,
+        ([, a], [, b]) => b.stats.total - a.stats.total
       );
 
       sortedBlocks.forEach(([block, blockData]) => {
@@ -933,29 +910,15 @@ const achievementCount =
               `${getAchievement(blockData.stats)}%`,
             ],
           ],
-          {
-            origin: `A${currentRow + 1}`,
-          },
+          { origin: `A${currentRow + 1}` }
         );
 
-        for (let c = 0; c < 12; c++) {
-          const cell =
-            worksheet[
-              XLSX.utils.encode_cell({
-                r: currentRow,
-                c,
-              })
-            ];
-
-          if (cell) {
-            cell.s = blockStyle;
-          }
-        }
+        styleRow(currentRow, blockStyle);
 
         currentRow++;
 
         const sortedUsers = Object.entries(blockData.users).sort(
-          ([, a], [, b]) => b.total - a.total,
+          ([, a], [, b]) => b.total - a.total
         );
 
         sortedUsers.forEach(([user, userData]) => {
@@ -977,49 +940,19 @@ const achievementCount =
                 `${getAchievement(userData)}%`,
               ],
             ],
-            {
-              origin: `A${currentRow + 1}`,
-            },
+            { origin: `A${currentRow + 1}` }
           );
 
-          for (let c = 0; c < 12; c++) {
-            const cell =
-              worksheet[
-                XLSX.utils.encode_cell({
-                  r: currentRow,
-                  c,
-                })
-              ];
-
-            if (cell) {
-              cell.s = userStyle;
-            }
-          }
+          styleRow(currentRow, userStyle);
 
           const achievementCell =
-            worksheet[
-              XLSX.utils.encode_cell({
-                r: currentRow,
-                c: 11,
-              })
-            ];
+            worksheet[XLSX.utils.encode_cell({ r: currentRow, c: 11 })];
 
           if (achievementCell) {
             achievementCell.s = {
               ...userStyle,
-              fill: {
-                fgColor: {
-                  rgb: COLORS.achievement,
-                },
-              },
-              font: {
-                name: "Arial",
-                sz: 10,
-                bold: true,
-                color: {
-                  rgb: COLORS.text,
-                },
-              },
+              fill: fillOf(COLORS.achievement),
+              font: fontOf(10, true, COLORS.text),
             };
           }
 
@@ -1030,14 +963,8 @@ const achievementCount =
 
         if (blockEndRow >= blockStartRow) {
           blockMergeRanges.push({
-            s: {
-              r: blockStartRow,
-              c: 1,
-            },
-            e: {
-              r: blockEndRow,
-              c: 1,
-            },
+            s: { r: blockStartRow, c: 1 },
+            e: { r: blockEndRow, c: 1 },
           });
         }
       });
@@ -1046,14 +973,8 @@ const achievementCount =
 
       if (districtEndRow >= districtStartRow) {
         districtMergeRanges.push({
-          s: {
-            r: districtStartRow,
-            c: 0,
-          },
-          e: {
-            r: districtEndRow,
-            c: 0,
-          },
+          s: { r: districtStartRow, c: 0 },
+          e: { r: districtEndRow, c: 0 },
         });
       }
     });
@@ -1076,47 +997,32 @@ const achievementCount =
       }
     });
 
-   worksheet["!cols"] = [
-  { wch: 24 },
-  { wch: 18 },
-  { wch: 18 },
-  { wch: 16 },
-  { wch: 28 },
-  { wch: 14 },
-  { wch: 20 },
-  { wch: 18 },
-  { wch: 20 },
-  { wch: 16 },
-];
+    worksheet["!cols"] = [
+      { wch: 24 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 28 },
+      { wch: 14 },
+      { wch: 20 },
+      { wch: 18 },
+      { wch: 20 },
+      { wch: 16 },
+    ];
 
     worksheet["!rows"] = [];
 
-    worksheet["!rows"][0] = {
-      hpt: 36,
-    };
+    worksheet["!rows"][0] = { hpt: 36 };
 
-    worksheet["!rows"][1] = {
-      hpt: 24,
-    };
+    worksheet["!rows"][1] = { hpt: 24 };
 
-    worksheet["!rows"][3] = {
-      hpt: 42,
-    };
+    worksheet["!rows"][3] = { hpt: 42 };
 
-    worksheet["!sheetViews"] = [
-      {
-        rightToLeft: true,
-      },
-    ];
+    worksheet["!sheetViews"] = [{ rightToLeft: true }];
 
-    worksheet["!freeze"] = {
-      xSplit: 0,
-      ySplit: 4,
-    };
+    worksheet["!freeze"] = { xSplit: 0, ySplit: 4 };
 
-    worksheet["!autofilter"] = {
-      ref: `A4:L${currentRow}`,
-    };
+    worksheet["!autofilter"] = { ref: `A4:L${currentRow}` };
 
     worksheet["!pageSetup"] = {
       orientation: "landscape",
@@ -1151,7 +1057,7 @@ const achievementCount =
 
     const districts: Record<string, SourceDistrictData> = {};
 
-    items.forEach((item) => {
+    scopedItems.forEach((item) => {
       const district = item.districtName?.trim()
         ? `منطقة ${item.districtName.trim()}`
         : "مخالفات حسب مؤشرات الأداء";
@@ -1200,7 +1106,7 @@ const achievementCount =
     });
 
     const sortedDistricts = Object.entries(districts).sort(
-      ([, a], [, b]) => b.total - a.total,
+      ([, a], [, b]) => b.total - a.total
     );
 
     const worksheet = XLSX.utils.aoa_to_sheet([]);
@@ -1218,182 +1124,80 @@ const achievementCount =
       border: "B7C9D6",
     };
 
+    const side = { style: "thin", color: { rgb: COLORS.border } };
+
     const border = {
-      top: {
-        style: "thin",
-        color: {
-          rgb: COLORS.border,
-        },
-      },
-      bottom: {
-        style: "thin",
-        color: {
-          rgb: COLORS.border,
-        },
-      },
-      left: {
-        style: "thin",
-        color: {
-          rgb: COLORS.border,
-        },
-      },
-      right: {
-        style: "thin",
-        color: {
-          rgb: COLORS.border,
-        },
-      },
+      top: side,
+      bottom: side,
+      left: side,
+      right: side,
     };
 
+    const center = {
+      horizontal: "center",
+      vertical: "center",
+    };
+
+    const fontOf = (sz: number, bold: boolean, rgb: string) => ({
+      name: "Arial",
+      sz,
+      bold,
+      color: { rgb },
+    });
+
+    const fillOf = (rgb: string) => ({ fgColor: { rgb } });
+
     const titleStyle = {
-      font: {
-        name: "Arial",
-        sz: 20,
-        bold: true,
-        color: {
-          rgb: COLORS.white,
-        },
-      },
-      fill: {
-        fgColor: {
-          rgb: COLORS.primaryDark,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-      },
+      font: fontOf(20, true, COLORS.white),
+      fill: fillOf(COLORS.primaryDark),
+      alignment: center,
     };
 
     const subtitleStyle = {
-      font: {
-        name: "Arial",
-        sz: 11,
-        bold: true,
-        color: {
-          rgb: COLORS.text,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-      },
+      font: fontOf(11, true, COLORS.text),
+      alignment: center,
     };
 
     const headerStyle = {
-      font: {
-        name: "Arial",
-        sz: 10,
-        bold: true,
-        color: {
-          rgb: COLORS.white,
-        },
-      },
-      fill: {
-        fgColor: {
-          rgb: COLORS.primary,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-        wrapText: true,
-      },
+      font: fontOf(10, true, COLORS.white),
+      fill: fillOf(COLORS.primary),
+      alignment: { ...center, wrapText: true },
       border,
     };
 
     const normalStyle = {
-      font: {
-        name: "Arial",
-        sz: 10,
-        color: {
-          rgb: COLORS.text,
-        },
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-        wrapText: true,
-      },
+      font: { name: "Arial", sz: 10, color: { rgb: COLORS.text } },
+      alignment: { ...center, wrapText: true },
       border,
     };
 
-    const callCenterStyle = {
-      ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.callCenter,
-        },
-      },
-    };
+    const callCenterStyle = { ...normalStyle, fill: fillOf(COLORS.callCenter) };
 
     const citizenPortalStyle = {
       ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.citizenPortal,
-        },
-      },
+      fill: fillOf(COLORS.citizenPortal),
     };
 
-    const avtrTeamStyle = {
-      ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.avtrTeam,
-        },
-      },
-    };
+    const avtrTeamStyle = { ...normalStyle, fill: fillOf(COLORS.avtrTeam) };
+
+    const boldText = fontOf(10, true, COLORS.text);
 
     const resolvedStyle = {
       ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.resolved,
-        },
-      },
-      font: {
-        name: "Arial",
-        sz: 10,
-        bold: true,
-        color: {
-          rgb: COLORS.text,
-        },
-      },
+      fill: fillOf(COLORS.resolved),
+      font: boldText,
     };
 
     const totalStyle = {
       ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.total,
-        },
-      },
-      font: {
-        name: "Arial",
-        sz: 10,
-        bold: true,
-        color: {
-          rgb: COLORS.text,
-        },
-      },
+      fill: fillOf(COLORS.total),
+      font: boldText,
     };
 
     const percentageStyle = {
       ...normalStyle,
-      fill: {
-        fgColor: {
-          rgb: COLORS.resolved,
-        },
-      },
-      font: {
-        name: "Arial",
-        sz: 10,
-        bold: true,
-        color: {
-          rgb: COLORS.text,
-        },
-      },
+      fill: fillOf(COLORS.resolved),
+      font: boldText,
     };
 
     XLSX.utils.sheet_add_aoa(
@@ -1403,9 +1207,7 @@ const achievementCount =
         ["Call Center | بوابة المواطن | AVTR Team"],
         [],
       ],
-      {
-        origin: "A1",
-      },
+      { origin: "A1" }
     );
 
     const headers = [
@@ -1421,31 +1223,11 @@ const achievementCount =
       "نسبة الحل",
     ];
 
-    XLSX.utils.sheet_add_aoa(worksheet, [headers], {
-      origin: "A4",
-    });
+    XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: "A4" });
 
     worksheet["!merges"] = [
-      {
-        s: {
-          r: 0,
-          c: 0,
-        },
-        e: {
-          r: 0,
-          c: 9,
-        },
-      },
-      {
-        s: {
-          r: 1,
-          c: 0,
-        },
-        e: {
-          r: 1,
-          c: 9,
-        },
-      },
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } },
     ];
 
     worksheet["A1"].s = titleStyle;
@@ -1453,13 +1235,7 @@ const achievementCount =
     worksheet["A2"].s = subtitleStyle;
 
     for (let c = 0; c < headers.length; c++) {
-      const cell =
-        worksheet[
-          XLSX.utils.encode_cell({
-            r: 3,
-            c,
-          })
-        ];
+      const cell = worksheet[XLSX.utils.encode_cell({ r: 3, c })];
 
       if (cell) {
         cell.s = headerStyle;
@@ -1479,29 +1255,18 @@ const achievementCount =
         [
           [
             district,
-
             data.callCenter.total,
-
             data.callCenter.resolved,
-
             data.citizenPortal.total,
-
             data.citizenPortal.resolved,
-
             data.avtrTeam.total,
-
             data.avtrTeam.resolved,
-
             total,
-
             resolved,
-
             `${percentage}%`,
           ],
         ],
-        {
-          origin: `A${currentRow + 1}`,
-        },
+        { origin: `A${currentRow + 1}` }
       );
 
       const rowStyles = [
@@ -1518,13 +1283,7 @@ const achievementCount =
       ];
 
       for (let c = 0; c < headers.length; c++) {
-        const cell =
-          worksheet[
-            XLSX.utils.encode_cell({
-              r: currentRow,
-              c,
-            })
-          ];
+        const cell = worksheet[XLSX.utils.encode_cell({ r: currentRow, c })];
 
         if (cell) {
           cell.s = rowStyles[c];
@@ -1536,30 +1295,23 @@ const achievementCount =
 
     const grandTotal = {
       callCenter: createSourceStats(),
-
       citizenPortal: createSourceStats(),
-
       avtrTeam: createSourceStats(),
-
       total: 0,
       resolved: 0,
     };
 
     Object.values(districts).forEach((district) => {
       grandTotal.callCenter.total += district.callCenter.total;
-
       grandTotal.callCenter.resolved += district.callCenter.resolved;
 
       grandTotal.citizenPortal.total += district.citizenPortal.total;
-
       grandTotal.citizenPortal.resolved += district.citizenPortal.resolved;
 
       grandTotal.avtrTeam.total += district.avtrTeam.total;
-
       grandTotal.avtrTeam.resolved += district.avtrTeam.resolved;
 
       grandTotal.total += district.total;
-
       grandTotal.resolved += district.resolved;
     });
 
@@ -1572,51 +1324,31 @@ const achievementCount =
       [
         [
           "الإجمالي العام",
-
           grandTotal.callCenter.total,
-
           grandTotal.callCenter.resolved,
-
           grandTotal.citizenPortal.total,
-
           grandTotal.citizenPortal.resolved,
-
           grandTotal.avtrTeam.total,
-
           grandTotal.avtrTeam.resolved,
-
           grandTotal.total,
-
           grandTotal.resolved,
-
           `${grandPercentage}%`,
         ],
       ],
-      {
-        origin: `A${currentRow + 1}`,
-      },
+      { origin: `A${currentRow + 1}` }
     );
 
     for (let c = 0; c < headers.length; c++) {
-      const cell =
-        worksheet[
-          XLSX.utils.encode_cell({
-            r: currentRow,
-            c,
-          })
-        ];
+      const cell = worksheet[XLSX.utils.encode_cell({ r: currentRow, c })];
 
       if (cell) {
         cell.s = {
           ...totalStyle,
-          fill: {
-            fgColor: {
-              rgb:
-                c === 2 || c === 4 || c === 6 || c === 8 || c === 9
-                  ? COLORS.resolved
-                  : COLORS.total,
-            },
-          },
+          fill: fillOf(
+            c === 2 || c === 4 || c === 6 || c === 8 || c === 9
+              ? COLORS.resolved
+              : COLORS.total
+          ),
         };
       }
     }
@@ -1636,32 +1368,17 @@ const achievementCount =
 
     worksheet["!rows"] = [];
 
-    worksheet["!rows"][0] = {
-      hpt: 36,
-    };
+    worksheet["!rows"][0] = { hpt: 36 };
 
-    worksheet["!rows"][1] = {
-      hpt: 24,
-    };
+    worksheet["!rows"][1] = { hpt: 24 };
 
-    worksheet["!rows"][3] = {
-      hpt: 42,
-    };
+    worksheet["!rows"][3] = { hpt: 42 };
 
-    worksheet["!sheetViews"] = [
-      {
-        rightToLeft: true,
-      },
-    ];
+    worksheet["!sheetViews"] = [{ rightToLeft: true }];
 
-    worksheet["!freeze"] = {
-      xSplit: 0,
-      ySplit: 4,
-    };
+    worksheet["!freeze"] = { xSplit: 0, ySplit: 4 };
 
-    worksheet["!autofilter"] = {
-      ref: `A4:J${currentRow + 1}`,
-    };
+    worksheet["!autofilter"] = { ref: `A4:J${currentRow + 1}` };
 
     worksheet["!pageSetup"] = {
       orientation: "landscape",
@@ -1675,717 +1392,354 @@ const achievementCount =
 
     XLSX.writeFile(workbook, "تقرير_مصادر_المخالفات_حسب_المنطقة.xlsx");
   };
+
+  /* =========================================================
+     EXPORT 3
+     CUMULATIVE REPORT
+  ========================================================= */
+
   const openCumulativeModal = () => {
     setCumulativeFromDate("");
     setCumulativeToDate("");
     setCumulativeModalOpened(true);
   };
-const handleCumulativeExport = async () => {
-  // =====================================================
-  // VALIDATION
-  // =====================================================
 
-  if (
-    !cumulativeFromDate ||
-    !cumulativeToDate
-  ) {
-    alert(
-      "يرجى اختيار تاريخ البداية والنهاية"
-    );
+  const handleCumulativeExport = async () => {
+    // VALIDATION
 
-    return;
-  }
+    if (!cumulativeFromDate || !cumulativeToDate) {
+      alert("يرجى اختيار تاريخ البداية والنهاية");
 
-  if (
-    cumulativeFromDate >
-    cumulativeToDate
-  ) {
-    alert(
-      "تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية"
-    );
+      return;
+    }
 
-    return;
-  }
+    if (cumulativeFromDate > cumulativeToDate) {
+      alert("تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية");
 
-  if (cumulativeExporting) {
-    return;
-  }
+      return;
+    }
 
-  const exportStart =
-    performance.now();
+    if (cumulativeExporting) {
+      return;
+    }
 
-  try {
-    setCumulativeExporting(true);
+    const exportStart = performance.now();
 
-    // =====================================================
-    // BUILD URL
-    // =====================================================
+    try {
+      setCumulativeExporting(true);
 
-    const params =
-      new URLSearchParams({
-        dateFrom:
-          cumulativeFromDate,
+      // BUILD URL
 
-        dateTo:
-          cumulativeToDate,
+      const params = new URLSearchParams({
+        dateFrom: cumulativeFromDate,
+        dateTo: cumulativeToDate,
       });
 
-    // =====================================================
-    // FETCH API
-    // =====================================================
+      // FETCH API
+      // cache: "no-store" لأن الـ API نفسه يتحكم بالـ cache
 
-    const response =
-      await fetch(
+      const response = await fetch(
         `/api/cumulative-report?${params.toString()}`,
         {
           method: "GET",
-
-          /*
-           * مهم:
-           * لا نريد browser cache هنا
-           * لأن API نفسه يتحكم بالـ cache.
-           */
           cache: "no-store",
         }
       );
 
-    // =====================================================
-    // CHECK RESPONSE
-    // =====================================================
+      // CHECK RESPONSE
 
-    const contentType =
-      response.headers.get(
-        "content-type"
-      ) || "";
+      const contentType = response.headers.get("content-type") || "";
 
-    if (
-      !contentType.includes(
-        "application/json"
-      )
-    ) {
-      const text =
-        await response.text();
+      if (!contentType.includes("application/json")) {
+        const text = await response.text();
 
-      console.error(
-        "Cumulative report returned non-JSON:",
-        text.substring(0, 500)
-      );
+        console.error(
+          "Cumulative report returned non-JSON:",
+          text.substring(0, 500)
+        );
 
-      throw new Error(
-        `الـ API لم يرجع JSON. Status: ${response.status}`
-      );
-    }
+        throw new Error(`الـ API لم يرجع JSON. Status: ${response.status}`);
+      }
 
-    const result =
-      await response.json();
+      const result = await response.json();
 
-    if (!response.ok) {
-      throw new Error(
-        result?.error ||
-          "حدث خطأ أثناء جلب التقرير"
-      );
-    }
+      if (!response.ok) {
+        throw new Error(result?.error || "حدث خطأ أثناء جلب التقرير");
+      }
 
-    // =====================================================
-    // DISTRICTS
-    // =====================================================
+      // DISTRICTS
 
-    const districts =
-      Array.isArray(
-        result?.districts
-      )
+      const districts = Array.isArray(result?.districts)
         ? result.districts
         : [];
 
-    // =====================================================
-    // EXCEL DATA
-    // =====================================================
+      // EXCEL DATA
 
-    const excelData: (
-      | string
-      | number
-      | null
-    )[][] = [];
+      const excelData: (string | number | null)[][] = [];
 
-    // =====================================================
-    // TITLE
-    // =====================================================
+      excelData.push(["التقرير التراكمي للمخالفات"]);
 
-    excelData.push([
-      "التقرير التراكمي للمخالفات",
-    ]);
-
-    // =====================================================
-    // PERIOD
-    // =====================================================
-
-    excelData.push([
-      `فترة التقرير: من ${cumulativeFromDate} إلى ${cumulativeToDate}`,
-    ]);
-
-    // =====================================================
-    // EMPTY ROW
-    // =====================================================
-
-    
-
-    // =====================================================
-    // HEADER
-    // =====================================================
-
-    excelData.push([
-      "المنطقة",
-      "إجمالي المخالفات",
-      "في انتظار القبول",
-      "قيد التنفيذ",
-      "في انتظار التحقق الميداني",
-      "تم الحل",
-      "تم قبول الرفض",
-      "تم رفض الحل",
-      "قيد مراجعة AVTR",
-      "نسبة الإنجاز",
-    ]);
-
-    // =====================================================
-    // DISTRICTS
-    // =====================================================
-
-    for (
-      const district of districts
-    ) {
       excelData.push([
-        district.districtName ||
-          "بدون منطقة",
-
-        Number(
-          district.total
-        ) || 0,
-
-        Number(
-          district.pendingAcceptance
-        ) || 0,
-
-        Number(
-          district.inProgress
-        ) || 0,
-
-        Number(
-          district.fieldVerification ??
-            district.pendingFieldMonitorVerification ??
-            0
-        ),
-
-        Number(
-          district.resolved
-        ) || 0,
-
-        Number(
-          district.acceptedRejection ??
-            district.rejected ??
-            0
-        ),
-
-        Number(
-          district.rejectedSolution ??
-            district.resolutionRejected ??
-            0
-        ),
-
-        Number(
-          district.avtrReview ??
-            district.pendingSupervisorReview ??
-            0
-        ),
-
-        `${Number(
-          district.achievementPercentage
-        ) || 0}%`,
+        `فترة التقرير: من ${cumulativeFromDate} إلى ${cumulativeToDate}`,
       ]);
-    }
 
- 
+      excelData.push([
+        "المنطقة",
+        "إجمالي المخالفات",
+        "في انتظار القبول",
+        "قيد التنفيذ",
+        "في انتظار التحقق الميداني",
+        "تم الحل",
+        "تم قبول الرفض",
+        "تم رفض الحل",
+        "قيد مراجعة AVTR",
+        "نسبة الإنجاز",
+      ]);
 
-    // =====================================================
-    // GRAND TOTAL
-    // =====================================================
+      for (const district of districts) {
+        excelData.push([
+          district.districtName || "بدون منطقة",
 
-   // =====================================================
-// GRAND TOTAL
-// =====================================================
+          Number(district.total) || 0,
 
-excelData.push([
-  "المجموع الكلي",
+          Number(district.pendingAcceptance) || 0,
 
-  Number(result.total) || 0,
+          Number(district.inProgress) || 0,
 
-  Number(result.pendingAcceptance) || 0,
+          Number(
+            district.fieldVerification ??
+              district.pendingFieldMonitorVerification ??
+              0
+          ),
 
-  Number(result.inProgress) || 0,
+          Number(district.resolved) || 0,
 
-  Number(result.fieldVerification) || 0,
+          Number(district.acceptedRejection ?? district.rejected ?? 0),
 
-  Number(result.resolved) || 0,
+          Number(district.rejectedSolution ?? district.resolutionRejected ?? 0),
 
-  Number(result.acceptedRejection) || 0,
+          Number(
+            district.avtrReview ?? district.pendingSupervisorReview ?? 0
+          ),
 
-  Number(result.rejectedSolution) || 0,
+          `${Number(district.achievementPercentage) || 0}%`,
+        ]);
+      }
 
-  Number(result.avtrReview) || 0,
+      // GRAND TOTAL
 
-  `${Number(result.achievementPercentage) || 0}%`,
-]);
+      excelData.push([
+        "المجموع الكلي",
 
-    // =====================================================
-    // CREATE WORKSHEET
-    // =====================================================
+        Number(result.total) || 0,
 
-    const worksheet =
-      XLSX.utils.aoa_to_sheet(
-        excelData
-      );
+        Number(result.pendingAcceptance) || 0,
 
-    // =====================================================
-    // COLUMN WIDTHS
-    // =====================================================
+        Number(result.inProgress) || 0,
 
-    worksheet["!cols"] = [
-      { wch: 28 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 16 },
-      { wch: 28 },
-      { wch: 16 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 20 },
-      { wch: 16 },
-    ];
+        Number(result.fieldVerification) || 0,
 
-    // =====================================================
-    // MERGES
-    // =====================================================
+        Number(result.resolved) || 0,
 
-    worksheet["!merges"] = [
-      {
-        s: {
-          r: 0,
-          c: 0,
-        },
+        Number(result.acceptedRejection) || 0,
 
-        e: {
-          r: 0,
-          c: 9,
-        },
-      },
+        Number(result.rejectedSolution) || 0,
 
-      {
-        s: {
-          r: 1,
-          c: 0,
-        },
+        Number(result.avtrReview) || 0,
 
-        e: {
-          r: 1,
-          c: 9,
-        },
-      },
-    ];
+        `${Number(result.achievementPercentage) || 0}%`,
+      ]);
 
-    // =====================================================
-    // BORDER
-    // =====================================================
+      // CREATE WORKSHEET
 
-    const border = {
-      top: {
-        style: "thin",
-        color: {
-          rgb: "D9D9D9",
-        },
-      },
+      const worksheet = XLSX.utils.aoa_to_sheet(excelData);
 
-      bottom: {
-        style: "thin",
-        color: {
-          rgb: "D9D9D9",
-        },
-      },
+      worksheet["!cols"] = [
+        { wch: 28 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 16 },
+        { wch: 28 },
+        { wch: 16 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 20 },
+        { wch: 16 },
+      ];
 
-      left: {
-        style: "thin",
-        color: {
-          rgb: "D9D9D9",
-        },
-      },
+      worksheet["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } },
+      ];
 
-      right: {
-        style: "thin",
-        color: {
-          rgb: "D9D9D9",
-        },
-      },
-    };
+      // STYLES
 
-    // =====================================================
-    // TITLE
-    // =====================================================
+      const thin = { style: "thin", color: { rgb: "D9D9D9" } };
 
-    worksheet["A1"].s = {
-      font: {
-        bold: true,
-        sz: 18,
-        color: {
-          rgb: "FFFFFF",
-        },
-      },
+      const border = {
+        top: thin,
+        bottom: thin,
+        left: thin,
+        right: thin,
+      };
 
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-      },
+      const NAVY = "15233C";
 
-      fill: {
-        fgColor: {
-          rgb: "15233C",
-        },
-      },
-
-      border,
-    };
-
-    // =====================================================
-    // PERIOD
-    // =====================================================
-
-    worksheet["A2"].s = {
-      font: {
-        bold: true,
-        sz: 12,
-      },
-
-      alignment: {
-        horizontal: "center",
-        vertical: "center",
-      },
-
-      fill: {
-        fgColor: {
-          rgb: "E9EEF5",
-        },
-      },
-
-      border,
-    };
-
-    // =====================================================
-    // HEADER
-    // =====================================================
-
-    const headerRow = 2;
-
-    for (
-      let col = 0;
-      col < 10;
-      col++
-    ) {
-      const cell =
-        worksheet[
-          XLSX.utils.encode_cell({
-            r: headerRow,
-            c: col,
-          })
-        ];
-
-      if (!cell) continue;
-
-      cell.s = {
-        font: {
-          bold: true,
-          sz: 11,
-          color: {
-          rgb: "FFFFFF",
-        },
-        },
-
-        alignment: {
-          horizontal: "center",
-          vertical: "center",
-          wrapText: true,
-        },
-
-        fill: {
-          fgColor: {
-            rgb: "15233C",
-          },
-        },
-
+      worksheet["A1"].s = {
+        font: { bold: true, sz: 18, color: { rgb: "FFFFFF" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        fill: { fgColor: { rgb: NAVY } },
         border,
       };
-    }
 
-    // =====================================================
-    // DATA ROWS
-    // =====================================================
+      worksheet["A2"].s = {
+        font: { bold: true, sz: 12 },
+        alignment: { horizontal: "center", vertical: "center" },
+        fill: { fgColor: { rgb: "E9EEF5" } },
+        border,
+      };
 
-    const firstDataRow = 3;
+      // HEADER
 
-    const lastDataRow =
-      firstDataRow +
-      districts.length -
-      1;
+      const headerRow = 2;
 
-    for (
-      let row = firstDataRow;
-      row <= lastDataRow;
-      row++
-    ) {
-      for (
-        let col = 0;
-        col < 10;
-        col++
-      ) {
+      for (let col = 0; col < 10; col++) {
         const cell =
-          worksheet[
-            XLSX.utils.encode_cell({
-              r: row,
-              c: col,
-            })
-          ];
+          worksheet[XLSX.utils.encode_cell({ r: headerRow, c: col })];
 
         if (!cell) continue;
 
         cell.s = {
+          font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
           alignment: {
-            horizontal:
-              col === 0
-                ? "right"
-                : "center",
-
-            vertical:
-              "center",
-
-            wrapText:
-              true,
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
           },
-
+          fill: { fgColor: { rgb: NAVY } },
           border,
         };
       }
-    }
 
-    // =====================================================
-    // TOTAL ROW
-    // =====================================================
-const totalRow =
-  firstDataRow +
-  districts.length;
+      // DATA ROWS
 
-    for (
-      let col = 0;
-      col < 10;
-      col++
-    ) {
-      const cell =
-        worksheet[
-          XLSX.utils.encode_cell({
-            r: totalRow,
-            c: col,
-          })
-        ];
+      const firstDataRow = 3;
 
-      if (!cell) continue;
+      const lastDataRow = firstDataRow + districts.length - 1;
 
-      cell.s = {
-        font: {
-          bold: true,
-          sz: 12,
-          color: {
-          rgb: "FFFFFF",
-        },
-        },
+      for (let row = firstDataRow; row <= lastDataRow; row++) {
+        for (let col = 0; col < 10; col++) {
+          const cell = worksheet[XLSX.utils.encode_cell({ r: row, c: col })];
 
-        alignment: {
-          horizontal:
-            "center",
+          if (!cell) continue;
 
-          vertical:
-            "center",
-
-          wrapText:
-            true,
-        },
-
-        fill: {
-          fgColor: {
-            rgb: "15233C",
-           
-          },
-        },
-
-        border: {
-          top: {
-            style: "medium",
-            color: {
-              rgb: "15233C",
+          cell.s = {
+            alignment: {
+              horizontal: col === 0 ? "right" : "center",
+              vertical: "center",
+              wrapText: true,
             },
-          },
+            border,
+          };
+        }
+      }
 
-          bottom: {
-            style: "medium",
-            color: {
-              rgb: "15233C",
-            },
-          },
+      // TOTAL ROW
 
-          left: {
-            style: "thin",
-            color: {
-              rgb: "808080",
-            },
-          },
+      const totalRow = firstDataRow + districts.length;
 
-          right: {
-            style: "thin",
-            color: {
-              rgb: "808080",
-            },
+      for (let col = 0; col < 10; col++) {
+        const cell = worksheet[XLSX.utils.encode_cell({ r: totalRow, c: col })];
+
+        if (!cell) continue;
+
+        cell.s = {
+          font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
           },
-        },
+          fill: { fgColor: { rgb: NAVY } },
+          border: {
+            top: { style: "medium", color: { rgb: NAVY } },
+            bottom: { style: "medium", color: { rgb: NAVY } },
+            left: { style: "thin", color: { rgb: "808080" } },
+            right: { style: "thin", color: { rgb: "808080" } },
+          },
+        };
+      }
+
+      // AUTOFILTER
+
+      if (districts.length > 0) {
+        worksheet["!autofilter"] = {
+          ref: `A3:J${firstDataRow + districts.length}`,
+        };
+      }
+
+      worksheet["!freeze"] = { xSplit: 0, ySplit: 4 };
+
+      worksheet["!sheetViews"] = [{ rightToLeft: true }];
+
+      worksheet["!pageSetup"] = {
+        orientation: "landscape",
+        fitToWidth: 1,
+        fitToHeight: 0,
       };
+
+      worksheet["!rows"] = [];
+
+      worksheet["!rows"][0] = { hpt: 30 };
+
+      worksheet["!rows"][1] = { hpt: 24 };
+
+      worksheet["!rows"][2] = { hpt: 30 };
+
+      // WORKBOOK
+
+      const workbook = XLSX.utils.book_new();
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, "التقرير التراكمي");
+
+      const fileName = `التقرير_التراكمي_${cumulativeFromDate}_إلى_${cumulativeToDate}.xlsx`;
+
+      XLSX.writeFile(workbook, fileName);
+
+      // CLOSE
+
+      setCumulativeModalOpened(false);
+
+      setCumulativeFromDate("");
+
+      setCumulativeToDate("");
+
+      console.log(
+        `Cumulative export completed in ${Math.round(
+          performance.now() - exportStart
+        )}ms`
+      );
+    } catch (error) {
+      console.error("Cumulative report error:", error);
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "حدث خطأ أثناء إنشاء التقرير التراكمي"
+      );
+    } finally {
+      setCumulativeExporting(false);
     }
-
-    // =====================================================
-    // AUTOFILTER
-    // =====================================================
-
-    if (districts.length > 0) {
-  worksheet["!autofilter"] = {
-    ref: `A3:J${
-      firstDataRow +
-      districts.length
-    }`,
   };
-}
 
-    // =====================================================
-    // FREEZE
-    // =====================================================
-
-    worksheet["!freeze"] = {
-      xSplit: 0,
-      ySplit: 4,
-    };
-
-    // =====================================================
-    // RTL
-    // =====================================================
-
-    worksheet["!sheetViews"] = [
-      {
-        rightToLeft: true,
-      },
-    ];
-
-    // =====================================================
-    // PRINT
-    // =====================================================
-
-    worksheet["!pageSetup"] = {
-      orientation: "landscape",
-      fitToWidth: 1,
-      fitToHeight: 0,
-    };
-
-    // =====================================================
-    // ROW HEIGHTS
-    // =====================================================
-
-    worksheet["!rows"] = [];
-
-    worksheet["!rows"][0] = {
-      hpt: 30,
-    };
-
-    worksheet["!rows"][1] = {
-      hpt: 24,
-    };
-
-    worksheet["!rows"][2] = {
-      hpt: 30,
-    };
-
-   
-
-    // =====================================================
-    // WORKBOOK
-    // =====================================================
-
-    const workbook =
-      XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "التقرير التراكمي"
-    );
-
-    // =====================================================
-    // FILE NAME
-    // =====================================================
-
-    const fileName =
-      `التقرير_التراكمي_${cumulativeFromDate}_إلى_${cumulativeToDate}.xlsx`;
-
-    // =====================================================
-    // WRITE FILE
-    // =====================================================
-
-    XLSX.writeFile(
-      workbook,
-      fileName
-    );
-
-    // =====================================================
-    // CLOSE
-    // =====================================================
-
-    setCumulativeModalOpened(
-      false
-    );
-
-    setCumulativeFromDate(
-      ""
-    );
-
-    setCumulativeToDate(
-      ""
-    );
-
-    console.log(
-      `Cumulative export completed in ${Math.round(
-        performance.now() -
-          exportStart
-      )}ms`
-    );
-  } catch (error) {
-    console.error(
-      "Cumulative report error:",
-      error
-    );
-
-    alert(
-      error instanceof Error
-        ? error.message
-        : "حدث خطأ أثناء إنشاء التقرير التراكمي"
-    );
-  } finally {
-    setCumulativeExporting(
-      false
-    );
-  }
-};
   /* =========================================================
      RENDER
   ========================================================= */
+
+  const modalInvalid =
+    !cumulativeFromDate ||
+    !cumulativeToDate ||
+    cumulativeFromDate > cumulativeToDate;
 
   return (
     <Box
@@ -2393,6 +1747,7 @@ const totalRow =
       style={{
         minHeight: "100vh",
         overflowX: "hidden",
+        fontFamily: FONT,
       }}
       p={{
         base: "xs",
@@ -2400,31 +1755,31 @@ const totalRow =
         md: "lg",
       }}
     >
+      {/* =====================================================
+          CUMULATIVE MODAL
+      ===================================================== */}
+
       <Modal
         opened={cumulativeModalOpened}
         onClose={() => setCumulativeModalOpened(false)}
         title="التقرير التراكمي"
         centered
-        radius="xl"
+        radius={20}
         size="md"
         dir="rtl"
         overlayProps={{
-          backgroundOpacity: 0.55,
-          blur: 4,
+          backgroundOpacity: 0.7,
+          blur: 6,
+          color: INK,
         }}
+        styles={modalStyles}
       >
         <Stack gap="lg">
-          <Text size="sm" c="dimmed" ta="center">
+          <Text size="sm" c={MUTED} ta="center">
             اختر الفترة الزمنية التي تريد استخراج التقرير التراكمي لها
           </Text>
 
-          <SimpleGrid
-            cols={{
-              base: 1,
-              sm: 2,
-            }}
-            spacing="md"
-          >
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
             <TextInput
               label="من تاريخ"
               placeholder="YYYY-MM-DD"
@@ -2434,6 +1789,7 @@ const totalRow =
                 setCumulativeFromDate(event.currentTarget.value)
               }
               required
+              styles={dateInputStyles}
             />
 
             <TextInput
@@ -2445,491 +1801,410 @@ const totalRow =
                 setCumulativeToDate(event.currentTarget.value)
               }
               required
+              styles={dateInputStyles}
             />
           </SimpleGrid>
 
           {cumulativeFromDate &&
             cumulativeToDate &&
             cumulativeFromDate > cumulativeToDate && (
-              <Text size="sm" c="red" fw={700} ta="center">
+              <Text size="sm" c="red.3" fw={600} ta="center">
                 تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية
               </Text>
             )}
-{cumulativeExporting && (
-  <Group justify="center" gap="sm">
-<Progress
-      value={100}
-      color="orange"
-      size="sm"
-      animated
-      w="100%"
-    />    <Text size="sm" fw={700} c="violet">
-      جاري تجهيز التقرير التراكمي...
-    </Text>
-  </Group>
-)}
+
+          {cumulativeExporting && (
+            <Stack gap={8}>
+              <Progress
+                value={100}
+                size={6}
+                radius="xl"
+                animated
+                w="100%"
+                styles={{
+                  root: { background: "rgba(255,255,255,.14)" },
+                  section: {
+                    background: `linear-gradient(90deg, ${GOLD}, ${GOLD_LIGHT})`,
+                  },
+                }}
+              />
+
+              <Text size="sm" fw={600} c={GOLD_LIGHT} ta="center">
+                جاري تجهيز التقرير التراكمي...
+              </Text>
+            </Stack>
+          )}
+
           <Group justify="flex-end" gap="sm">
             <Button
-              variant="subtle"
-              color="gray"
+              variant="default"
               radius="xl"
               onClick={() => setCumulativeModalOpened(false)}
               disabled={cumulativeExporting}
+              style={ghostBtn}
             >
               إلغاء
             </Button>
 
-           <Button
-  color="violet"
-  radius="xl"
-  leftSection={<IconFileSpreadsheet size={18} />}
-  disabled={
-    cumulativeExporting ||
-    !cumulativeFromDate ||
-    !cumulativeToDate ||
-    cumulativeFromDate > cumulativeToDate
-  }
-  onClick={handleCumulativeExport}
->
-  تنزيل التقرير
-</Button>
+            <Button
+              radius="xl"
+              variant="default"
+              leftSection={<IconFileSpreadsheet size={18} stroke={1.6} />}
+              disabled={cumulativeExporting || modalInvalid}
+              onClick={handleCumulativeExport}
+              style={{
+                ...goldSolidBtn,
+                opacity: cumulativeExporting || modalInvalid ? 0.45 : 1,
+              }}
+            >
+              تنزيل التقرير
+            </Button>
           </Group>
         </Stack>
       </Modal>
+
       <Stack maw={1600} mx="auto">
-        {/* =====================================================
-            MAIN HEADER
-        ===================================================== */}
         {isAdmin && (
           <>
-            <Card
-              p={{
-                base: "md",
-                sm: "xl",
-              }}
-              withBorder
-              style={{
-                background:
-                  "linear-gradient(145deg, rgba(255,255,255,.98), rgba(248,250,252,.94))",
-                border: "1px solid rgba(15,23,42,.07)",
-                boxShadow: "0 20px 60px rgba(15,23,42,.08)",
-              }}
-            >
-              <Stack gap="xl">
-                {/* Header */}
+            {/* =================================================
+                ADMIN PANEL
+            ================================================= */}
+
+            <Card radius={22} p={0} style={panelStyle}>
+              {/* ---------- HERO ---------- */}
+
+              <Box
+                p={{ base: "md", sm: "xl" }}
+                style={{
+                  position: "relative",
+                  background: `radial-gradient(55% 150% at 100% 0%, ${hexA(
+                    GOLD,
+                    0.22
+                  )} 0%, transparent 70%), linear-gradient(135deg, ${INK}, #20345A)`,
+                  borderBottom: `1px solid ${LINE}`,
+                }}
+              >
+                <Box
+                  style={{
+                    position: "absolute",
+                    insetInline: 0,
+                    top: 0,
+                    height: 2,
+                    background: `linear-gradient(90deg, ${GOLD}, ${hexA(
+                      GOLD,
+                      0
+                    )})`,
+                  }}
+                />
 
                 <Group
                   justify="space-between"
                   align="center"
                   gap="md"
                   wrap="wrap"
+                  mb="xl"
                 >
-                  <Group
-                    gap="sm"
-                    wrap="nowrap"
-                    style={{
-                      minWidth: 0,
-                    }}
-                  >
+                  <Group gap="md" wrap="nowrap" style={{ minWidth: 0 }}>
                     <Box
                       style={{
-                        width: 46,
-                        height: 46,
-                        minWidth: 46,
-                        borderRadius: 16,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-                        color: "white",
-                        boxShadow: "0 10px 24px rgba(37,99,235,.22)",
+                        width: 50,
+                        height: 50,
+                        minWidth: 50,
+                        display: "grid",
+                        placeItems: "center",
+                        borderRadius: 15,
+                        color: GOLD_LIGHT,
+                        background: hexA(GOLD, 0.1),
+                        border: `1px solid ${hexA(GOLD, 0.45)}`,
                       }}
                     >
-                      <IconChartBar size={24} />
+                      <IconChartBar size={25} stroke={1.5} />
                     </Box>
 
-                    <Stack
-                      gap={2}
-                      style={{
-                        minWidth: 0,
-                      }}
-                    >
+                    <Stack gap={2} style={{ minWidth: 0 }}>
                       <Text
-                        fw={900}
+                        fw={700}
+                        c={TEXT}
                         style={{
-                          fontSize: "clamp(18px, 3vw, 28px)",
-                          lineHeight: 1.2,
+                          fontSize: "clamp(18px, 3vw, 26px)",
+                          lineHeight: 1.25,
                         }}
                       >
                         ملخص المخالفات لجميع المناطق
                       </Text>
 
                       <Text
-                        size="sm"
-                        c="dimmed"
-                        style={{
-                          fontSize: "clamp(11px, 2vw, 14px)",
-                        }}
+                        c={MUTED}
+                        style={{ fontSize: "clamp(11px, 2vw, 14px)" }}
                       >
                         تحليل مركزي لحالة المخالفات ومصادرها ونسب الإنجاز
                       </Text>
                     </Stack>
                   </Group>
 
-                  {/* =================================================
-                  SOURCE
-              ================================================= */}
-
-                  <Badge
-                    size="lg"
-                    radius="xl"
-                    variant="light"
-                    color={activeSource.color}
-                    leftSection={activeSource.icon}
+                  <Box
+                    component="span"
                     style={{
-                      maxWidth: "100%",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "6px 14px",
+                      borderRadius: 999,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: GOLD_LIGHT,
+                      background: hexA(GOLD, 0.1),
+                      border: `1px solid ${hexA(GOLD, 0.5)}`,
                     }}
                   >
+                    {activeSource.icon}
                     {activeSource.label}
-                  </Badge>
+                  </Box>
                 </Group>
 
-                {/* =================================================
-                KPI HERO
-            ================================================= */}
-
-                <Box
-                  p={{
-                    base: "md",
-                    sm: "xl",
-                  }}
-                  style={{
-                    position: "relative",
-                    overflow: "hidden",
-                    borderRadius: 28,
-                    background:
-                      "linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%)",
-                    color: "white",
-                    boxShadow: "0 20px 50px rgba(15,23,42,.18)",
-                  }}
+                <Group
+                  justify="space-between"
+                  align="flex-end"
+                  gap="xl"
+                  wrap="wrap"
                 >
-                  <Box
-                    style={{
-                      position: "absolute",
-                      width: 220,
-                      height: 220,
-                      borderRadius: "50%",
-                      background: "rgba(255,255,255,.07)",
-                      top: -110,
-                      left: -70,
-                    }}
-                  />
+                  <Stack gap={4}>
+                    <Text size="sm" fw={600} c={MUTED}>
+                      نسبة الإنجاز الكلي
+                    </Text>
 
-                  <Box
-                    style={{
-                      position: "absolute",
-                      width: 180,
-                      height: 180,
-                      borderRadius: "50%",
-                      background: "rgba(255,255,255,.05)",
-                      bottom: -100,
-                      right: -50,
-                    }}
-                  />
+                    <Text
+                      fw={800}
+                      c={TEXT}
+                      style={{
+                        fontSize: "clamp(46px, 9vw, 72px)",
+                        lineHeight: 1,
+                        ...tabular,
+                      }}
+                    >
+                      {achievement}
+                      <Text
+                        span
+                        fw={600}
+                        c={GOLD_LIGHT}
+                        style={{ fontSize: "0.5em" }}
+                      >
+                        %
+                      </Text>
+                    </Text>
 
-                  <Group
-                    justify="space-between"
-                    align="center"
-                    gap="xl"
-                    wrap="wrap"
-                    style={{
-                      position: "relative",
-                      zIndex: 1,
-                    }}
+                    <Text size="sm" c={MUTED}>
+                      بناءً على المخالفات المعروضة حالياً
+                    </Text>
+                  </Stack>
+
+                  <SimpleGrid
+                    cols={{ base: 2, xs: 2 }}
+                    spacing="sm"
+                    style={{ width: "min(100%, 460px)" }}
                   >
-                    <Stack gap={3}>
-                      <Text
-                        size="sm"
-                        fw={700}
-                        style={{
-                          opacity: 0.75,
-                        }}
-                      >
-                        نسبة الإنجاز الكلي
+                    <HeroMiniStat
+                      label="الإجمالي"
+                      value={kpis.total}
+                      color="#8FB4FF"
+                      icon={<IconSum size={18} stroke={1.7} />}
+                    />
+
+                    <HeroMiniStat
+                      label="المخالفات المنجزة"
+                      value={kpis.completedCount}
+                      color={GOLD_LIGHT}
+                      icon={<IconCircleCheck size={18} stroke={1.7} />}
+                      highlight
+                    />
+                  </SimpleGrid>
+                </Group>
+              </Box>
+
+              {/* ---------- BODY ---------- */}
+
+              <Stack gap="lg" p={{ base: "md", sm: "xl" }}>
+                {/* SOURCE FILTER */}
+
+                <Group
+                  justify="space-between"
+                  align="center"
+                  gap="sm"
+                  wrap="wrap"
+                >
+                  <Group gap="sm" wrap="nowrap">
+                    <Box
+                      style={{
+                        width: 38,
+                        height: 38,
+                        display: "grid",
+                        placeItems: "center",
+                        borderRadius: 12,
+                        color: GOLD_LIGHT,
+                        background: hexA(GOLD, 0.1),
+                        border: `1px solid ${hexA(GOLD, 0.45)}`,
+                      }}
+                    >
+                      <IconFilter size={19} stroke={1.6} />
+                    </Box>
+
+                    <Stack gap={0}>
+                      <Text fw={700} c={TEXT} style={{ fontSize: 16 }}>
+                        مصدر المخالفة
                       </Text>
 
-                      <Text
-                        fw={900}
-                        style={{
-                          fontSize: "clamp(44px, 9vw, 72px)",
-                          lineHeight: 1,
-                          letterSpacing: "-2px",
-                        }}
-                      >
-                        {achievement}%
-                      </Text>
-
-                      <Text
-                        size="sm"
-                        style={{
-                          opacity: 0.75,
-                        }}
-                      >
-                        بناءً على المخالفات المعروضة حالياً
+                      <Text size="xs" c={MUTED}>
+                        اختر المصدر لعرض البيانات الخاصة به
                       </Text>
                     </Stack>
-
-                    <SimpleGrid
-                      cols={{
-                        base: 2,
-                        xs: 3,
-                      }}
-                      spacing="xs"
-                      style={{
-                        width: "min(100%, 430px)",
-                      }}
-                    >
-                      <HeroMiniStat label="الإجمالي" value={kpis.total} />
-
-                      <HeroMiniStat
-                        label="ميداني التحقق في انتظار"
-                        value={
-                          totalStatuses.PendingFieldMonitorVerification || 0
-                        }
-                      />
-
-                      <HeroMiniStat
-                        label="تم الحل"
-                        value={totalStatuses.Resolved || 0}
-                      />
-                    </SimpleGrid>
                   </Group>
-                </Box>
 
-                {/* =================================================
-                SOURCE FILTER
-            ================================================= */}
-
-                <Card
-                  radius="24"
-                  p={{
-                    base: "sm",
-                    sm: "lg",
-                  }}
-                  withBorder
-                  style={{
-                    background: "rgba(248,250,252,.92)",
-                    border: "1px solid rgba(15,23,42,.06)",
-                  }}
-                >
-                  <Stack gap="md">
-                    <Group
-                      justify="space-between"
-                      align="center"
-                      gap="sm"
-                      wrap="wrap"
-                    >
-                      <Group gap="xs" wrap="nowrap">
-                        <Box
-                          style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 12,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            background: "rgba(37,99,235,.10)",
-                            color: "#2563eb",
-                          }}
-                        >
-                          <IconFilter size={19} />
-                        </Box>
-
-                        <Stack gap={0}>
-                          <Text fw={900} size="md">
-                            مصدر المخالفة
-                          </Text>
-
-                          <Text size="xs" c="dimmed">
-                            اختر المصدر لعرض البيانات الخاصة به
-                          </Text>
-                        </Stack>
-                      </Group>
-
-                      <Group gap="xs" wrap="wrap">
-                        <Badge
-                          variant="light"
-                          radius="xl"
-                          color={activeSource.color}
-                        >
-                          {activeSource.label}
-                        </Badge>
-
-                        <Badge variant="light" radius="xl" color="gray">
-                          {filteredItems.length.toLocaleString("en-US")} مخالفة
-                        </Badge>
-                      </Group>
-                    </Group>
-
-                    <SimpleGrid
-                      cols={{
-                        base: 1,
-                        xs: 2,
-                        sm: 4,
-                      }}
-                      spacing={{
-                        base: "xs",
-                        sm: "sm",
-                      }}
-                    >
-                      {SOURCE_OPTIONS.map((source) => {
-                        const active = complaintSourceFilter === source.key;
-
-                        return (
-                          <Button
-                            key={source.key}
-                            fullWidth
-                            variant={active ? "filled" : "light"}
-                            color={source.color}
-                            radius="xl"
-                            size="md"
-                            leftSection={source.icon}
-                            onClick={() => setComplaintSourceFilter(source.key)}
-                            styles={{
-                              root: {
-                                minHeight: 52,
-                                justifyContent: "flex-start",
-                                transition: "all .2s ease",
-                                boxShadow: active
-                                  ? "0 8px 20px rgba(37,99,235,.15)"
-                                  : "none",
-                              },
-
-                              label: {
-                                width: "100%",
-                              },
-                            }}
-                          >
-                            <Group
-                              justify="space-between"
-                              wrap="nowrap"
-                              style={{
-                                width: "100%",
-                              }}
-                            >
-                              <Stack
-                                gap={0}
-                                style={{
-                                  minWidth: 0,
-                                  textAlign: "right",
-                                }}
-                              >
-                                <Text fw={800} size="sm" truncate>
-                                  {source.label}
-                                </Text>
-
-                                <Text
-                                  size="xs"
-                                  style={{
-                                    opacity: 0.75,
-                                  }}
-                                >
-                                  {
-                                    sourceCounts[
-                                      source.key as keyof typeof sourceCounts
-                                    ]
-                                  }{" "}
-                                  مخالفة
-                                </Text>
-                              </Stack>
-                            </Group>
-                          </Button>
-                        );
-                      })}
-                    </SimpleGrid>
-
-                    {complaintSourceFilter !== "all" && (
-                      <Button
-                        variant="subtle"
-                        color="gray"
-                        radius="xl"
-                        leftSection={<IconRefresh size={17} />}
-                        onClick={() => setComplaintSourceFilter("all")}
-                        fullWidth
-                      >
-                        إعادة عرض جميع المصادر
-                      </Button>
-                    )}
-                  </Stack>
-                </Card>
-
-                {/* =================================================
-                EXPORT ACTIONS
-            ================================================= */}
+                  <Text fw={700} c={GOLD_LIGHT} style={tabular}>
+                    {filteredItems.length.toLocaleString("en-US")} مخالفة
+                  </Text>
+                </Group>
 
                 <SimpleGrid
-                  cols={{
-                    base: 1,
-                    sm: 3,
-                  }}
-                  spacing="sm"
+                  cols={{ base: 1, xs: 2, sm: 4 }}
+                  spacing={{ base: "xs", sm: "sm" }}
                 >
-                  <Button
-                    size="md"
-                    radius="xl"
-                    color="violet"
-                    variant="light"
-                    leftSection={<IconCalendarStats size={19} />}
-                    onClick={openCumulativeModal}
-                    fullWidth
-                  >
-                    التقرير التراكمي
-                  </Button>
-                  <Button
-                    size="md"
-                    radius="xl"
-                    color="blue"
-                    leftSection={<IconFileSpreadsheet size={19} />}
-                    onClick={exportExcel}
-                    fullWidth
-                  >
-                    تصدير التقرير التفصيلي
-                  </Button>
+                  {SOURCE_OPTIONS.map((source) => {
+                    const active = complaintSourceFilter === source.key;
 
-                  <Button
-                    size="md"
-                    radius="xl"
-                    color="green"
-                    variant="light"
-                    leftSection={<IconFileSpreadsheet size={19} />}
-                    onClick={exportComplaintSourceExcel}
-                    fullWidth
-                  >
-                    تصدير مصادر المخالفات
-                  </Button>
+                    return (
+                      <Box
+                        key={source.key}
+                        component="button"
+                        type="button"
+                        onClick={() => setComplaintSourceFilter(source.key)}
+                        {...(active ? {} : liftHandlers)}
+                        style={{
+                          cursor: "pointer",
+                          textAlign: "right",
+                          width: "100%",
+                          minHeight: 62,
+                          padding: "10px 14px",
+                          borderRadius: 16,
+                          fontFamily: FONT,
+                          color: TEXT,
+                          background: `${cornerGlow(
+                            source.color,
+                            active ? 0.4 : 0.2
+                          )}, ${SURFACE_2}`,
+                          border: `1px solid ${active ? GOLD : LINE}`,
+                          boxShadow: active
+                            ? `0 0 0 3px ${hexA(GOLD, 0.18)}`
+                            : "none",
+                          transition: "all .18s ease",
+                        }}
+                      >
+                        <Group gap="sm" wrap="nowrap">
+                          <Box
+                            style={{
+                              display: "grid",
+                              placeItems: "center",
+                              width: 34,
+                              height: 34,
+                              minWidth: 34,
+                              borderRadius: 11,
+                              color: active ? GOLD_LIGHT : bright(source.color),
+                              background: "rgba(255,255,255,.07)",
+                              border: `1px solid ${LINE}`,
+                            }}
+                          >
+                            {source.icon}
+                          </Box>
+
+                          <Stack gap={0} style={{ minWidth: 0 }}>
+                            <Text fw={700} size="sm" c={TEXT} truncate>
+                              {source.label}
+                            </Text>
+
+                            <Text size="xs" c={MUTED} style={tabular}>
+                              {
+                                sourceCounts[
+                                  source.key as keyof typeof sourceCounts
+                                ]
+                              }{" "}
+                              مخالفة
+                            </Text>
+                          </Stack>
+                        </Group>
+                      </Box>
+                    );
+                  })}
                 </SimpleGrid>
+
+                {complaintSourceFilter !== "all" && (
+                  <Button
+                    variant="default"
+                    radius="xl"
+                    leftSection={<IconRefresh size={17} stroke={1.6} />}
+                    onClick={() => setComplaintSourceFilter("all")}
+                    fullWidth
+                    style={ghostBtn}
+                  >
+                    إعادة عرض جميع المصادر
+                  </Button>
+                )}
+
+                {/* EXPORT ACTIONS */}
+
+                <Box style={{ borderTop: `1px solid ${LINE}` }} pt="lg">
+                  <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+                    <Button
+                      size="md"
+                      radius="xl"
+                      variant="default"
+                      leftSection={<IconCalendarStats size={19} stroke={1.6} />}
+                      onClick={openCumulativeModal}
+                      fullWidth
+                      style={goldOutlineBtn}
+                    >
+                      التقرير التراكمي
+                    </Button>
+
+                    <Button
+                      size="md"
+                      radius="xl"
+                      variant="default"
+                      leftSection={<IconFileSpreadsheet size={19} stroke={1.6} />}
+                      onClick={exportExcel}
+                      fullWidth
+                      style={goldSolidBtn}
+                    >
+                      تصدير التقرير التفصيلي
+                    </Button>
+
+                    <Button
+                      size="md"
+                      radius="xl"
+                      variant="default"
+                      leftSection={<IconFileSpreadsheet size={19} stroke={1.6} />}
+                      onClick={exportComplaintSourceExcel}
+                      fullWidth
+                      style={ghostBtn}
+                    >
+                      تصدير مصادر المخالفات
+                    </Button>
+                  </SimpleGrid>
+                </Box>
               </Stack>
             </Card>
 
             <GeneralSummary items={filteredItems} />
           </>
         )}
+
         {/* =====================================================
             DISTRICT NAVIGATION
         ===================================================== */}
 
         {Object.keys(stats).length > 0 && (
           <Card
-            radius="24"
-            p={{
-              base: "sm",
-              sm: "md",
-            }}
-            withBorder
-            style={{
-              background: "rgba(255,255,255,.86)",
-              border: "1px solid rgba(15,23,42,.06)",
-            }}
+            radius={20}
+            p={{ base: "sm", sm: "md" }}
+            style={panelStyle}
           >
             <Group gap="xs" wrap="wrap">
               {Object.entries(stats)
@@ -2937,17 +2212,23 @@ const totalRow =
                 .map(([district, data]) => (
                   <Button
                     key={district}
-                    variant="light"
-                    color="blue"
+                    variant="default"
                     radius="xl"
                     size="sm"
                     onClick={() => focusDistrict(district)}
+                    style={ghostBtn}
+                    rightSection={
+                      <Text
+                        span
+                        fw={800}
+                        c={GOLD_LIGHT}
+                        style={{ fontSize: 13, ...tabular }}
+                      >
+                        {data.total.toLocaleString("en-US")}
+                      </Text>
+                    }
                   >
                     {district}
-
-                    <Badge ml={6} size="sm" variant="white" color="blue">
-                      {data.total}
-                    </Badge>
                   </Button>
                 ))}
             </Group>
@@ -2960,48 +2241,41 @@ const totalRow =
 
         {filteredItems.length === 0 && (
           <Card
-            radius="28"
-            p={{
-              base: "xl",
-              sm: 60,
-            }}
-            withBorder
-            style={{
-              textAlign: "center",
-              background: "rgba(255,255,255,.9)",
-            }}
+            radius={22}
+            p={{ base: "xl", sm: 60 }}
+            style={{ ...panelStyle, textAlign: "center" }}
           >
             <Stack align="center" gap="sm">
               <Box
                 style={{
                   width: 64,
                   height: 64,
+                  display: "grid",
+                  placeItems: "center",
                   borderRadius: 20,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "rgba(37,99,235,.08)",
-                  color: "#2563eb",
+                  color: GOLD_LIGHT,
+                  background: hexA(GOLD, 0.1),
+                  border: `1px solid ${hexA(GOLD, 0.45)}`,
                 }}
               >
-                <IconFilter size={30} />
+                <IconFilter size={30} stroke={1.5} />
               </Box>
 
-              <Text fw={900} size="lg">
+              <Text fw={700} c={TEXT} style={{ fontSize: 18 }}>
                 لا توجد مخالفات
               </Text>
 
-              <Text size="sm" c="dimmed">
+              <Text size="sm" c={MUTED}>
                 لا توجد بيانات مطابقة للفلاتر الحالية.
               </Text>
 
               {complaintSourceFilter !== "all" && (
                 <Button
-                  variant="light"
-                  color="blue"
+                  variant="default"
                   radius="xl"
-                  leftSection={<IconRefresh size={17} />}
+                  leftSection={<IconRefresh size={17} stroke={1.6} />}
                   onClick={() => setComplaintSourceFilter("all")}
+                  style={goldOutlineBtn}
                 >
                   عرض جميع المصادر
                 </Button>
@@ -3038,37 +2312,63 @@ const totalRow =
    HERO MINI STAT
 ========================================================= */
 
-function HeroMiniStat({ label, value }: { label: string; value: number }) {
+function HeroMiniStat({
+  label,
+  value,
+  color,
+  icon,
+  highlight = false,
+}: {
+  label: string;
+  value: number;
+  color: string;
+  icon?: ReactNode;
+  highlight?: boolean;
+}) {
   return (
     <Box
-      p={{
-        base: "sm",
-        sm: "md",
-      }}
+      px="md"
+      py="sm"
       style={{
-        borderRadius: 18,
-        background: "rgba(255,255,255,.09)",
-        border: "1px solid rgba(255,255,255,.12)",
-        backdropFilter: "blur(10px)",
+        position: "relative",
+        overflow: "hidden",
         textAlign: "center",
+        borderRadius: 16,
+        background: `${cornerGlow(color, highlight ? 0.32 : 0.2)}, ${SURFACE_2}`,
+        border: `1px solid ${highlight ? hexA(color, 0.6) : LINE_STRONG}`,
+        boxShadow: highlight ? `0 0 0 3px ${hexA(color, 0.14)}` : "none",
       }}
     >
-      <Text
-        size="xs"
-        fw={700}
+      {/* شريط ملوّن بالأعلى */}
+      <Box
         style={{
-          opacity: 0.7,
+          position: "absolute",
+          insetInline: 0,
+          top: 0,
+          height: 2,
+          background: `linear-gradient(90deg, ${color}, ${hexA(color, 0)})`,
         }}
-      >
-        {label}
-      </Text>
+      />
+
+      <Group justify="center" gap={6} mb={4} wrap="nowrap">
+        {icon && (
+          <Box style={{ color, display: "grid", placeItems: "center" }}>
+            {icon}
+          </Box>
+        )}
+
+        <Text size="xs" fw={600} c={MUTED}>
+          {label}
+        </Text>
+      </Group>
 
       <Text
-        fw={900}
+        fw={800}
         style={{
-          fontSize: "clamp(20px, 4vw, 28px)",
-          lineHeight: 1.2,
-          marginTop: 4,
+          color: highlight ? color : TEXT,
+          fontSize: "clamp(22px, 4vw, 30px)",
+          lineHeight: 1.15,
+          ...tabular,
         }}
       >
         {value.toLocaleString("en-US")}

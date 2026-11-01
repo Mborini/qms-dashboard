@@ -1,9 +1,7 @@
-
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { signOut } from "next-auth/react";
-import { IconLogout } from "@tabler/icons-react";
+import { signOut, useSession } from "next-auth/react";
 import {
   Box,
   Container,
@@ -13,18 +11,15 @@ import {
   Switch,
   Text,
   Stack,
-  Badge,
   Paper,
   SegmentedControl,
-  ThemeIcon,
-  Divider,
 } from "@mantine/core";
 
 import {
+  IconLogout,
   IconSearch,
   IconCalendar,
   IconChartBar,
-  IconChartBarOff,
   IconAlertCircle,
   IconRefresh,
   IconActivity,
@@ -32,12 +27,72 @@ import {
   IconLayoutList,
   IconLayoutGrid,
   IconPhoneCall,
+  IconArrowRight,
+  IconArrowBadgeLeftFilled,
+  IconArrowLeft,
 } from "@tabler/icons-react";
 
 import { bungee } from "../../layout";
 
 import FailureStatsCollapsible from "../../components/FailureStats1";
 import FailureStats from "../../components/Failures/FailureStats";
+import { useRouter } from "next/navigation";
+/* =========================================================
+   DESIGN TOKENS  (Navy + Champagne Gold)
+========================================================= */
+
+const INK = "#1A2A4A";
+const SURFACE = "#213459";
+const SURFACE_2 = "#2A4070";
+const PAGE = "#182646";
+const GOLD = "#C9A66B";
+const GOLD_LIGHT = "#E6CF9D";
+const LIVE = "#5EDDB8";
+const DANGER = "#FF8787";
+const TEXT = "#F3F6FC";
+const MUTED = "rgba(240,244,252,.72)";
+const FAINT = "rgba(240,244,252,.5)";
+const LINE = "rgba(255,255,255,.12)";
+const LINE_STRONG = "rgba(255,255,255,.22)";
+
+const FONT =
+  '"IBM Plex Sans Arabic", "Cairo", "Tajawal", "Segoe UI", system-ui, sans-serif';
+
+const hexA = (hex: string, a: number) =>
+  `${hex}${Math.round(a * 255)
+    .toString(16)
+    .padStart(2, "0")}`;
+
+const panelStyle = {
+  position: "relative" as const,
+  overflow: "hidden",
+  background: SURFACE,
+  color: TEXT,
+  fontFamily: FONT,
+  border: `1px solid ${LINE_STRONG}`,
+  boxShadow: "0 30px 60px -30px rgba(10,20,45,.55)",
+};
+
+const iconBoxStyle = {
+  display: "grid",
+  placeItems: "center",
+  color: GOLD_LIGHT,
+  background: hexA(GOLD, 0.1),
+  border: `1px solid ${hexA(GOLD, 0.45)}`,
+};
+
+const pill = (color: string) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "3px 12px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: 700,
+  color,
+  background: hexA(color, 0.1),
+  border: `1px solid ${hexA(color, 0.5)}`,
+});
 
 // =====================================================
 // PAGE
@@ -51,30 +106,29 @@ export default function StatsPage() {
   function getToday() {
     const date = new Date();
 
-    return `${date.getFullYear()}-${String(
-      date.getMonth() + 1,
-    ).padStart(2, "0")}-${String(
-      date.getDate(),
-    ).padStart(2, "0")}`;
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}-${String(date.getDate()).padStart(2, "0")}`;
   }
 
   // =====================================================
   // STATES
   // =====================================================
 
+  const { data: session } = useSession();
+
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [showCollapsible, setShowCollapsible] =
-    useState(false);
+  const [showCollapsible, setShowCollapsible] = useState(false);
 
   // =====================================================
   // SINGLE SELECTED DATE
   // =====================================================
-
-  const [selectedDate, setSelectedDate] =
-    useState(getToday());
+const router = useRouter();
+  const [selectedDate, setSelectedDate] = useState(getToday());
 
   // =====================================================
   // LIVE
@@ -82,31 +136,13 @@ export default function StatsPage() {
 
   const [liveMode, setLiveMode] = useState(false);
 
-  const [lastUpdated, setLastUpdated] =
-    useState<Date | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const liveIntervalRef =
-    useRef<ReturnType<typeof setInterval> | null>(
-      null,
-    );
-const [loggingOut, setLoggingOut] = useState(false);
+  const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-async function handleLogout() {
-  try {
-    setLoggingOut(true);
 
-    // أوقف التحديث التلقائي
-    if (liveIntervalRef.current) {
-      clearInterval(liveIntervalRef.current);
-      liveIntervalRef.current = null;
-    }
 
-    await signOut({ callbackUrl: "/login" });
-  } catch (e) {
-    console.error("LOGOUT ERROR:", e);
-    setLoggingOut(false);
-  }
-}
+
   // =====================================================
   // BUILD API DATE RANGE
   // =====================================================
@@ -116,31 +152,20 @@ async function handleLogout() {
 
     const year = current.getFullYear();
 
-    const month = String(
-      current.getMonth() + 1,
-    ).padStart(2, "0");
+    const month = String(current.getMonth() + 1).padStart(2, "0");
 
-    const day = String(
-      current.getDate(),
-    ).padStart(2, "0");
+    const day = String(current.getDate()).padStart(2, "0");
 
     // Previous calendar day
     const previous = new Date(current);
 
-    previous.setDate(
-      previous.getDate() - 1,
-    );
+    previous.setDate(previous.getDate() - 1);
 
-    const previousYear =
-      previous.getFullYear();
+    const previousYear = previous.getFullYear();
 
-    const previousMonth = String(
-      previous.getMonth() + 1,
-    ).padStart(2, "0");
+    const previousMonth = String(previous.getMonth() + 1).padStart(2, "0");
 
-    const previousDay = String(
-      previous.getDate(),
-    ).padStart(2, "0");
+    const previousDay = String(previous.getDate()).padStart(2, "0");
 
     return {
       from: `${previousYear}-${previousMonth}-${previousDay}T21:00:00.000Z`,
@@ -162,70 +187,43 @@ async function handleLogout() {
         setError("");
 
         if (!selectedDate) {
-          throw new Error(
-            "يرجى تحديد التاريخ",
-          );
+          throw new Error("يرجى تحديد التاريخ");
         }
 
-        const range =
-          getDateRange(selectedDate);
+        const range = getDateRange(selectedDate);
 
-        const params =
-          new URLSearchParams();
+        const params = new URLSearchParams();
 
-        params.append(
-          "dateFrom",
-          range.from,
-        );
+        params.append("dateFrom", range.from);
 
-        params.append(
-          "dateTo",
-          range.to,
-        );
+        params.append("dateTo", range.to);
 
-        params.append(
-          "limit",
-          "1000000",
-        );
+        params.append("limit", "1000000");
 
-        params.append(
-          "offset",
-          "0",
-        );
+        params.append("offset", "0");
 
-        console.log(
-          "KPI REQUEST:",
-          {
-            selectedDate,
-            dateFrom: range.from,
-            dateTo: range.to,
-            liveMode,
+        console.log("KPI REQUEST:", {
+          selectedDate,
+          dateFrom: range.from,
+          dateTo: range.to,
+          liveMode,
+        });
+
+        const response = await fetch(`/api/kpis?${params.toString()}`, {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache",
           },
-        );
-
-        const response = await fetch(
-          `/api/kpis?${params.toString()}`,
-          {
-            method: "GET",
-            cache: "no-store",
-            headers: {
-              "Cache-Control":
-                "no-cache",
-            },
-          },
-        );
+        });
 
         if (!response.ok) {
-          let message =
-            "تعذر تحميل بيانات الإحصائيات";
+          let message = "تعذر تحميل بيانات الإحصائيات";
 
           try {
-            const data =
-              await response.json();
+            const data = await response.json();
 
-            message =
-              data?.error ||
-              message;
+            message = data?.error || message;
           } catch {
             // Ignore JSON parsing error
           }
@@ -233,33 +231,21 @@ async function handleLogout() {
           throw new Error(message);
         }
 
-        const data =
-          await response.json();
+        const data = await response.json();
 
-        const result =
-          Array.isArray(data?.items)
-            ? data.items
-            : [];
+        const result = Array.isArray(data?.items) ? data.items : [];
 
         setItems(result);
 
-        setLastUpdated(
-          new Date(),
-        );
+        setLastUpdated(new Date());
       } catch (error: any) {
-        console.error(
-          "KPI ERROR:",
-          error,
-        );
+        console.error("KPI ERROR:", error);
 
         if (!silent) {
           setItems([]);
         }
 
-        setError(
-          error?.message ||
-            "حدث خطأ أثناء تحميل البيانات",
-        );
+        setError(error?.message || "حدث خطأ أثناء تحميل البيانات");
       } finally {
         if (!silent) {
           setLoading(false);
@@ -283,9 +269,7 @@ async function handleLogout() {
 
   useEffect(() => {
     if (liveIntervalRef.current) {
-      clearInterval(
-        liveIntervalRef.current,
-      );
+      clearInterval(liveIntervalRef.current);
 
       liveIntervalRef.current = null;
     }
@@ -294,16 +278,13 @@ async function handleLogout() {
       return;
     }
 
-    liveIntervalRef.current =
-      setInterval(() => {
-        getData(true);
-      }, 5 * 60 * 1000);
+    liveIntervalRef.current = setInterval(() => {
+      getData(true);
+    }, 5 * 60 * 1000);
 
     return () => {
       if (liveIntervalRef.current) {
-        clearInterval(
-          liveIntervalRef.current,
-        );
+        clearInterval(liveIntervalRef.current);
 
         liveIntervalRef.current = null;
       }
@@ -317,9 +298,7 @@ async function handleLogout() {
   useEffect(() => {
     return () => {
       if (liveIntervalRef.current) {
-        clearInterval(
-          liveIntervalRef.current,
-        );
+        clearInterval(liveIntervalRef.current);
       }
     };
   }, []);
@@ -328,21 +307,16 @@ async function handleLogout() {
   // FORMAT LAST UPDATED
   // =====================================================
 
-  function formatLastUpdated(
-    date: Date | null,
-  ) {
+  function formatLastUpdated(date: Date | null) {
     if (!date) {
       return "لم يتم التحديث بعد";
     }
 
-    return date.toLocaleTimeString(
-      "en-JO",
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      },
-    );
+    return date.toLocaleTimeString("en-JO", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
   }
 
   // =====================================================
@@ -358,24 +332,21 @@ async function handleLogout() {
         maxWidth: "100vw",
         position: "relative",
         overflowX: "hidden",
-        background:
-          "linear-gradient(135deg, #f8fbff 0%, #eef6ff 45%, #f4fbf8 100%)",
+        fontFamily: FONT,
+        background: PAGE,
       }}
     >
-      {/* =================================================
-          BACKGROUND GLOW
-      ================================================= */}
+      {/* BACKGROUND GLOW */}
 
       <Box
         style={{
           position: "fixed",
-          width: 500,
-          height: 500,
+          width: 520,
+          height: 520,
           borderRadius: "50%",
-          background:
-            "rgba(34,139,230,0.10)",
-          filter: "blur(110px)",
-          top: -180,
+          background: hexA(GOLD, 0.16),
+          filter: "blur(120px)",
+          top: -200,
           right: -160,
           pointerEvents: "none",
         }}
@@ -384,21 +355,117 @@ async function handleLogout() {
       <Box
         style={{
           position: "fixed",
-          width: 450,
-          height: 450,
+          width: 480,
+          height: 480,
           borderRadius: "50%",
-          background:
-            "rgba(18,184,134,0.08)",
-          filter: "blur(110px)",
-          bottom: -180,
-          left: -150,
+          background: "rgba(74,120,220,.22)",
+          filter: "blur(120px)",
+          bottom: -200,
+          left: -160,
           pointerEvents: "none",
         }}
       />
 
       {/* =================================================
-          MAIN CONTAINER
+          GLASS NAVBAR
       ================================================= */}
+
+      <Box className="glass-nav-wrap">
+        <Box className="glass-nav">
+          {/* USER */}
+          <Group gap={10} wrap="nowrap">
+            <Box
+              style={{
+                width: 38,
+                height: 38,
+                flexShrink: 0,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: "50%",
+                color: INK,
+                fontWeight: 800,
+                fontSize: 15,
+                background: `linear-gradient(145deg, ${GOLD_LIGHT}, ${GOLD})`,
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,.6)",
+              }}
+            >
+              {(session?.user?.name || "?").trim().charAt(0)}
+            </Box>
+
+            {session?.user?.name && (
+              <Box style={{ minWidth: 0 }}>
+                <Text size="sm" fw={700} c={TEXT} truncate>
+                  {session.user.name}
+                </Text>
+
+                <Text size="10px" c={MUTED} fw={500} truncate>
+                  {session.user.role}
+                </Text>
+              </Box>
+            )}
+          </Group>
+
+          {/* BRAND */}
+          <Box
+            dir="ltr"
+            style={{
+              display: "inline-flex",
+              alignItems: "baseline",
+              gap: 5,
+              justifySelf: "center",
+            }}
+          >
+           
+
+            <Text
+              component="span"
+              className={bungee.className}
+              style={{
+                fontSize: 24,
+                lineHeight: 1,
+                                background:                   "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
+
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Matrix
+            </Text>
+             <Text
+              component="span"
+              style={{
+                fontFamily: "Inter, sans-serif",
+                fontSize: 18,
+                fontWeight: 600,
+                letterSpacing: "-1px",
+                color: TEXT,
+                lineHeight: 1,
+              }}
+            >
+              Ops
+            </Text>
+          </Box>
+
+          {/* LOGOUT */}
+          <Box style={{ justifySelf: "end" }}>
+         {/* BACK */}
+<Box style={{ justifySelf: "end" }}>
+  <button
+    type="button"
+    className="glass-logout"
+    onClick={() => router.back()}
+    aria-label="رجوع"
+  >
+    <span className="glass-logout-label">رجوع</span>
+    <IconArrowLeft size={16} />
+  </button>
+</Box>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* MAIN CONTAINER */}
 
       <Container
         size="xl"
@@ -406,563 +473,212 @@ async function handleLogout() {
           position: "relative",
           zIndex: 2,
           width: "100%",
-          paddingTop: 30,
+          paddingTop: 100,
           paddingBottom: 40,
         }}
       >
         {/* =================================================
-            HEADER
+            FILTER PANEL
         ================================================= */}
-<Group justify="flex-start" mb="sm">
-  <Button
-    size="xs"
-    radius="xl"
-    variant="light"
-    color="red"
-    loading={loggingOut}
-    leftSection={<IconLogout size={15} />}
-    onClick={handleLogout}
-    style={{ fontWeight: 800 }}
-  >
-    تسجيل خروج
-  </Button>
-</Group>
-        <Box
-          style={{
-            textAlign: "center",
-            marginBottom: 24,
-          }}
-        >
-          <Box
-            style={{
-              display: "inline-flex",
-              alignItems: "baseline",
-              justifyContent: "center",
-              gap: 6,
-            }}
-          >
-            <Text
-              component="span"
-              style={{
-                fontFamily:
-                  "Inter, sans-serif",
-                fontSize:
-                  "clamp(30px, 5vw, 40px)",
-                fontWeight: 600,
-                letterSpacing: "-2px",
-                color: "#263746",
-                lineHeight: 1,
-              }}
-            >
-              Ops
-            </Text>
 
-            <Text
-              component="span"
-              className={
-                bungee.className
-              }
-              style={{
-                fontSize:
-                  "clamp(32px, 4.5vw, 52px)",
-                lineHeight: 1,
-                background:
-                  "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
-                WebkitBackgroundClip:
-                  "text",
-                WebkitTextFillColor:
-                  "transparent",
-                backgroundClip:
-                  "text",
-                display:
-                  "inline-block",
-              }}
-            >
-              Matrix
-            </Text>
-          </Box>
+       <Paper
+  radius={26}
+  p={{ base: "md", sm: "lg" }}
+  mb="lg"
+  style={{
+    position: "relative",
+    overflow: "hidden",
+    color: TEXT,
+    fontFamily: FONT,
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,.08), rgba(255,255,255,.03))",
+    WebkitBackdropFilter: "blur(14px)",
+    backdropFilter: "blur(14px)",
+    border: "1px solid rgba(255,255,255,.14)",
+    boxShadow:
+      "inset 0 1px 0 rgba(255,255,255,.18), 0 20px 40px -24px rgba(10,20,45,.6)",
+  }}
+>
+  {/* HEADER */}
 
-          <Text
-            mt={14}
-            style={{
-              fontFamily:
-                "Inter, sans-serif",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "2.4px",
-              textTransform:
-                "uppercase",
-              color:
-                "rgba(30,50,65,0.52)",
-            }}
-          >
-            Operations Intelligence
+  <Group justify="space-between" align="center" mb="lg">
+    <Group gap="sm" wrap="nowrap">
+      <Box
+        style={{
+          ...iconBoxStyle,
+          width: 42,
+          height: 42,
+          borderRadius: 14,
+        }}
+      >
+        <IconChartBar size={20} stroke={1.6} />
+      </Box>
+
+      <Box>
+        <Text fw={700} c={TEXT} style={{ fontSize: 16 }}>
+          خيارات الإحصائيات
+        </Text>
+
+        <Text size="xs" c={MUTED} mt={2}>
+          اختر التاريخ ثم اضغط استعلام
+        </Text>
+      </Box>
+    </Group>
+
+    <Box component="span" style={pill(liveMode ? LIVE : GOLD_LIGHT)}>
+      <IconActivity size={12} />
+      {liveMode ? "LIVE" : "MANUAL"}
+    </Box>
+  </Group>
+
+  {/* CONTROLS */}
+
+  <Group align="center" gap="sm" wrap="wrap">
+    {/* DATE */}
+
+    <Box
+      style={{
+        flex: "1 1 220px",
+        minWidth: 190,
+        height: 44,
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "0 16px",
+        borderRadius: 999,
+        background: "rgba(255,255,255,.06)",
+        border: `1px solid ${LINE}`,
+      }}
+    >
+      <IconCalendar size={17} color={GOLD_LIGHT} stroke={1.6} />
+
+      <input
+        type="date"
+        value={selectedDate}
+        onChange={(e) => setSelectedDate(e.target.value)}
+        aria-label="تاريخ الاستعلام"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          height: "100%",
+          border: "none",
+          outline: "none",
+          background: "transparent",
+          color: TEXT,
+          colorScheme: "dark",
+          fontSize: 13,
+          fontWeight: 600,
+          fontFamily: FONT,
+        }}
+      />
+    </Box>
+
+    {/* SEARCH */}
+
+    <Button
+      radius="xl"
+      variant="default"
+      loading={loading}
+      disabled={liveMode}
+      leftSection={<IconSearch size={17} stroke={1.8} />}
+      onClick={() => getData(false)}
+      style={{
+        minWidth: 140,
+        height: 44,
+        flexShrink: 0,
+        border: "none",
+        fontWeight: 700,
+        fontFamily: FONT,
+        color: liveMode ? FAINT : INK,
+        background: liveMode
+          ? "rgba(255,255,255,.08)"
+          : `linear-gradient(135deg, ${GOLD_LIGHT}, ${GOLD})`,
+        boxShadow: liveMode
+          ? "none"
+          : `0 10px 22px -12px ${hexA(GOLD, 0.8)}`,
+      }}
+    >
+      استعلام
+    </Button>
+
+    {/* LIVE */}
+
+    <Box
+      style={{
+        height: 44,
+        flexShrink: 0,
+        display: "flex",
+        alignItems: "center",
+        gap: 9,
+        padding: "0 16px",
+        borderRadius: 999,
+        background: liveMode ? hexA(LIVE, 0.1) : "rgba(255,255,255,.06)",
+        border: `1px solid ${liveMode ? hexA(LIVE, 0.45) : LINE}`,
+        transition: "all 180ms ease",
+      }}
+    >
+      <Box
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: liveMode ? LIVE : FAINT,
+          boxShadow: liveMode ? `0 0 0 4px ${hexA(LIVE, 0.2)}` : "none",
+        }}
+      />
+
+      <Switch
+        size="sm"
+        color="teal"
+        checked={liveMode}
+        onChange={(event) => setLiveMode(event.currentTarget.checked)}
+        label={
+          <Text size="xs" fw={800} c={liveMode ? LIVE : MUTED}>
+            LIVE
           </Text>
-        </Box>
+        }
+      />
+    </Box>
+  </Group>
 
-        {/* =================================================
-            PREMIUM FILTER PANEL
-        ================================================= */}
+  {/* STATUS */}
 
-        <Paper
-          radius="xl"
-          p={{
-            base: "md",
-            sm: "lg",
-          }}
-          mb="lg"
-          withBorder
-          shadow="sm"
-          style={{
-            background:
-              "rgba(255,255,255,0.82)",
-            borderColor:
-              "rgba(255,255,255,0.95)",
-            backdropFilter:
-              "blur(18px)",
-          }}
-        >
-          {/* =================================================
-              FILTER HEADER
-          ================================================= */}
+  <Group
+    justify="space-between"
+    gap="sm"
+    wrap="wrap"
+    mt="lg"
+    pt="md"
+    style={{ borderTop: `1px solid ${LINE}` }}
+  >
+    <Group gap={8} wrap="nowrap">
+      <IconActivity size={15} color={liveMode ? LIVE : FAINT} />
 
-          <Group
-            justify="space-between"
-            align="center"
-            mb="md"
-          >
-            <Group
-              gap="sm"
-              wrap="nowrap"
-            >
-              <ThemeIcon
-                size={38}
-                radius="md"
-                variant="light"
-                color="blue"
-              >
-                <IconChartBar
-                  size={20}
-                />
-              </ThemeIcon>
+      <Text size="xs" fw={600} c={liveMode ? LIVE : MUTED}>
+        {liveMode
+          ? "التحديث التلقائي مفعل · كل 5 دقائق"
+          : "التحديث التلقائي متوقف"}
+      </Text>
+    </Group>
 
-              <Box>
-                <Text
-                  fw={850}
-                  size="sm"
-                  c="#1e293b"
-                >
-                  خيارات الإحصائيات
-                </Text>
+    <Group gap={6} wrap="nowrap">
+      <IconClock size={13} color={FAINT} />
 
-                <Text
-                  size="xs"
-                  c="dimmed"
-                  mt={2}
-                >
-                  اختر التاريخ وطريقة عرض البيانات
-                </Text>
-              </Box>
-            </Group>
+      <Text size="xs" c={MUTED}>
+        آخر تحديث
+      </Text>
 
-            <Badge
-              variant="light"
-              color={
-                liveMode
-                  ? "teal"
-                  : "gray"
-              }
-              radius="xl"
-              leftSection={
-                <IconActivity
-                  size={12}
-                />
-              }
-            >
-              {liveMode
-                ? "LIVE"
-                : "MANUAL"}
-            </Badge>
-          </Group>
-
-          <Divider
-            mb="md"
-            color="#edf1f5"
-          />
-
-          {/* =================================================
-              CONTROLS
-          ================================================= */}
-
-          <Group
-            align="flex-end"
-            gap="md"
-            wrap="wrap"
-          >
-            {/* =================================================
-                DATE
-            ================================================= */}
-
-            <Box
-              style={{
-                flex:
-                  "1 1 220px",
-                minWidth: 190,
-              }}
-            >
-              <Stack gap={6}>
-                <Group
-                  gap={6}
-                  wrap="nowrap"
-                >
-                  <IconCalendar
-                    size={15}
-                    color="#228be6"
-                  />
-
-                  <Text
-                    size="xs"
-                    fw={800}
-                    c="#475569"
-                  >
-                    تاريخ الاستعلام
-                  </Text>
-                </Group>
-
-                <input
-                  type="date"
-                  value={
-                    selectedDate
-                  }
-                  onChange={(e) =>
-                    setSelectedDate(
-                      e.target.value,
-                    )
-                  }
-                  style={{
-                    width: "100%",
-                    height: 40,
-                    borderRadius: 10,
-                    border:
-                      "1px solid #dbe4ee",
-                    padding:
-                      "0 12px",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    background:
-                      "#ffffff",
-                    color:
-                      "#334155",
-                    outline: "none",
-                    boxSizing:
-                      "border-box",
-                  }}
-                />
-              </Stack>
-            </Box>
-
-            {/* =================================================
-                SEARCH
-            ================================================= */}
-
-            <Button
-              size="md"
-              radius="md"
-              loading={loading}
-              disabled={liveMode}
-              leftSection={
-                <IconSearch
-                  size={17}
-                />
-              }
-              onClick={() =>
-                getData(false)
-              }
-              style={{
-                minWidth: 130,
-                height: 40,
-                flexShrink: 0,
-                border: "none",
-                fontWeight: 800,
-                background:
-                  liveMode
-                    ? "#cbd5e1"
-                    : "linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #1e40af 100%)",
-                boxShadow:
-                  liveMode
-                    ? "none"
-                    : "0 8px 20px rgba(37,99,235,.20)",
-              }}
-            >
-              استعلام
-            </Button>
-
-            {/* =================================================
-                VIEW MODE
-            ================================================= */}
-
-            <Box
-              style={{
-                flex:
-                  "0 1 auto",
-                minWidth: 220,
-              }}
-            >
-              <Text
-                size="xs"
-                fw={800}
-                c="#475569"
-                mb={6}
-              >
-                طريقة العرض
-              </Text>
-
-              <SegmentedControl
-                fullWidth
-                size="sm"
-                radius="md"
-                value={
-                  showCollapsible
-                    ? "detailed"
-                    : "compact"
-                }
-                onChange={(value) =>
-                  setShowCollapsible(
-                    value ===
-                      "detailed",
-                  )
-                }
-                data={[
-                  {
-                    value:
-                      "compact",
-                    label: (
-                      <Group
-                        gap={6}
-                        justify="center"
-                        wrap="nowrap"
-                      >
-                        <IconLayoutList
-                          size={15}
-                        />
-                        <span>
-                          مختصر
-                        </span>
-                      </Group>
-                    ),
-                  },
-                  {
-                    value:
-                      "detailed",
-                    label: (
-                      <Group
-                        gap={6}
-                        justify="center"
-                        wrap="nowrap"
-                      >
-                        <IconLayoutGrid
-                          size={15}
-                        />
-                        <span>
-                          تفصيلي
-                        </span>
-                      </Group>
-                    ),
-                  },
-                ]}
-              />
-            </Box>
-
-            {/* =================================================
-                LIVE
-            ================================================= */}
-
-            <Paper
-              radius="md"
-              px="md"
-              h={40}
-              withBorder
-              style={{
-                display: "flex",
-                alignItems:
-                  "center",
-                flexShrink: 0,
-                background:
-                  liveMode
-                    ? "rgba(18,184,134,0.07)"
-                    : "#f8fafc",
-                borderColor:
-                  liveMode
-                    ? "rgba(18,184,134,0.25)"
-                    : "#e5eaf0",
-                transition:
-                  "all 180ms ease",
-              }}
-            >
-              <Group
-                gap={9}
-                wrap="nowrap"
-              >
-                <Box
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius:
-                      "50%",
-                    background:
-                      liveMode
-                        ? "#12b886"
-                        : "#94a3b8",
-                    boxShadow:
-                      liveMode
-                        ? "0 0 0 4px rgba(18,184,134,.10)"
-                        : "none",
-                  }}
-                />
-
-                <Switch
-                  size="sm"
-                  checked={
-                    liveMode
-                  }
-                  onChange={(event) =>
-                    setLiveMode(
-                      event
-                        .currentTarget
-                        .checked,
-                    )
-                  }
-                  label={
-                    <Text
-                      size="xs"
-                      fw={900}
-                      c={
-                        liveMode
-                          ? "#087f5b"
-                          : "#475569"
-                      }
-                    >
-                      LIVE
-                    </Text>
-                  }
-                />
-              </Group>
-            </Paper>
-          </Group>
-
-          {/* =================================================
-              LIVE STATUS
-          ================================================= */}
-
-          <Paper
-            mt="md"
-            radius="md"
-            px="md"
-            py="xs"
-            withBorder
-            style={{
-              background:
-                liveMode
-                  ? "rgba(18,184,134,0.045)"
-                  : "rgba(248,250,252,0.75)",
-              borderColor:
-                liveMode
-                  ? "rgba(18,184,134,0.13)"
-                  : "#edf1f5",
-            }}
-          >
-            <Group
-              justify="space-between"
-              gap="sm"
-              wrap="wrap"
-            >
-              <Group
-                gap={8}
-                wrap="nowrap"
-              >
-                <IconActivity
-                  size={15}
-                  color={
-                    liveMode
-                      ? "#12b886"
-                      : "#94a3b8"
-                  }
-                />
-
-                <Text
-                  size="xs"
-                  fw={800}
-                  c={
-                    liveMode
-                      ? "#087f5b"
-                      : "#64748b"
-                  }
-                >
-                  {liveMode
-                    ? "التحديث التلقائي مفعل"
-                    : "التحديث التلقائي متوقف"}
-                </Text>
-
-                {liveMode && (
-                  <>
-                    <Badge
-                      size="xs"
-                      color="teal"
-                      variant="light"
-                      radius="xl"
-                    >
-                      LIVE
-                    </Badge>
-
-                    <Text
-                      size="xs"
-                      c="dimmed"
-                    >
-                      كل 5 دقائق
-                    </Text>
-                  </>
-                )}
-              </Group>
-
-              <Group
-                gap={6}
-                wrap="nowrap"
-              >
-                <IconClock
-                  size={13}
-                  color="#94a3b8"
-                />
-
-                <Text
-                  size="xs"
-                  c="dimmed"
-                >
-                  آخر تحديث
-                </Text>
-
-                <Text
-                  size="xs"
-                  fw={800}
-                  c={
-                    lastUpdated
-                      ? "#334155"
-                      : "#94a3b8"
-                  }
-                >
-                  {formatLastUpdated(
-                    lastUpdated,
-                  )}
-                </Text>
-              </Group>
-            </Group>
-          </Paper>
-        </Paper>
-
-        {/* =================================================
-            ERROR CARD
-        ================================================= */}
-
-       
+      <Text
+        size="xs"
+        fw={700}
+        c={lastUpdated ? TEXT : FAINT}
+        style={{ fontVariantNumeric: "tabular-nums" }}
+      >
+        {formatLastUpdated(lastUpdated)}
+      </Text>
+    </Group>
+  </Group>
+</Paper>
 
         {/* =================================================
             DATA STATES
@@ -971,214 +687,233 @@ async function handleLogout() {
         {loading ? (
           <Paper
             mih={320}
-            radius="xl"
-            withBorder
-            shadow="sm"
+            radius={22}
             style={{
+              ...panelStyle,
               display: "flex",
-              alignItems:
-                "center",
-              justifyContent:
-                "center",
-              background:
-                "rgba(255,255,255,.70)",
-              borderColor:
-                "rgba(255,255,255,.9)",
-              backdropFilter:
-                "blur(18px)",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            <Stack
-              align="center"
-              gap="sm"
-            >
-              <Loader
-                size="md"
-                color="blue"
-              />
+            <Stack align="center" gap="sm">
+              <Loader size="md" color={GOLD} />
 
-              <Text
-                size="sm"
-                fw={700}
-                c="dimmed"
-              >
+              <Text size="sm" fw={600} c={MUTED}>
                 جاري تحميل الإحصائيات...
               </Text>
             </Stack>
           </Paper>
         ) : error ? (
           <Paper
-  mih={320}
-  radius="xl"
-  p="xl"
-  withBorder
-  shadow="sm"
-  style={{
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "rgba(255,255,255,.78)",
-    borderColor: "#e7ebf0",
-    backdropFilter: "blur(18px)",
-  }}
->
-  <Stack align="center" gap="md" maw={420} w="100%">
-    {/* الأيقونة */}
-    <Box
-      style={{
-        width: 84,
-        height: 84,
-        borderRadius: "50%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #ecfdf5, #d1fae5)",
-        border: "1px solid #a7f3d0",
-        boxShadow: "0 0 0 8px rgba(16,185,129,.08)",
-      }}
-    >
-      <IconPhoneCall size={38} stroke={1.6} color="#059669" />
-    </Box>
+            mih={320}
+            radius={22}
+            p="xl"
+            style={{
+              ...panelStyle,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Stack align="center" gap="md" maw={420} w="100%">
+              <Box
+                style={{
+                  ...iconBoxStyle,
+                  width: 84,
+                  height: 84,
+                  borderRadius: "50%",
+                  boxShadow: `0 0 0 8px ${hexA(GOLD, 0.08)}`,
+                }}
+              >
+                <IconPhoneCall size={38} stroke={1.5} />
+              </Box>
 
-    {/* العنوان */}
-    <Stack align="center" gap={4}>
-      <Text fw={850} size="lg" c="#172033">
-        لم يتم تحميل الإحصائيات
-      </Text>
-    </Stack>
+              <Text fw={700} c={TEXT} style={{ fontSize: 18 }}>
+                لم يتم تحميل الإحصائيات
+              </Text>
 
-    {/* صندوق التنبيه */}
-    <Box
-      w="100%"
-      style={{
-        padding: "14px 16px",
-        borderRadius: 16,
-        background: "linear-gradient(135deg, #fff5f5, #ffffff)",
-        border: "1px solid #ffc9c9",
-        textAlign: "center",
-      }}
-    >
-      <Group justify="center" gap={6} mb={6}>
-        <IconAlertCircle size={16} color="#e03131" />
+              <Box
+                w="100%"
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: 16,
+                  background: hexA(DANGER, 0.08),
+                  border: `1px solid ${hexA(DANGER, 0.45)}`,
+                  textAlign: "center",
+                }}
+              >
+                <Group justify="center" gap={6} mb={6}>
+                  <IconAlertCircle size={16} color={DANGER} />
 
-        <Text size="xs" fw={800} c="#e03131">
-          إجراء مطلوب
-        </Text>
-      </Group>
+                  <Text size="xs" fw={700} c={DANGER}>
+                    إجراء مطلوب
+                  </Text>
+                </Group>
 
-      <Text fw={900} size="sm" c="#c92a2a" lh={1.7}>
-        اطلب الدعم من وحدة التحكم والسيطرة فورًا
-      </Text>
+                <Text fw={700} size="sm" c={TEXT} lh={1.7}>
+                  اطلب الدعم من وحدة التحكم والسيطرة فورًا
+                </Text>
 
-      <Badge
-        mt={8}
-        size="md"
-        radius="xl"
-        color="red"
-        variant="light"
-        style={{ letterSpacing: ".6px" }}
-      >
-        Command & Control
-      </Badge>
-    </Box>
+                <Box component="span" mt={8} style={{ ...pill(DANGER), marginTop: 8 }}>
+                  Command & Control
+                </Box>
+              </Box>
 
-    {/* زر إعادة المحاولة */}
-    <Button
-      size="sm"
-      radius="xl"
-      variant="light"
-      color="gray"
-      leftSection={<IconRefresh size={15} />}
-      onClick={() => getData(false)}
-      disabled={liveMode}
-    >
-      إعادة المحاولة
-    </Button>
-  </Stack>
-</Paper>
+              <Button
+                size="sm"
+                radius="xl"
+                variant="default"
+                leftSection={<IconRefresh size={15} stroke={1.6} />}
+                onClick={() => getData(false)}
+                disabled={liveMode}
+                style={{
+                  background: "transparent",
+                  border: `1px solid ${LINE_STRONG}`,
+                  color: TEXT,
+                  fontWeight: 600,
+                  fontFamily: FONT,
+                }}
+              >
+                إعادة المحاولة
+              </Button>
+            </Stack>
+          </Paper>
         ) : items.length === 0 ? (
           <Paper
             mih={300}
-            radius="xl"
-            withBorder
-            shadow="sm"
+            radius={22}
             style={{
+              ...panelStyle,
               display: "flex",
-              alignItems:
-                "center",
-              justifyContent:
-                "center",
-              background:
-                "rgba(255,255,255,.68)",
-              borderColor:
-                "rgba(255,255,255,.9)",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            <Stack
-              align="center"
-              gap={7}
-            >
-              <ThemeIcon
-                size={50}
-                radius="xl"
-                color="gray"
-                variant="light"
-              >
-                <IconChartBar
-                  size={24}
-                />
-              </ThemeIcon>
+            <Stack align="center" gap={8}>
+              <Box style={{ ...iconBoxStyle, width: 54, height: 54, borderRadius: 16 }}>
+                <IconChartBar size={26} stroke={1.5} />
+              </Box>
 
-              <Text
-                fw={800}
-                c="dark"
-              >
+              <Text fw={700} c={TEXT} style={{ fontSize: 17 }}>
                 لا توجد مخالفات
               </Text>
 
-              <Text
-                size="xs"
-                c="dimmed"
-              >
+              <Text size="xs" c={MUTED}>
                 لا توجد بيانات ضمن الفترة المحددة
               </Text>
 
-              <Badge
-                size="sm"
-                color="gray"
-                variant="light"
-              >
+              <Box component="span" style={pill(GOLD_LIGHT)}>
                 0 مخالفة
-              </Badge>
+              </Box>
             </Stack>
           </Paper>
         ) : (
           <Box
             style={{
-              position:
-                "relative",
+              position: "relative",
               width: "100%",
               maxWidth: "100%",
               minWidth: 0,
             }}
           >
             {showCollapsible ? (
-              <FailureStatsCollapsible
-                items={
-                  items as unknown as never[]
-                }
-              />
+              <FailureStatsCollapsible items={items as unknown as never[]} />
             ) : (
-              <FailureStats
-                items={
-                  items as unknown as never[]
-                }
-              />
+              <FailureStats items={items as unknown as never[]} />
             )}
           </Box>
         )}
       </Container>
+
+      {/* =====================================================
+          CSS
+      ===================================================== */}
+
+      <style>{`
+        /* ================================================
+           LIQUID GLASS NAVBAR
+        ================================================ */
+
+        .glass-nav-wrap {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 14px 16px 0;
+}
+
+        .glass-nav {
+          position: relative;
+          max-width: 1300px;
+          margin: 0 auto;
+          padding: 9px 14px;
+          display: grid;
+          grid-template-columns: 1fr auto 1fr;
+          align-items: center;
+          gap: 12px;
+          border-radius: 999px;
+          overflow: hidden;
+
+          background: rgba(255,255,255,.04);
+          -webkit-backdrop-filter: blur(14px) saturate(160%);
+          backdrop-filter: blur(14px) saturate(160%);
+          border: 1px solid rgba(255,255,255,.16);
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,.30),
+            inset 0 -1px 0 rgba(255,255,255,.05),
+            0 10px 28px -14px rgba(10,20,45,.5);
+        }
+
+        .glass-nav::before {
+          content: "";
+          position: absolute;
+          inset: 0 0 55% 0;
+          border-radius: inherit;
+          background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0));
+          pointer-events: none;
+        }
+
+        .glass-nav > * { position: relative; }
+
+        .glass-logout {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 8px 14px;
+          border-radius: 999px;
+          cursor: pointer;
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 600;
+          color: ${TEXT};
+          background: rgba(255,255,255,.05);
+          border: 1px solid rgba(255,255,255,.18);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+          transition: background .18s ease, border-color .18s ease;
+        }
+
+        .glass-logout:hover:not(:disabled) {
+          background: rgba(255,255,255,.14);
+          border-color: ${hexA(GOLD, 0.6)};
+        }
+
+        .glass-logout:disabled {
+          opacity: .6;
+          cursor: default;
+        }
+
+        .glass-logout:focus-visible {
+          outline: 2px solid ${GOLD_LIGHT};
+          outline-offset: 2px;
+        }
+
+        @media (max-width: 576px) {
+          .glass-logout-label { display: none; }
+          .glass-logout { padding: 9px; }
+          .glass-nav { padding: 8px 10px; }
+        }
+      `}</style>
     </Box>
   );
 }
-

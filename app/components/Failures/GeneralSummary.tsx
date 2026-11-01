@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 import {
   Box,
@@ -9,9 +10,7 @@ import {
   Text,
   Stack,
   SimpleGrid,
-  Badge,
   Progress,
-  Divider,
 } from "@mantine/core";
 
 import {
@@ -23,11 +22,8 @@ import {
   IconChartPie,
 } from "@tabler/icons-react";
 
-import {
-  statusConfig,
-} from "./statusConfig";
+import { statusConfig } from "./statusConfig";
 import FailureListModal from "../FailureListModal";
-
 
 /* =========================================================
    TYPES
@@ -50,35 +46,85 @@ type FailureItem = {
 };
 
 type GeneralSummaryProps = {
-  items?: FailureItem[] ;
+  items?: FailureItem[];
 };
+
+/* =========================================================
+   DESIGN TOKENS  (Navy + Champagne Gold + لون المنطقة)
+========================================================= */
+
+const INK = "#1A2A4A";
+const SURFACE = "#213459";
+const SURFACE_2 = "#2A4070";
+const SURFACE_3 = "#324D84";
+const GOLD = "#C9A66B";
+const GOLD_LIGHT = "#E6CF9D";
+const TEXT = "#F3F6FC";
+const MUTED = "rgba(240,244,252,.72)";
+const FAINT = "rgba(240,244,252,.5)";
+const LINE = "rgba(255,255,255,.12)";
+const LINE_STRONG = "rgba(255,255,255,.22)";
+
+const FONT =
+  '"IBM Plex Sans Arabic", "Cairo", "Tajawal", "Segoe UI", system-ui, sans-serif';
+
+const tabular = { fontVariantNumeric: "tabular-nums" as const };
+
+/* =========================================================
+   COLOR HELPERS (hex + أسماء ألوان Mantine)
+========================================================= */
+
+const isHex = (c: string) => c.startsWith("#");
+
+const hexA = (hex: string, a: number) =>
+  `${hex}${Math.round(a * 255)
+    .toString(16)
+    .padStart(2, "0")}`;
+
+/** لون صلب */
+const solid = (c: string) => (isHex(c) ? c : `var(--mantine-color-${c}-5)`);
+
+/** لون فاتح للأيقونات والنصوص على الخلفية الداكنة */
+const bright = (c: string) => (isHex(c) ? c : `var(--mantine-color-${c}-3)`);
+
+/** لون بشفافية */
+const tint = (c: string, a: number) =>
+  isHex(c)
+    ? hexA(c, a)
+    : `color-mix(in srgb, var(--mantine-color-${c}-5) ${Math.round(
+        a * 100
+      )}%, transparent)`;
+
+/** تكحيلة الزاوية */
+const cornerGlow = (c: string, a = 0.3) =>
+  `radial-gradient(75% 95% at 100% 0%, ${tint(c, a)} 0%, transparent 70%)`;
 
 /* =========================================================
    DISTRICT COLORS
 ========================================================= */
 
 const DISTRICT_COLORS: Record<string, string> = {
-  طارق: "#f59e0b",
-  الجبيهة: "#16a34a",
-  الجبيهه: "#16a34a",
+  طارق: "#F76707",
+  الجبيهة: "#40C057",
+  الجبيهه: "#40C057",
 
-  "ابو نصير": "#dc2626",
-  "أبو نصير": "#dc2626",
-  "ابونصير": "#dc2626",
+  "ابو نصير": "#FA5252",
+  "أبو نصير": "#FA5252",
+  ابونصير: "#FA5252",
 
-  "شفا بدران": "#eab308",
+  "شفا بدران": "#FCC419",
 
-  احد: "#8b5cf6",
-  أحد: "#8b5cf6",
+  احد: "#845EF7",
+  أحد: "#845EF7",
 
-  النصر: "#0891b2",
+  النصر: "#20C997",
 
-  ماركا: "#ec4899",
+  ماركا: "#F06595",
 
-  "تلاع العلي": "#92400e",
-  "ام السماق": "#92400e",
-  "أم السماق": "#92400e",
-  خلدا: "#92400e",
+  "تلاع العلي": "#A1887F",
+  "ام السماق": "#A1887F",
+  "أم السماق": "#A1887F",
+  خلدا: "#A1887F",
 };
 
 /* =========================================================
@@ -86,73 +132,131 @@ const DISTRICT_COLORS: Record<string, string> = {
 ========================================================= */
 
 const getDistrictColor = (district: string) => {
-  const normalized = district
-    .replace(/^منطقة\s+/u, "")
-    .trim();
+  const normalized = district.replace(/^منطقة\s+/u, "").trim();
 
-  return (
-    DISTRICT_COLORS[normalized] ??
-    "#2563eb"
-  );
+  return DISTRICT_COLORS[normalized] ?? "#74A7FF";
 };
 
 const getStatusLabel = (status: string) => {
-  const config =
-    statusConfig[
-      status as keyof typeof statusConfig
-    ];
+  const config = statusConfig[status as keyof typeof statusConfig];
 
-  return config?.label ?? (
-    status === "Unknown"
-      ? "غير محدد"
-      : status
-  );
+  return config?.label ?? (status === "Unknown" ? "غير محدد" : status);
 };
 
-const getStatusColor = (status: string) => {
-  const config =
-    statusConfig[
-      status as keyof typeof statusConfig
-    ];
+const getStatusColor = (status: string): string => {
+  const config = statusConfig[status as keyof typeof statusConfig];
 
-  if (!config) {
-    return "#64748b";
-  }
+  if (!config) return "#94A3B8";
 
-  return (
-    config.color ??
-    "#64748b"
-  );
+  return (config.color as string | undefined) ?? "#94A3B8";
 };
+
+/* =========================================================
+   SHARED UI
+========================================================= */
+
+const lift = {
+  onMouseEnter: (e: MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.transform = "translateY(-3px)";
+    e.currentTarget.style.boxShadow = "0 18px 34px -16px rgba(10,20,45,.65)";
+    e.currentTarget.style.borderColor = hexA(GOLD, 0.55);
+  },
+  onMouseLeave: (e: MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.transform = "none";
+    e.currentTarget.style.boxShadow = "none";
+    e.currentTarget.style.borderColor = LINE;
+  },
+};
+
+const SectionHeader = ({
+  icon,
+  title,
+  hint,
+  count,
+}: {
+  icon: ReactNode;
+  title: string;
+  hint: string;
+  count: string;
+}) => (
+  <Group justify="space-between" align="center" gap="md" wrap="wrap">
+    <Group gap="sm" wrap="nowrap">
+      <Box
+        style={{
+          width: 38,
+          height: 38,
+          minWidth: 38,
+          display: "grid",
+          placeItems: "center",
+          borderRadius: 12,
+          color: GOLD_LIGHT,
+          background: hexA(GOLD, 0.1),
+          border: `1px solid ${hexA(GOLD, 0.45)}`,
+        }}
+      >
+        {icon}
+      </Box>
+
+      <Stack gap={0}>
+        <Text fw={700} c={TEXT} style={{ fontSize: 16 }}>
+          {title}
+        </Text>
+
+        <Text size="xs" c={MUTED}>
+          {hint}
+        </Text>
+      </Stack>
+    </Group>
+
+    <Box
+      component="span"
+      style={{
+        padding: "3px 12px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        color: GOLD_LIGHT,
+        border: `1px solid ${hexA(GOLD, 0.45)}`,
+        background: hexA(GOLD, 0.08),
+      }}
+    >
+      {count}
+    </Box>
+  </Group>
+);
+
+const panelStyle = {
+  position: "relative" as const,
+  overflow: "hidden",
+  background: SURFACE,
+  color: TEXT,
+  fontFamily: FONT,
+  border: `1px solid ${LINE_STRONG}`,
+  boxShadow: "0 30px 60px -30px rgba(10,20,45,.55)",
+};
+
+const tileStyle = (color: string) => ({
+  cursor: "pointer",
+  textAlign: "right" as const,
+  width: "100%",
+  fontFamily: FONT,
+  color: TEXT,
+  background: `${cornerGlow(color, 0.3)}, ${SURFACE_2}`,
+  border: `1px solid ${LINE}`,
+  transition: "transform .18s ease, box-shadow .18s ease, border-color .18s ease",
+});
 
 /* =========================================================
    COMPONENT
 ========================================================= */
 
-export default function GeneralSummary({
-  items = [],
-}: GeneralSummaryProps) {
-  /* =======================================================
-     MODAL STATE
-  ======================================================= */
+export default function GeneralSummary({ items = [] }: GeneralSummaryProps) {
+  /* MODAL STATE */
 
-  const [modalOpened, setModalOpened] =
-    useState(false);
-
-  const [modalTitle, setModalTitle] =
-    useState("");
-
-  const [modalItems, setModalItems] =
-    useState<FailureItem[]>([]);
-
-  const [modalStatus, setModalStatus] =
-    useState<string | undefined>(
-      undefined
-    );
-
-  /* =======================================================
-     OPEN MODAL
-  ======================================================= */
+  const [modalOpened, setModalOpened] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalItems, setModalItems] = useState<FailureItem[]>([]);
+  const [modalStatus, setModalStatus] = useState<string | undefined>(undefined);
 
   const openFailuresModal = ({
     title,
@@ -169,153 +273,82 @@ export default function GeneralSummary({
     setModalOpened(true);
   };
 
-  /* =======================================================
-     CLOSE MODAL
-  ======================================================= */
-
   const closeFailuresModal = () => {
     setModalOpened(false);
   };
 
-  /* =======================================================
-     DISTRICT DISTRIBUTION
-  ======================================================= */
+  /* DISTRICT DISTRIBUTION */
 
   const districtStats = useMemo(() => {
-    const result: Record<
-      string,
-      FailureItem[]
-    > = {};
+    const result: Record<string, FailureItem[]> = {};
 
     items.forEach((item) => {
-      const district =
-        item.districtName?.trim()
-          ? item.districtName.trim()
-          : "حسب مؤشرات الأداء";
+      const district = item.districtName?.trim()
+        ? item.districtName.trim()
+        : "حسب مؤشرات الأداء";
 
-      if (!result[district]) {
-        result[district] = [];
-      }
+      if (!result[district]) result[district] = [];
 
       result[district].push(item);
     });
 
     return Object.entries(result)
-      .sort(
-        ([, a], [, b]) =>
-          b.length - a.length
-      )
-      .map(
-        ([district, failures]) => ({
-          district,
-          count: failures.length,
-          failures,
-        })
-      );
+      .sort(([, a], [, b]) => b.length - a.length)
+      .map(([district, failures]) => ({
+        district,
+        count: failures.length,
+        failures,
+      }));
   }, [items]);
 
-  /* =======================================================
-     STATUS DISTRIBUTION
-  ======================================================= */
+  /* STATUS DISTRIBUTION */
 
   const statusStats = useMemo(() => {
-    const result: Record<
-      string,
-      FailureItem[]
-    > = {};
+    const result: Record<string, FailureItem[]> = {};
 
     items.forEach((item) => {
-      const status =
-        item.status || "Unknown";
+      const status = item.status || "Unknown";
 
-      if (!result[status]) {
-        result[status] = [];
-      }
+      if (!result[status]) result[status] = [];
 
       result[status].push(item);
     });
 
     return Object.entries(result)
-      .sort(
-        ([, a], [, b]) =>
-          b.length - a.length
-      )
-      .map(
-        ([status, failures]) => ({
-          status,
-          count: failures.length,
-          failures,
-        })
-      );
+      .sort(([, a], [, b]) => b.length - a.length)
+      .map(([status, failures]) => ({
+        status,
+        count: failures.length,
+        failures,
+      }));
   }, [items]);
-  /* =======================================================
-     TOTAL
-  ======================================================= */
+
+  /* TOTAL */
 
   const total = items.length;
-
-  /* =======================================================
-     EMPTY
-  ======================================================= */
 
   if (total === 0) {
     return null;
   }
 
-  /* =======================================================
-     STATUS ICON
-  ======================================================= */
+  /* STATUS ICON */
 
-  const getStatusIcon = (
-    status: string
-  ) => {
-    if (
-      status === "Resolved"
-    ) {
-      return (
-        <IconCircleCheck
-          size={18}
-        />
-      );
+  const getStatusIcon = (status: string) => {
+    if (status === "Resolved") return <IconCircleCheck size={18} stroke={1.6} />;
+
+    if (status === "PendingFieldMonitorVerification" || status === "InProgress") {
+      return <IconClock size={18} stroke={1.6} />;
     }
 
-    if (
-      status ===
-        "PendingFieldMonitorVerification" ||
-      status === "InProgress"
-    ) {
-      return (
-        <IconClock
-          size={18}
-        />
-      );
+    if (status === "Rejected" || status === "ResolutionRejected") {
+      return <IconAlertCircle size={18} stroke={1.6} />;
     }
 
-    if (
-      status === "Rejected" ||
-      status ===
-        "ResolutionRejected"
-    ) {
-      return (
-        <IconAlertCircle
-          size={18}
-        />
-      );
-    }
-
-    return (
-      <IconChartBar
-        size={18}
-      />
-    );
+    return <IconChartBar size={18} stroke={1.6} />;
   };
 
   return (
     <>
-      {/* =====================================================
-          FAILURE LIST MODAL
-      ===================================================== */}
-
       <FailureListModal
         opened={modalOpened}
         onClose={closeFailuresModal}
@@ -324,779 +357,314 @@ export default function GeneralSummary({
         status={modalStatus}
       />
 
-      <Stack gap="md">
-        {/* ===================================================
-            MAIN SUMMARY HEADER
-        =================================================== */}
+      <Stack gap="md" dir="rtl">
+        {/* =====================================================
+            DISTRICTS PANEL
+        ===================================================== */}
 
-        <Card
-          radius={28}
-          p={{
-            base: "md",
-            sm: "xl",
-          }}
-          withBorder
-          style={{
-            background:
-              "linear-gradient(145deg, rgba(255,255,255,.98), rgba(248,250,252,.96))",
-            border:
-              "1px solid rgba(15,23,42,.07)",
-            boxShadow:
-              "0 18px 50px rgba(15,23,42,.07)",
-          }}
-        >
-          <Stack gap="xl">
-            {/* HEADER */}
+        <Card radius={22} p={0} style={panelStyle}>
+          {/* ---------- HERO ---------- */}
 
-            <Group
-              justify="space-between"
-              align="center"
-              gap="md"
-              wrap="wrap"
-            >
-              <Group
-                gap="sm"
-                wrap="nowrap"
-              >
+          <Box
+            p={{ base: "md", sm: "xl" }}
+            style={{
+              position: "relative",
+              background: `radial-gradient(55% 150% at 100% 0%, ${hexA(
+                GOLD,
+                0.22
+              )} 0%, transparent 70%), linear-gradient(135deg, ${INK}, #20345A)`,
+              borderBottom: `1px solid ${LINE}`,
+            }}
+          >
+            <Box
+              style={{
+                position: "absolute",
+                insetInline: 0,
+                top: 0,
+                height: 2,
+                background: `linear-gradient(90deg, ${GOLD}, ${hexA(GOLD, 0)})`,
+              }}
+            />
+
+            <Group justify="space-between" align="center" gap="lg" wrap="wrap">
+              <Group gap="md" wrap="nowrap">
                 <Box
                   style={{
-                    width: 46,
-                    height: 46,
-                    minWidth: 46,
+                    width: 50,
+                    height: 50,
+                    minWidth: 50,
+                    display: "grid",
+                    placeItems: "center",
                     borderRadius: 15,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background:
-                      "linear-gradient(135deg, #2563eb, #1d4ed8)",
-                    color: "white",
-                    boxShadow:
-                      "0 10px 25px rgba(37,99,235,.20)",
+                    color: GOLD_LIGHT,
+                    background: hexA(GOLD, 0.1),
+                    border: `1px solid ${hexA(GOLD, 0.45)}`,
                   }}
                 >
-                  <IconChartPie
-                    size={24}
-                  />
+                  <IconChartPie size={25} stroke={1.5} />
                 </Box>
 
                 <Stack gap={2}>
                   <Text
-                    fw={900}
+                    fw={700}
+                    c={TEXT}
                     style={{
-                      fontSize:
-                        "clamp(18px, 3vw, 26px)",
-                      lineHeight: 1.2,
+                      fontSize: "clamp(18px, 3vw, 24px)",
+                      lineHeight: 1.25,
                     }}
                   >
                     الملخص العام للمخالفات
                   </Text>
 
-                  <Text
-                    size="sm"
-                    c="dimmed"
-                  >
-                    توزيع إجمالي المخالفات حسب
-                    المناطق والحالات
+                  <Text size="sm" c={MUTED}>
+                    توزيع إجمالي المخالفات حسب المناطق والحالات
                   </Text>
                 </Stack>
               </Group>
 
-              <Badge
-                size="lg"
-                radius="xl"
-                variant="light"
-                color="blue"
-                leftSection={
-                  <IconChartBar
-                    size={17}
-                  />
-                }
-              >
-                {total.toLocaleString(
-                  "en-US"
-                )}{" "}
-                مخالفة
-              </Badge>
-            </Group>
-
-            <Divider />
-
-            {/* =================================================
-                TOTAL HERO
-            ================================================= */}
-
-            <Box
-              p={{
-                base: "md",
-                sm: "xl",
-              }}
-              style={{
-                position: "relative",
-                overflow: "hidden",
-                borderRadius: 24,
-                background:
-                  "linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%)",
-                color: "white",
-                boxShadow:
-                  "0 18px 45px rgba(15,23,42,.15)",
-              }}
-            >
-              <Box
-                style={{
-                  position: "absolute",
-                  width: 220,
-                  height: 220,
-                  borderRadius: "50%",
-                  background:
-                    "rgba(255,255,255,.06)",
-                  top: -120,
-                  left: -60,
-                }}
-              />
-
-              <Box
-                style={{
-                  position: "absolute",
-                  width: 180,
-                  height: 180,
-                  borderRadius: "50%",
-                  background:
-                    "rgba(255,255,255,.05)",
-                  bottom: -100,
-                  right: -50,
-                }}
-              />
-
-              <Group
-                justify="space-between"
-                align="center"
-                gap="lg"
-                wrap="wrap"
-                style={{
-                  position: "relative",
-                  zIndex: 1,
-                }}
-              >
-                <Stack gap={3}>
-                  <Text
-                    size="sm"
-                    fw={700}
-                    style={{
-                      opacity: 0.72,
-                    }}
-                  >
-                    إجمالي المخالفات المعروضة
-                  </Text>
-
-                  <Text
-                    fw={900}
-                    style={{
-                      fontSize:
-                        "clamp(42px, 8vw, 68px)",
-                      lineHeight: 1,
-                      letterSpacing:
-                        "-2px",
-                    }}
-                  >
-                    {total.toLocaleString(
-                      "en-US"
-                    )}
-                  </Text>
-
-                  <Text
-                    size="sm"
-                    style={{
-                      opacity: 0.7,
-                    }}
-                  >
-                    حسب المصدر المحدد حاليًا
-                  </Text>
-                </Stack>
-
-                <Box
+              <Box ta="end">
+                <Text
+                  fw={800}
+                  c={GOLD_LIGHT}
                   style={{
-                    width: 90,
-                    height: 90,
-                    minWidth: 90,
-                    borderRadius: 28,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background:
-                      "rgba(255,255,255,.10)",
-                    border:
-                      "1px solid rgba(255,255,255,.15)",
-                    backdropFilter:
-                      "blur(10px)",
+                    fontSize: "clamp(40px, 7vw, 60px)",
+                    lineHeight: 1,
+                    ...tabular,
                   }}
                 >
-                  <IconChartPie
-                    size={42}
-                    stroke={1.5}
-                  />
-                </Box>
-              </Group>
-            </Box>
+                  {total.toLocaleString("en-US")}
+                </Text>
 
-            {/* =================================================
-                DISTRICTS
-            ================================================= */}
+                <Text size="xs" c={MUTED} fw={500} mt={6}>
+                  إجمالي المخالفات · حسب المصدر المحدد حاليًا
+                </Text>
+              </Box>
+            </Group>
+          </Box>
 
-            <Stack gap="md">
-              <Group
-                justify="space-between"
-                align="center"
-              >
-                <Group
-                  gap="xs"
-                  wrap="nowrap"
-                >
-                  <Box
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 10,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background:
-                        "rgba(37,99,235,.09)",
-                      color:
-                        "#2563eb",
-                    }}
+          {/* ---------- DISTRICTS ---------- */}
+
+          <Stack gap="md" p={{ base: "md", sm: "xl" }}>
+            <SectionHeader
+              icon={<IconMapPin size={19} stroke={1.6} />}
+              title="توزيع المخالفات حسب المناطق"
+              hint="اضغط على أي منطقة لعرض مخالفاتها"
+              count={`${districtStats.length} مناطق`}
+            />
+
+            <SimpleGrid cols={{ base: 1, xs: 2, md: 3, lg: 4 }} spacing="sm">
+              {districtStats.map(({ district, count, failures }) => {
+                const percentage = total ? (count / total) * 100 : 0;
+                const color = getDistrictColor(district);
+
+                return (
+                  <Card
+                    key={district}
+                    component="button"
+                    type="button"
+                    onClick={() =>
+                      openFailuresModal({
+                        title: `مخالفات ${district}`,
+                        failures,
+                      })
+                    }
+                    p="md"
+                    radius={16}
+                    {...lift}
+                    style={tileStyle(color)}
                   >
-                    <IconMapPin
-                      size={18}
-                    />
-                  </Box>
-
-                  <Stack gap={0}>
-                    <Text fw={900}>
-                      توزيع المخالفات حسب المناطق
-                    </Text>
-
-                    <Text
-                      size="xs"
-                      c="dimmed"
-                    >
-                      اضغط على أي منطقة لعرض
-                      مخالفاتها
-                    </Text>
-                  </Stack>
-                </Group>
-
-                <Badge
-                  variant="light"
-                  color="blue"
-                  radius="xl"
-                >
-                  {districtStats.length}{" "}
-                  مناطق
-                </Badge>
-              </Group>
-
-              <SimpleGrid
-                cols={{
-                  base: 1,
-                  xs: 2,
-                  md: 3,
-                  lg: 4,
-                }}
-                spacing="sm"
-              >
-                {districtStats.map(
-                  ({
-                    district,
-                    count,
-                    failures,
-                  }) => {
-                    const percentage =
-                      total
-                        ? (count / total) *
-                          100
-                        : 0;
-
-                    const color =
-                      getDistrictColor(
-                        district
-                      );
-
-                    return (
-                      <Card
-                        key={district}
-                        component="button"
-                        type="button"
-                        onClick={() =>
-                          openFailuresModal({
-                            title: `مخالفات ${district}`,
-                            failures,
-                          })
-                        }
-                        p="md"
-                        radius={20}
-                        style={{
-                          cursor: "pointer",
-                          textAlign: "right",
-                          background:
-                            "#ffffff",
-                          border:
-                            "1px solid rgba(15,23,42,.07)",
-                          boxShadow:
-                            "0 8px 25px rgba(15,23,42,.045)",
-                          transition:
-                            "transform .18s ease, box-shadow .18s ease, border-color .18s ease",
-                        }}
-                        styles={{
-                          root: {
-                            "&:hover": {
-                              transform:
-                                "translateY(-3px)",
-                              boxShadow:
-                                "0 14px 32px rgba(15,23,42,.10)",
-                              borderColor:
-                                `${color}55`,
-                            },
-                          },
-                        }}
-                      >
-                        <Stack gap="sm">
-                          <Group
-                            justify="space-between"
-                            align="flex-start"
-                            gap="xs"
-                          >
-                            <Group
-                              gap="xs"
-                              wrap="nowrap"
-                              style={{
-                                minWidth: 0,
-                              }}
-                            >
-                              <Box
-                                style={{
-                                  width: 10,
-                                  height: 10,
-                                  minWidth: 10,
-                                  borderRadius:
-                                    "50%",
-                                  background:
-                                    color,
-                                  boxShadow: `0 0 0 4px ${color}18`,
-                                }}
-                              />
-
-                              <Text
-                                fw={800}
-                                size="sm"
-                                truncate
-                              >
-                                {district}
-                              </Text>
-                            </Group>
-
-                            <Badge
-                              radius="xl"
-                              variant="light"
-                              style={{
-                                color,
-                                background:
-                                  `${color}12`,
-                                flexShrink: 0,
-                              }}
-                            >
-                              {count.toLocaleString(
-                                "en-US"
-                              )}
-                            </Badge>
-                          </Group>
-
-                          <Group
-                            justify="space-between"
-                            gap="xs"
-                          >
-                            <Text
-                              size="xs"
-                              c="dimmed"
-                            >
-                              نسبة المنطقة
-                            </Text>
-
-                            <Text
-                              size="xs"
-                              fw={800}
-                            >
-                              {percentage.toFixed(
-                                1
-                              )}
-                              %
-                            </Text>
-                          </Group>
-
-                          <Progress
-                            value={percentage}
-                            size="sm"
-                            radius="xl"
-                            styles={{
-                              root: {
-                                background:
-                                  "#eef2f7",
-                              },
-                              section: {
-                                background:
-                                  color,
-                              },
+                    <Stack gap="sm">
+                      <Group justify="space-between" align="center" gap="xs" wrap="nowrap">
+                        <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
+                          <Box
+                            style={{
+                              width: 9,
+                              height: 9,
+                              minWidth: 9,
+                              borderRadius: "50%",
+                              background: color,
+                              boxShadow: `0 0 0 4px ${hexA(color, 0.22)}`,
                             }}
                           />
 
-                          <Text
-                            size="xs"
-                            c="blue"
-                            fw={700}
-                            ta="center"
-                          >
-                            اضغط لعرض المخالفات
+                          <Text fw={700} size="sm" c={TEXT} truncate>
+                            {district}
                           </Text>
-                        </Stack>
-                      </Card>
-                    );
-                  }
-                )}
-              </SimpleGrid>
-            </Stack>
+                        </Group>
+
+                        <Text
+                          fw={800}
+                          c={TEXT}
+                          style={{ fontSize: 20, lineHeight: 1, ...tabular }}
+                        >
+                          {count.toLocaleString("en-US")}
+                        </Text>
+                      </Group>
+
+                      <Group justify="space-between" gap="xs">
+                        <Text size="xs" c={MUTED}>
+                          نسبة المنطقة
+                        </Text>
+
+                        <Text size="xs" fw={700} c={TEXT} style={tabular}>
+                          {percentage.toFixed(1)}%
+                        </Text>
+                      </Group>
+
+                      <Progress
+                        value={percentage}
+                        size={5}
+                        radius="xl"
+                        styles={{
+                          root: { background: "rgba(255,255,255,.14)" },
+                          section: { background: color },
+                        }}
+                      />
+                    </Stack>
+                  </Card>
+                );
+              })}
+            </SimpleGrid>
           </Stack>
         </Card>
 
         {/* =====================================================
-            STATUS DISTRIBUTION
+            STATUS PANEL
         ===================================================== */}
 
-        <Card
-          radius={28}
-          p={{
-            base: "md",
-            sm: "xl",
-          }}
-          withBorder
-          style={{
-            background:
-              "linear-gradient(145deg, rgba(255,255,255,.98), rgba(248,250,252,.96))",
-            border:
-              "1px solid rgba(15,23,42,.07)",
-            boxShadow:
-              "0 18px 50px rgba(15,23,42,.07)",
-          }}
-        >
+        <Card radius={22} p={{ base: "md", sm: "xl" }} style={panelStyle}>
           <Stack gap="xl">
-            <Group
-              justify="space-between"
-              align="center"
-              gap="md"
-              wrap="wrap"
-            >
-              <Group
-                gap="xs"
-                wrap="nowrap"
-              >
-                <Box
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 11,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background:
-                      "rgba(124,58,237,.10)",
-                    color: "#7c3aed",
-                  }}
-                >
-                  <IconChartBar
-                    size={19}
-                  />
-                </Box>
+            <SectionHeader
+              icon={<IconChartBar size={19} stroke={1.6} />}
+              title="توزيع أعداد المخالفات حسب الحالة"
+              hint="اضغط على أي حالة لعرض المخالفات التابعة لها"
+              count={`${statusStats.length} حالات`}
+            />
 
-                <Stack gap={0}>
-                  <Text fw={900}>
-                    توزيع أعداد المخالفات حسب الحالة
-                  </Text>
+            <SimpleGrid cols={{ base: 1, xs: 2, md: 3, lg: 4 }} spacing="sm">
+              {statusStats.map(({ status, count, failures }) => {
+                const percentage = total ? (count / total) * 100 : 0;
+                const color = getStatusColor(status);
 
-                  <Text
-                    size="xs"
-                    c="dimmed"
+                return (
+                  <Card
+                    key={status}
+                    component="button"
+                    type="button"
+                    onClick={() =>
+                      openFailuresModal({
+                        title: `مخالفات الحالة: ${getStatusLabel(status)}`,
+                        failures,
+                        status: status === "Unknown" ? undefined : status,
+                      })
+                    }
+                    p="md"
+                    radius={16}
+                    {...lift}
+                    style={tileStyle(color)}
                   >
-                    اضغط على أي حالة لعرض
-                    المخالفات التابعة لها
-                  </Text>
-                </Stack>
-              </Group>
-
-              <Badge
-                radius="xl"
-                variant="light"
-                color="violet"
-              >
-                {statusStats.length} حالات
-              </Badge>
-            </Group>
-
-            <SimpleGrid
-              cols={{
-                base: 1,
-                xs: 2,
-                md: 3,
-                lg: 4,
-              }}
-              spacing="sm"
-            >
-              {statusStats.map(
-                ({
-                  status,
-                  count,
-                  failures,
-                }) => {
-                  const percentage =
-                    total
-                      ? (count / total) *
-                        100
-                      : 0;
-
-                  const color =
-                    getStatusColor(
-                      status
-                    );
-
-                  return (
-                    <Card
-                      key={status}
-                      component="button"
-                      type="button"
-                      onClick={() =>
-                        openFailuresModal({
-                          title: `مخالفات الحالة: ${getStatusLabel(
-                            status
-                          )}`,
-                          failures,
-                          status:
-                            status ===
-                            "Unknown"
-                              ? undefined
-                              : status,
-                        })
-                      }
-                      p="md"
-                      radius={20}
-                      style={{
-                        cursor: "pointer",
-                        textAlign: "right",
-                        background:
-                          "#ffffff",
-                        border:
-                          "1px solid rgba(15,23,42,.07)",
-                        boxShadow:
-                          "0 8px 25px rgba(15,23,42,.045)",
-                        transition:
-                          "transform .18s ease, box-shadow .18s ease, border-color .18s ease",
-                      }}
-                      styles={{
-                        root: {
-                          "&:hover": {
-                            transform:
-                              "translateY(-3px)",
-                            boxShadow:
-                              "0 14px 32px rgba(15,23,42,.10)",
-                            borderColor:
-                              `${color}55`,
-                          },
-                        },
-                      }}
-                    >
-                      <Stack gap="sm">
-                        <Group
-                          justify="space-between"
-                          align="flex-start"
-                          gap="xs"
-                        >
-                          <Group
-                            gap="xs"
-                            wrap="nowrap"
+                    <Stack gap="sm">
+                      <Group justify="space-between" align="center" gap="xs" wrap="nowrap">
+                        <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
+                          <Box
                             style={{
-                              minWidth: 0,
+                              width: 34,
+                              height: 34,
+                              minWidth: 34,
+                              display: "grid",
+                              placeItems: "center",
+                              borderRadius: 11,
+                              color: bright(color),
+                              background: "rgba(255,255,255,.07)",
+                              border: `1px solid ${LINE}`,
                             }}
                           >
-                            <Box
-                              style={{
-                                width: 34,
-                                height: 34,
-                                minWidth: 34,
-                                borderRadius: 11,
-                                display:
-                                  "flex",
-                                alignItems:
-                                  "center",
-                                justifyContent:
-                                  "center",
-                                color,
-                                background:
-                                  `${color}12`,
-                              }}
-                            >
-                              {getStatusIcon(
-                                status
-                              )}
-                            </Box>
+                            {getStatusIcon(status)}
+                          </Box>
 
-                            <Text
-                              fw={800}
-                              size="sm"
-                              lineClamp={2}
-                            >
-                              {getStatusLabel(
-                                status
-                              )}
-                            </Text>
-                          </Group>
-
-                          <Badge
-                            radius="xl"
-                            variant="light"
-                            style={{
-                              color,
-                              background:
-                                `${color}12`,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {count.toLocaleString(
-                              "en-US"
-                            )}
-                          </Badge>
-                        </Group>
-
-                        <Group
-                          justify="space-between"
-                          gap="xs"
-                        >
-                          <Text
-                            size="xs"
-                            c="dimmed"
-                          >
-                            من الإجمالي
-                          </Text>
-
-                          <Text
-                            size="xs"
-                            fw={800}
-                          >
-                            {percentage.toFixed(
-                              1
-                            )}
-                            %
+                          <Text fw={700} size="sm" c={TEXT} lineClamp={2}>
+                            {getStatusLabel(status)}
                           </Text>
                         </Group>
-
-                        <Progress
-                          value={
-                            percentage
-                          }
-                          size="sm"
-                          radius="xl"
-                          styles={{
-                            root: {
-                              background:
-                                "#eef2f7",
-                            },
-                            section: {
-                              background:
-                                color,
-                            },
-                          }}
-                        />
 
                         <Text
-                          size="xs"
-                          c="blue"
-                          fw={700}
-                          ta="center"
+                          fw={800}
+                          c={TEXT}
+                          style={{ fontSize: 20, lineHeight: 1, ...tabular }}
                         >
-                          اضغط لعرض المخالفات
+                          {count.toLocaleString("en-US")}
                         </Text>
-                      </Stack>
-                    </Card>
-                  );
-                }
-              )}
+                      </Group>
+
+                      <Group justify="space-between" gap="xs">
+                        <Text size="xs" c={MUTED}>
+                          من الإجمالي
+                        </Text>
+
+                        <Text size="xs" fw={700} c={TEXT} style={tabular}>
+                          {percentage.toFixed(1)}%
+                        </Text>
+                      </Group>
+
+                      <Progress
+                        value={percentage}
+                        size={5}
+                        radius="xl"
+                        styles={{
+                          root: { background: "rgba(255,255,255,.14)" },
+                          section: { background: solid(color) },
+                        }}
+                      />
+                    </Stack>
+                  </Card>
+                );
+              })}
             </SimpleGrid>
 
-            {/* =================================================
-                STATUS TOTAL
-            ================================================= */}
+            {/* ---------- STATUS TOTAL ---------- */}
 
             <Box
               p="md"
               style={{
-                borderRadius: 20,
-                background:
-                  "linear-gradient(135deg, #f8fafc, #eef2ff)",
-                border:
-                  "1px solid rgba(37,99,235,.08)",
+                borderRadius: 16,
+                background: SURFACE_3,
+                border: `1px solid ${hexA(GOLD, 0.4)}`,
               }}
             >
-              <Group
-                justify="space-between"
-                align="center"
-                gap="md"
-                wrap="wrap"
-              >
-                <Group
-                  gap="sm"
-                  wrap="nowrap"
-                >
+              <Group justify="space-between" align="center" gap="md" wrap="wrap">
+                <Group gap="sm" wrap="nowrap">
                   <Box
                     style={{
                       width: 38,
                       height: 38,
+                      display: "grid",
+                      placeItems: "center",
                       borderRadius: 12,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background:
-                        "rgba(37,99,235,.10)",
-                      color:
-                        "#2563eb",
+                      color: GOLD_LIGHT,
+                      background: hexA(GOLD, 0.12),
+                      border: `1px solid ${hexA(GOLD, 0.45)}`,
                     }}
                   >
-                    <IconChartBar
-                      size={20}
-                    />
+                    <IconChartBar size={20} stroke={1.6} />
                   </Box>
 
                   <Stack gap={0}>
-                    <Text
-                      fw={900}
-                      size="sm"
-                    >
+                    <Text fw={700} size="sm" c={TEXT}>
                       الإجمالي العام
                     </Text>
 
-                    <Text
-                      size="xs"
-                      c="dimmed"
-                    >
+                    <Text size="xs" c={MUTED}>
                       مجموع جميع الحالات
                     </Text>
                   </Stack>
                 </Group>
 
                 <Text
-                  fw={900}
-                  style={{
-                    fontSize: 26,
-                    color: "#1d4ed8",
-                  }}
+                  fw={800}
+                  c={GOLD_LIGHT}
+                  style={{ fontSize: 28, lineHeight: 1, ...tabular }}
                 >
-                  {total.toLocaleString(
-                    "en-US"
-                  )}
+                  {total.toLocaleString("en-US")}
                 </Text>
               </Group>
             </Box>

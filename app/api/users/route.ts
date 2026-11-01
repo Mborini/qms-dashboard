@@ -1,14 +1,61 @@
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/lib/auth"; // عدّل المسار إذا كان مختلفاً عندك
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+// Pool واحد فقط حتى مع الـ hot reload
+const globalForPg = globalThis as unknown as { pgPool?: Pool };
+
+const pool =
+  globalForPg.pgPool ??
+  new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPg.pgPool = pool;
+}
+
+// =========================
+// Helpers
+// =========================
+
+/** تنظيف مصفوفة المناطق: نص، بدون فراغات، بدون تكرار */
+const parseDistricts = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? Array.from(
+        new Set(value.map((d) => String(d).trim()).filter(Boolean))
+      )
+    : [];
+
+/** فقط الأدمن (roleId === 1). يرجع Response عند الرفض أو null عند السماح */
+async function requireAdmin() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  if ((session.user as any).roleId !== 1) {
+    return NextResponse.json(
+      { success: false, error: "Forbidden" },
+      { status: 403 }
+    );
+  }
+
+  return null;
+}
 
 // =========================
 // GET - Get all users
 // =========================
 export async function GET() {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   const client = await pool.connect();
 
   try {
@@ -18,7 +65,8 @@ export async function GET() {
         name,
         username,
         password,
-        role_id
+        role_id,
+        COALESCE(district_names, '{}') AS district_names
       FROM users
       ORDER BY id ASC
     `);
@@ -46,6 +94,9 @@ export async function GET() {
 // POST - Create user
 // =========================
 export async function POST(request: Request) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   const client = await pool.connect();
 
   try {
@@ -55,44 +106,33 @@ export async function POST(request: Request) {
     const username = String(body.username ?? "").trim();
     const password = String(body.password ?? "");
     const roleId = Number(body.role_id);
+    const districtNames = parseDistricts(body.district_names);
 
     // Validation
     if (!name) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Name is required",
-        },
+        { success: false, error: "Name is required" },
         { status: 400 }
       );
     }
 
     if (!username) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Username is required",
-        },
+        { success: false, error: "Username is required" },
         { status: 400 }
       );
     }
 
     if (!password) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Password is required",
-        },
+        { success: false, error: "Password is required" },
         { status: 400 }
       );
     }
 
     if (!Number.isInteger(roleId) || roleId <= 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid role_id",
-        },
+        { success: false, error: "Invalid role_id" },
         { status: 400 }
       );
     }
@@ -110,10 +150,7 @@ export async function POST(request: Request) {
 
     if (existingUser.rows.length > 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Username already exists",
-        },
+        { success: false, error: "Username already exists" },
         { status: 409 }
       );
     }
@@ -125,17 +162,19 @@ export async function POST(request: Request) {
         name,
         username,
         password,
-        role_id
+        role_id,
+        district_names
       )
-      VALUES ($1, $2, $3, $4)
+      VALUES ($1, $2, $3, $4, $5::text[])
       RETURNING
         id,
         name,
         username,
         password,
-        role_id
+        role_id,
+        district_names
       `,
-      [name, username, password, roleId]
+      [name, username, password, roleId, districtNames]
     );
 
     return NextResponse.json(
@@ -164,6 +203,9 @@ export async function POST(request: Request) {
 // PUT - Update user
 // =========================
 export async function PUT(request: Request) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   const client = await pool.connect();
 
   try {
@@ -174,54 +216,40 @@ export async function PUT(request: Request) {
     const username = String(body.username ?? "").trim();
     const password = String(body.password ?? "");
     const roleId = Number(body.role_id);
+    const districtNames = parseDistricts(body.district_names);
 
     // Validation
     if (!Number.isInteger(id) || id <= 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid user id",
-        },
+        { success: false, error: "Invalid user id" },
         { status: 400 }
       );
     }
 
     if (!name) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Name is required",
-        },
+        { success: false, error: "Name is required" },
         { status: 400 }
       );
     }
 
     if (!username) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Username is required",
-        },
+        { success: false, error: "Username is required" },
         { status: 400 }
       );
     }
 
     if (!password) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Password is required",
-        },
+        { success: false, error: "Password is required" },
         { status: 400 }
       );
     }
 
     if (!Number.isInteger(roleId) || roleId <= 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid role_id",
-        },
+        { success: false, error: "Invalid role_id" },
         { status: 400 }
       );
     }
@@ -239,10 +267,7 @@ export async function PUT(request: Request) {
 
     if (userExists.rows.length === 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "User not found",
-        },
+        { success: false, error: "User not found" },
         { status: 404 }
       );
     }
@@ -261,10 +286,7 @@ export async function PUT(request: Request) {
 
     if (duplicateUsername.rows.length > 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Username already exists",
-        },
+        { success: false, error: "Username already exists" },
         { status: 409 }
       );
     }
@@ -277,16 +299,18 @@ export async function PUT(request: Request) {
         name = $1,
         username = $2,
         password = $3,
-        role_id = $4
-      WHERE id = $5
+        role_id = $4,
+        district_names = $5::text[]
+      WHERE id = $6
       RETURNING
         id,
         name,
         username,
         password,
-        role_id
+        role_id,
+        district_names
       `,
-      [name, username, password, roleId, id]
+      [name, username, password, roleId, districtNames, id]
     );
 
     return NextResponse.json({
@@ -312,6 +336,9 @@ export async function PUT(request: Request) {
 // DELETE - Delete user
 // =========================
 export async function DELETE(request: Request) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   const client = await pool.connect();
 
   try {
@@ -321,10 +348,7 @@ export async function DELETE(request: Request) {
 
     if (!Number.isInteger(id) || id <= 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid user id",
-        },
+        { success: false, error: "Invalid user id" },
         { status: 400 }
       );
     }
@@ -337,17 +361,15 @@ export async function DELETE(request: Request) {
         id,
         name,
         username,
-        role_id
+        role_id,
+        district_names
       `,
       [id]
     );
 
     if (result.rows.length === 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "User not found",
-        },
+        { success: false, error: "User not found" },
         { status: 404 }
       );
     }
