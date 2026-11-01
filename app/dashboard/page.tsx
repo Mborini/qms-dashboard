@@ -430,6 +430,9 @@ const operationsPermissions = [
   "bin_export",
   
 ];
+const ReportingPermissions =[
+  
+]
 
 const maintenancePermissions = [
   "maintenance",
@@ -444,6 +447,7 @@ const adminPermissions = [
   "permissions",
    "vehicle_movements_history",
 ];
+
 
 /* =======================================================
    VISIBILITY

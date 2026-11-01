@@ -2,7 +2,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-
+import { signOut } from "next-auth/react";
+import { IconLogout } from "@tabler/icons-react";
 import {
   Box,
   Container,
@@ -88,7 +89,24 @@ export default function StatsPage() {
     useRef<ReturnType<typeof setInterval> | null>(
       null,
     );
+const [loggingOut, setLoggingOut] = useState(false);
 
+async function handleLogout() {
+  try {
+    setLoggingOut(true);
+
+    // أوقف التحديث التلقائي
+    if (liveIntervalRef.current) {
+      clearInterval(liveIntervalRef.current);
+      liveIntervalRef.current = null;
+    }
+
+    await signOut({ callbackUrl: "/login" });
+  } catch (e) {
+    console.error("LOGOUT ERROR:", e);
+    setLoggingOut(false);
+  }
+}
   // =====================================================
   // BUILD API DATE RANGE
   // =====================================================
@@ -395,7 +413,20 @@ export default function StatsPage() {
         {/* =================================================
             HEADER
         ================================================= */}
-
+<Group justify="flex-start" mb="sm">
+  <Button
+    size="xs"
+    radius="xl"
+    variant="light"
+    color="red"
+    loading={loggingOut}
+    leftSection={<IconLogout size={15} />}
+    onClick={handleLogout}
+    style={{ fontWeight: 800 }}
+  >
+    تسجيل خروج
+  </Button>
+</Group>
         <Box
           style={{
             textAlign: "center",
