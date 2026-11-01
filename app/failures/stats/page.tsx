@@ -30,6 +30,7 @@ import {
   IconClock,
   IconLayoutList,
   IconLayoutGrid,
+  IconPhoneCall,
 } from "@tabler/icons-react";
 
 import { bungee } from "../../layout";
@@ -930,78 +931,7 @@ export default function StatsPage() {
             ERROR CARD
         ================================================= */}
 
-        {error && !loading && (
-          <Paper
-            mb="lg"
-            radius="lg"
-            p="md"
-            withBorder
-            style={{
-              background:
-                "rgba(255,255,255,.82)",
-              borderColor:
-                "#ffc9c9",
-            }}
-          >
-            <Group
-              justify="space-between"
-              align="center"
-              gap="md"
-            >
-              <Group
-                gap="sm"
-                wrap="nowrap"
-              >
-                <ThemeIcon
-                  size={38}
-                  radius="xl"
-                  color="red"
-                  variant="light"
-                >
-                  <IconAlertCircle
-                    size={20}
-                  />
-                </ThemeIcon>
-
-                <Box>
-                  <Text
-                    size="sm"
-                    fw={800}
-                    c="#c92a2a"
-                  >
-                    تعذر تحميل البيانات
-                  </Text>
-
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                    mt={2}
-                  >
-                    {error}
-                  </Text>
-                </Box>
-              </Group>
-
-              <Button
-                variant="light"
-                color="red"
-                size="xs"
-                radius="xl"
-                leftSection={
-                  <IconRefresh
-                    size={14}
-                  />
-                }
-                onClick={() =>
-                  getData(false)
-                }
-                disabled={liveMode}
-              >
-                إعادة المحاولة
-              </Button>
-            </Group>
-          </Paper>
-        )}
+       
 
         {/* =================================================
             DATA STATES
@@ -1047,64 +977,94 @@ export default function StatsPage() {
           </Paper>
         ) : error ? (
           <Paper
-            mih={300}
-            radius="xl"
-            withBorder
-            shadow="sm"
-            style={{
-              display: "flex",
-              alignItems:
-                "center",
-              justifyContent:
-                "center",
-              background:
-                "rgba(255,255,255,.65)",
-              borderColor:
-                "rgba(255,255,255,.9)",
-            }}
-          >
-            <Stack
-              align="center"
-              gap="xs"
-            >
-              <IconChartBarOff
-                size={42}
-                stroke={1.4}
-                color="#adb5bd"
-              />
+  mih={320}
+  radius="xl"
+  p="xl"
+  withBorder
+  shadow="sm"
+  style={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(255,255,255,.78)",
+    borderColor: "#e7ebf0",
+    backdropFilter: "blur(18px)",
+  }}
+>
+  <Stack align="center" gap="md" maw={420} w="100%">
+    {/* الأيقونة */}
+    <Box
+      style={{
+        width: 84,
+        height: 84,
+        borderRadius: "50%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #ecfdf5, #d1fae5)",
+        border: "1px solid #a7f3d0",
+        boxShadow: "0 0 0 8px rgba(16,185,129,.08)",
+      }}
+    >
+      <IconPhoneCall size={38} stroke={1.6} color="#059669" />
+    </Box>
 
-              <Text
-                fw={800}
-                c="dark"
-              >
-                لم يتم تحميل الإحصائيات
-              </Text>
+    {/* العنوان */}
+    <Stack align="center" gap={4}>
+      <Text fw={850} size="lg" c="#172033">
+        لم يتم تحميل الإحصائيات
+      </Text>
+    </Stack>
 
-              <Text
-                size="xs"
-                c="dimmed"
-              >
-                تحقق من الاتصال ثم حاول مرة أخرى
-              </Text>
+    {/* صندوق التنبيه */}
+    <Box
+      w="100%"
+      style={{
+        padding: "14px 16px",
+        borderRadius: 16,
+        background: "linear-gradient(135deg, #fff5f5, #ffffff)",
+        border: "1px solid #ffc9c9",
+        textAlign: "center",
+      }}
+    >
+      <Group justify="center" gap={6} mb={6}>
+        <IconAlertCircle size={16} color="#e03131" />
 
-              <Button
-                size="xs"
-                radius="xl"
-                variant="light"
-                leftSection={
-                  <IconRefresh
-                    size={14}
-                  />
-                }
-                onClick={() =>
-                  getData(false)
-                }
-                disabled={liveMode}
-              >
-                إعادة المحاولة
-              </Button>
-            </Stack>
-          </Paper>
+        <Text size="xs" fw={800} c="#e03131">
+          إجراء مطلوب
+        </Text>
+      </Group>
+
+      <Text fw={900} size="sm" c="#c92a2a" lh={1.7}>
+        اطلب الدعم من وحدة التحكم والسيطرة فورًا
+      </Text>
+
+      <Badge
+        mt={8}
+        size="md"
+        radius="xl"
+        color="red"
+        variant="light"
+        style={{ letterSpacing: ".6px" }}
+      >
+        Command & Control
+      </Badge>
+    </Box>
+
+    {/* زر إعادة المحاولة */}
+    <Button
+      size="sm"
+      radius="xl"
+      variant="light"
+      color="gray"
+      leftSection={<IconRefresh size={15} />}
+      onClick={() => getData(false)}
+      disabled={liveMode}
+    >
+      إعادة المحاولة
+    </Button>
+  </Stack>
+</Paper>
         ) : items.length === 0 ? (
           <Paper
             mih={300}

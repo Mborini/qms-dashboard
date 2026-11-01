@@ -4,10 +4,20 @@ import type { NextAuthOptions, User } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { Pool } from "pg";
+import { refreshAvtrToken, ensureMainAvtrToken } from "./avtr";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+// Pool واحد فقط حتى مع الـ hot reload في وضع التطوير
+const globalForPg = globalThis as unknown as { pgPool?: Pool };
+
+const pool =
+  globalForPg.pgPool ??
+  new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPg.pgPool = pool;
+}
 
 type AuthUser = User & {
   id: string;
@@ -16,6 +26,10 @@ type AuthUser = User & {
   role: string;
   roleId: number;
   permissions: string[];
+  avtrToken?: string | null;
+  avtrTokenExpiresAt?: string | null;
+  avtrMainToken?: string | null;
+  avtrMainTokenExpiresAt?: string | null;
 };
 
 type AuthToken = JWT & {
@@ -24,6 +38,10 @@ type AuthToken = JWT & {
   role?: string;
   roleId?: number;
   permissions?: string[];
+  avtrToken?: string | null;
+  avtrTokenExpiresAt?: string | null;
+  avtrMainToken?: string | null;
+  avtrMainTokenExpiresAt?: string | null;
 };
 
 export const authOptions: NextAuthOptions = {
@@ -32,21 +50,12 @@ export const authOptions: NextAuthOptions = {
       name: "Credentials",
 
       credentials: {
-        username: {
-          label: "Username",
-          type: "text",
-        },
-        password: {
-          label: "Password",
-          type: "password",
-        },
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
       },
 
       async authorize(credentials) {
-        if (
-          !credentials?.username ||
-          !credentials?.password
-        ) {
+        if (!credentials?.username || !credentials?.password) {
           return null;
         }
 
@@ -58,6 +67,8 @@ export const authOptions: NextAuthOptions = {
                 u.name,
                 u.username,
                 u.password,
+                u.avtr_email,
+                u.avtr_pass,
 
                 r.id AS role_id,
                 r.name AS role_name,
@@ -86,6 +97,8 @@ export const authOptions: NextAuthOptions = {
                 u.name,
                 u.username,
                 u.password,
+                u.avtr_email,
+                u.avtr_pass,
                 r.id,
                 r.name
 
@@ -100,9 +113,22 @@ export const authOptions: NextAuthOptions = {
 
           const user = result.rows[0];
 
+          // TODO: استبدلها بـ bcrypt.compare(credentials.password, user.password)
           if (credentials.password !== user.password) {
             return null;
           }
+
+          // 1) توكن اليوزر: يجيبه ويسجله بالجدول الرئيسي
+          //    (تم إضافة user.id كوسيط ثاني، هذا كان سبب المشكلة)
+          const avtr = await refreshAvtrToken(
+            pool,
+            user.id,
+            user.avtr_email,
+            user.avtr_pass
+          );
+
+          // 2) التوكن الرئيسي: يقرأه من الجدول بعد التحديث
+          const main = await ensureMainAvtrToken(pool);
 
           return {
             id: String(user.id),
@@ -111,13 +137,13 @@ export const authOptions: NextAuthOptions = {
             role: user.role_name,
             roleId: Number(user.role_id),
             permissions: user.permissions || [],
+            avtrToken: avtr?.token ?? null,
+            avtrTokenExpiresAt: avtr?.expiresAt ?? null,
+            avtrMainToken: main?.token ?? null,
+            avtrMainTokenExpiresAt: main?.expiresAt ?? null,
           } as AuthUser;
         } catch (error) {
-          console.error(
-            "NextAuth authorize error:",
-            error
-          );
-
+          console.error("NextAuth authorize error:", error);
           return null;
         }
       },
@@ -129,13 +155,7 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({
-      token,
-      user,
-    }: {
-      token: AuthToken;
-      user?: User;
-    }) {
+    async jwt({ token, user }: { token: AuthToken; user?: User }) {
       if (user) {
         const authUser = user as AuthUser;
 
@@ -144,6 +164,28 @@ export const authOptions: NextAuthOptions = {
         token.role = authUser.role;
         token.roleId = authUser.roleId;
         token.permissions = authUser.permissions || [];
+        token.avtrToken = authUser.avtrToken ?? null;
+        token.avtrTokenExpiresAt = authUser.avtrTokenExpiresAt ?? null;
+        token.avtrMainToken = authUser.avtrMainToken ?? null;
+        token.avtrMainTokenExpiresAt =
+          authUser.avtrMainTokenExpiresAt ?? null;
+
+        // إذا التوكن فاضية: اعمل SELECT من الداتا بيز وجيب التوكن الرئيسي وحطه مكانها
+        if (!token.avtrToken || !token.avtrMainToken) {
+          const main = await ensureMainAvtrToken(pool);
+
+          if (main?.token) {
+            if (!token.avtrToken) {
+              token.avtrToken = main.token;
+              token.avtrTokenExpiresAt = main.expiresAt;
+            }
+
+            if (!token.avtrMainToken) {
+              token.avtrMainToken = main.token;
+              token.avtrMainTokenExpiresAt = main.expiresAt;
+            }
+          }
+        }
       }
 
       return token;
@@ -161,8 +203,15 @@ export const authOptions: NextAuthOptions = {
         session.user.username = token.username;
         session.user.role = token.role;
         session.user.roleId = token.roleId;
-        session.user.permissions =
-          token.permissions || [];
+        session.user.permissions = token.permissions || [];
+
+        // ملاحظة: هذه القيم تصل للمتصفح. إن لم تكن بحاجتها في الواجهة،
+        // احذف الأسطر الأربعة التالية واقرأها من getToken() في الـ API routes.
+        session.user.avtrToken = token.avtrToken ?? null;
+        session.user.avtrTokenExpiresAt = token.avtrTokenExpiresAt ?? null;
+        session.user.avtrMainToken = token.avtrMainToken ?? null;
+        session.user.avtrMainTokenExpiresAt =
+          token.avtrMainTokenExpiresAt ?? null;
       }
 
       return session;

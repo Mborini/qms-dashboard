@@ -1,4 +1,8 @@
+// app/api/kpis/route.js
+
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/lib/auth";
 
 // =====================================================
 // CONFIG
@@ -20,22 +24,6 @@ const RETRY_DELAY = 1000;
 
 // حجم Pagination
 const PAGE_SIZE = 100;
-
-
-// =====================================================
-// TOKEN
-// =====================================================
-
-const TOKEN = process.env.Main_AVTR_TOKEN_Admin;
-
-// =====================================================
-// HEADERS
-// =====================================================
-
-const headers = {
-  Authorization: `Bearer ${TOKEN}`,
-  Accept: "application/json",
-};
 
 
 // =====================================================
@@ -222,13 +210,64 @@ async function mapWithConcurrency(
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(
-      request.url,
-    );
+    // =================================================
+    // SESSION + MAIN TOKEN
+    // =================================================
+
+    const session = await getServerSession(authOptions);
+
+  console.log("KPI token debug:", {
+    hasSession: !!session,
+    hasUserToken: !!(session )?.user?.avtrToken,
+    hasMainToken: !!(session )?.user?.avtrMainToken,
+    userTokenPrefix: (session )?.user?.avtrToken?.slice(0, 8),
+  });
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "غير مسجّل دخول" },
+        { status: 401 },
+      );
+    }
+
+    const token = session.user.avtrMainToken;
+    const tokenExpiresAt =
+      session.user.avtrMainTokenExpiresAt;
+
+    if (!token) {
+      return NextResponse.json(
+        {
+          error:
+            "التوكن الرئيسي غير موجود، سجّل دخول من جديد",
+        },
+        { status: 401 },
+      );
+    }
+
+    if (
+      tokenExpiresAt &&
+      new Date(tokenExpiresAt).getTime() < Date.now()
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "انتهت صلاحية التوكن، سجّل دخول من جديد",
+        },
+        { status: 401 },
+      );
+    }
+
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    };
 
     // =================================================
     // PARAMETERS
     // =================================================
+
+    const { searchParams } = new URL(
+      request.url,
+    );
 
     const districtNames =
       searchParams.get("districtNames") || "";
@@ -374,107 +413,107 @@ export async function GET(request) {
             const activities =
               details.activities || [];
 
-// =========================================
-// LAST ACTIVITY
-// =========================================
+            // =========================================
+            // LAST ACTIVITY
+            // =========================================
 
-const lastActivity =
-  activities.at(-1);
-
-
-// =========================================
-// LAST RESOLUTION
-// =========================================
-
-const resolutionActivity =
-  activities
-    .slice()
-    .reverse()
-    .find(
-      (activity) =>
-        activity.activityType ===
-        "ResolutionSubmitted",
-    );
+            const lastActivity =
+              activities.at(-1);
 
 
-// =========================================
-// SERVICE PROVIDER REJECTION
-// =========================================
-// الموظف الذي قام برفض المخالفة من C&C
+            // =========================================
+            // LAST RESOLUTION
+            // =========================================
 
-const spRejectedActivity =
-  activities
-    .slice()
-    .reverse()
-    .find(
-      (activity) =>
-        activity.activityType ===
-        "SpRejected",
-    );
-
-
-// =========================================
-// FINAL USER
-// =========================================
-
-let finalUser = "غير معروف";
-
-// إذا كانت المخالفة InProgress
-// وكان هناك SpRejected من موظف C&C
-// نعتبر موظف SpRejected هو الموظف المسؤول
-if (
-  item.status === "InProgress" &&
-  spRejectedActivity?.userName
-) {
-  finalUser =
-    spRejectedActivity.userName;
-} else {
-  // باقي الحالات تستخدم المنطق السابق
-  finalUser =
-    resolutionActivity?.userName ??
-    lastActivity?.userName ??
-    "غير معروف";
-}
+            const resolutionActivity =
+              activities
+                .slice()
+                .reverse()
+                .find(
+                  (activity) =>
+                    activity.activityType ===
+                    "ResolutionSubmitted",
+                );
 
 
-// =========================================
-// RETURN
-// =========================================
+            // =========================================
+            // SERVICE PROVIDER REJECTION
+            // =========================================
+            // الموظف الذي قام برفض المخالفة من C&C
 
-return {
-  id: item.id,
+            const spRejectedActivity =
+              activities
+                .slice()
+                .reverse()
+                .find(
+                  (activity) =>
+                    activity.activityType ===
+                    "SpRejected",
+                );
 
-  districtName:
-    item.districtName,
 
-  blockName:
-    item.blockName,
+            // =========================================
+            // FINAL USER
+            // =========================================
 
-  status:
-    item.status,
+            let finalUser = "غير معروف";
 
-  kpiNameAr:
-    details.kpiNameAr,
+            // إذا كانت المخالفة InProgress
+            // وكان هناك SpRejected من موظف C&C
+            // نعتبر موظف SpRejected هو الموظف المسؤول
+            if (
+              item.status === "InProgress" &&
+              spRejectedActivity?.userName
+            ) {
+              finalUser =
+                spRejectedActivity.userName;
+            } else {
+              // باقي الحالات تستخدم المنطق السابق
+              finalUser =
+                resolutionActivity?.userName ??
+                lastActivity?.userName ??
+                "غير معروف";
+            }
 
-  // الموظف المسؤول عن المخالفة
-  userName:
-    finalUser,
 
-  complaintSource:
-    item.complaintSource ?? null,
+            // =========================================
+            // RETURN
+            // =========================================
 
-  // آخر موظف قام بـ ResolutionSubmitted
-  resolutionUser:
-    resolutionActivity?.userName ||
-    null,
+            return {
+              id: item.id,
 
-  // موظف C&C الذي قام بـ SpRejected
-  spRejectedUser:
-    spRejectedActivity?.userName ||
-    null,
+              districtName:
+                item.districtName,
 
-  activities,
-};
+              blockName:
+                item.blockName,
+
+              status:
+                item.status,
+
+              kpiNameAr:
+                details.kpiNameAr,
+
+              // الموظف المسؤول عن المخالفة
+              userName:
+                finalUser,
+
+              complaintSource:
+                item.complaintSource ?? null,
+
+              // آخر موظف قام بـ ResolutionSubmitted
+              resolutionUser:
+                resolutionActivity?.userName ||
+                null,
+
+              // موظف C&C الذي قام بـ SpRejected
+              spRejectedUser:
+                spRejectedActivity?.userName ||
+                null,
+
+              activities,
+            };
           } catch (error) {
             // =========================================
             // IMPORTANT
@@ -494,8 +533,10 @@ return {
 
               blockName:
                 item.blockName,
-complaintSource:
-    item.complaintSource ?? null,
+
+              complaintSource:
+                item.complaintSource ?? null,
+
               status:
                 item.status,
 
@@ -507,6 +548,9 @@ complaintSource:
                 "غير معروف",
 
               resolutionUser:
+                null,
+
+              spRejectedUser:
                 null,
 
               activities: [],
@@ -525,137 +569,10 @@ complaintSource:
 
 
     // =================================================
-    // GROUPED DATA
-    // =================================================
-
-    const grouped = {};
-
-
-    validItems.forEach((item) => {
-      const district =
-        item.districtName ||
-        "بدون منطقة";
-
-      const block =
-        item.blockName ||
-        "بدون حي";
-
-      const status =
-        item.status ||
-        "غير معروف";
-
-
-      // ===============================================
-      // DISTRICT
-      // ===============================================
-
-      if (!grouped[district]) {
-        grouped[district] = {
-          total: 0,
-          blocks: {},
-        };
-      }
-
-
-      // ===============================================
-      // BLOCK
-      // ===============================================
-
-      if (
-        !grouped[district].blocks[
-          block
-        ]
-      ) {
-        grouped[district].blocks[
-          block
-        ] = {
-          total: 0,
-          statuses: {},
-        };
-      }
-
-
-      // ===============================================
-      // TOTALS
-      // ===============================================
-
-      grouped[district].total++;
-
-      grouped[district].blocks[
-        block
-      ].total++;
-
-
-      // ===============================================
-      // STATUS
-      // ===============================================
-
-      if (
-        !grouped[district]
-          .blocks[block]
-          .statuses[status]
-      ) {
-        grouped[district]
-          .blocks[block]
-          .statuses[status] = {
-            total: 0,
-            ids: [],
-            users: {},
-          };
-      }
-
-
-      const statusData =
-        grouped[district]
-          .blocks[block]
-          .statuses[status];
-
-
-      // ===============================================
-      // STATUS TOTAL
-      // ===============================================
-
-      statusData.total++;
-
-
-      // ===============================================
-      // FAILURE ID
-      // ===============================================
-
-      statusData.ids.push(
-        item.id,
-      );
-
-
-      // ===============================================
-      // USER
-      // ===============================================
-
-      const user =
-        item.userName ||
-        "غير معروف";
-
-
-      if (!statusData.users[user]) {
-        statusData.users[user] = {
-          count: 0,
-          ids: [],
-        };
-      }
-
-
-      statusData.users[user].count++;
-
-
-      statusData.users[user].ids.push(
-        item.id,
-      );
-    });
-
-
-    // =================================================
     // RESPONSE
     // =================================================
+    // ملاحظة: شلت كتلة grouped لأنها كانت تُحسب
+    // وما تُستخدم بالرد. إذا بدك ترجعها، قلّي.
 
     return NextResponse.json({
       total: validItems.length,

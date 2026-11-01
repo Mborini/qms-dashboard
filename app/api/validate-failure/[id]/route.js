@@ -1,4 +1,20 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/lib/auth"; // عدّل المسار إذا لزم
+
+/* =========================================================
+   جلب avtrToken الخاص بالمستخدم من السشن
+========================================================= */
+
+async function getUserFromSession() {
+  const session = await getServerSession(authOptions);
+
+  const token = session?.user?.avtrToken ?? null;
+  const expiresAt = session?.user?.avtrTokenExpiresAt ?? null;
+  const user = session?.user?.username ?? session?.user?.name ?? null;
+
+  return { token, expiresAt, user };
+}
 
 export async function POST(request, { params }) {
   try {
@@ -9,121 +25,35 @@ export async function POST(request, { params }) {
     const { id } = await params;
 
     // =============================
-    // قراءة الباسوورد
+    // التوكن من السشن
     // =============================
 
-    const body = await request.json();
+    const { token, expiresAt, user } = await getUserFromSession();
 
-    const { password } = body;
-
-    if (!password) {
-      return NextResponse.json(
+    const tokenExpiredResponse = () =>
+      NextResponse.json(
         {
-          error: "Password is required",
+          error: "AVTR token expired",
+          code: "TOKEN_EXPIRED",
+          message: "انتهت صلاحية التوكن، أعد تسجيل الدخول",
         },
-        {
-          status: 400,
-        }
+        { status: 401 }
       );
-    }
 
-    // =============================
-    // تحديد المستخدم والـ Token
-    // =============================
-
-    let token = null;
-    let user = null;
-
-    if (password === process.env.ADMIN_PASSWORD) {
-      token = process.env.ADMIN_AVTR_TOKEN;
-      user = "admin";
-    } else if (password === process.env.ZYAD_PASSWORD) {
-      token = process.env.ZYAD_AVTR_TOKEN;
-      user = "zyad";
-    } else if (password === process.env.NAYF_PASSWORD) {
-      token = process.env.NAYF_AVTR_TOKEN;
-      user = "nayf";
-    }
-    else if (password === process.env.MAJDI_PASSWORD) {
-      token = process.env.MAJDI_AVTR_TOKEN;
-      user = "majdi";
-    }
-    else if (password === process.env.KHALAILEH_PASSWORD) {
-      token = process.env.KHALAILEH_AVTR_TOKEN;
-      user = "khalaileh";
-    }
-    else if (password === process.env.DEMA_PASSWORD) {
-      token = process.env.DEMA_AVTR_TOKEN;
-      user = "dema";
-    }
-
-    // =============================
-    // الباسوورد غير صحيح
-    // =============================
-
+    // التوكن فاضي أو منتهي: ممنوع نسدد بأي توكن ثاني
     if (!token) {
-      return NextResponse.json(
-        {
-          error: "Invalid password",
-        },
-        {
-          status: 401,
-        }
-      );
+      return tokenExpiredResponse();
     }
 
-    // =============================
-    // التأكد من وجود Token
-    // =============================
-
-    if (
-      user === "admin" &&
-      !process.env.ADMIN_AVTR_TOKEN
-    ) {
-      return NextResponse.json(
-        {
-          error: "Admin token missing",
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    if (
-      user === "zyad" &&
-      !process.env.ZYAD_AVTR_TOKEN
-    ) {
-      return NextResponse.json(
-        {
-          error: "Zyad token missing",
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    if (
-      user === "nayf" &&
-      !process.env.NAYF_AVTR_TOKEN
-    ) {
-      return NextResponse.json(
-        {
-          error: "Nayf token missing",
-        },
-        {
-          status: 500,
-        }
-      );
+    if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
+      return tokenExpiredResponse();
     }
 
     // =============================
     // رابط AVTR
     // =============================
 
-    const url =
-      `https://api.avtr.jo/api/service-provider/failures/${id}/validate`;
+    const url = `https://api.avtr.jo/api/service-provider/failures/${id}/validate`;
 
     console.log("=================================");
     console.log("AVTR VALIDATE");
@@ -139,61 +69,31 @@ export async function POST(request, { params }) {
     let response;
 
     try {
-      response = await fetch(
-        url,
-        {
-          method: "POST",
+      response = await fetch(url, {
+        method: "POST",
 
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
 
-          body: JSON.stringify({
-            accepted: true,
-          }),
+        body: JSON.stringify({
+          accepted: true,
+        }),
 
-          // Timeout 15 seconds
-          signal: AbortSignal.timeout(15000),
-        }
-      );
+        // Timeout 15 seconds
+        signal: AbortSignal.timeout(15000),
+      });
     } catch (error) {
-      console.error(
-        "================================="
-      );
+      console.error("=================================");
+      console.error("AVTR FETCH ERROR");
+      console.error("Name:", error?.name);
+      console.error("Message:", error?.message);
+      console.error("Code:", error?.code);
+      console.error("Cause:", error?.cause);
+      console.error("=================================");
 
-      console.error(
-        "AVTR FETCH ERROR"
-      );
-
-      console.error(
-        "Name:",
-        error?.name
-      );
-
-      console.error(
-        "Message:",
-        error?.message
-      );
-
-      console.error(
-        "Code:",
-        error?.code
-      );
-
-      console.error(
-        "Cause:",
-        error?.cause
-      );
-
-      console.error(
-        "================================="
-      );
-
-      // =============================
       // Timeout
-      // =============================
-
       if (
         error?.name === "TimeoutError" ||
         error?.code === "ETIMEDOUT" ||
@@ -202,27 +102,19 @@ export async function POST(request, { params }) {
         return NextResponse.json(
           {
             error: "AVTR API timeout",
-            message:
-              "تعذر الاتصال بخادم AVTR خلال الوقت المحدد",
+            message: "تعذر الاتصال بخادم AVTR خلال الوقت المحدد",
           },
-          {
-            status: 504,
-          }
+          { status: 504 }
         );
       }
 
-      // =============================
       // Connection Error
-      // =============================
-
       return NextResponse.json(
         {
           error: "AVTR API connection failed",
           message: error?.message || "Fetch failed",
         },
-        {
-          status: 502,
-        }
+        { status: 502 }
       );
     }
 
@@ -235,67 +127,34 @@ export async function POST(request, { params }) {
     try {
       data = await response.json();
     } catch {
-      data = {
-        message: await response.text(),
-      };
+      data = { message: "Invalid or empty response from AVTR" };
     }
 
-    // =============================
-    // Log
-    // =============================
+    console.log("AVTR STATUS:", response.status);
+    console.log("AVTR RESPONSE:", data);
 
-    console.log(
-      "AVTR STATUS:",
-      response.status
-    );
-
-    console.log(
-      "AVTR RESPONSE:",
-      data
-    );
+    // AVTR رفض التوكن (منتهي من طرفهم)
+    if (response.status === 401) {
+      return tokenExpiredResponse();
+    }
 
     // =============================
     // إرسال نتيجة AVTR
     // =============================
 
-    return NextResponse.json(
-      data,
-      {
-        status: response.status,
-      }
-    );
-
+    return NextResponse.json(data, { status: response.status });
   } catch (error) {
-
-    // =============================
-    // General Error
-    // =============================
-
-    console.error(
-      "================================="
-    );
-
-    console.error(
-      "GENERAL SERVER ERROR"
-    );
-
-    console.error(
-      error
-    );
-
-    console.error(
-      "================================="
-    );
+    console.error("=================================");
+    console.error("GENERAL SERVER ERROR");
+    console.error(error);
+    console.error("=================================");
 
     return NextResponse.json(
       {
         error: "Server error",
-        message:
-          error?.message || "Unknown error",
+        message: error?.message || "Unknown error",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
