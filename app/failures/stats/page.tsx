@@ -732,32 +732,41 @@ const router = useRouter();
                 لم يتم تحميل الإحصائيات
               </Text>
 
-              <Box
-                w="100%"
-                style={{
-                  padding: "14px 16px",
-                  borderRadius: 16,
-                  background: hexA(DANGER, 0.08),
-                  border: `1px solid ${hexA(DANGER, 0.45)}`,
-                  textAlign: "center",
-                }}
-              >
-                <Group justify="center" gap={6} mb={6}>
-                  <IconAlertCircle size={16} color={DANGER} />
+             <Box
+  w="100%"
+  style={{
+    padding: "14px 16px",
+    borderRadius: 16,
+    background: hexA(DANGER, 0.08),
+    border: `1px solid ${hexA(DANGER, 0.45)}`,
+    textAlign: "center",
+  }}
+>
+  <Group justify="center" gap={6} mb={6}>
+    <IconAlertCircle size={16} color={DANGER} />
+    <Text size="xs" fw={700} c={DANGER}>
+      إجراء مطلوب
+    </Text>
+  </Group>
 
-                  <Text size="xs" fw={700} c={DANGER}>
-                    إجراء مطلوب
-                  </Text>
-                </Group>
+  <Text fw={700} size="sm" c={TEXT} lh={1.7}>
+    اطلب الدعم من وحدة التحكم والسيطرة او اعد تسجيل الدخول
+  </Text>
 
-                <Text fw={700} size="sm" c={TEXT} lh={1.7}>
-                  اطلب الدعم من وحدة التحكم والسيطرة فورًا
-                </Text>
 
-                <Box component="span" mt={8} style={{ ...pill(DANGER), marginTop: 8 }}>
-                  Command & Control
-                </Box>
-              </Box>
+
+  <Button
+    mt="md"
+    fullWidth
+    variant="light"
+    color="red"
+    radius="md"
+    leftSection={<IconLogout size={16} />}
+    onClick={() => signOut({ callbackUrl: "/login" })}
+  >
+    تسجيل خروج
+  </Button>
+</Box>
 
               <Button
                 size="sm"
