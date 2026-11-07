@@ -1114,7 +1114,7 @@ export default function DistrictCard({
 
           {/* بطاقات الإحصائيات */}
           <SimpleGrid
-            cols={{ base: 3, sm: 3, md: 5 }}
+            cols={{ base: 2, sm: 2, md: 5 }}
             spacing="xs"
             verticalSpacing="xs"
           >
