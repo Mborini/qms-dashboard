@@ -2,8 +2,8 @@
 
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/lib/auth";
-
+import { authOptions, pool } from "@/app/lib/auth";
+import { ensureMainAvtrToken } from "@/app/lib/avtr";
 // =====================================================
 // CONFIG
 // =====================================================
@@ -216,12 +216,7 @@ export async function GET(request) {
 
     const session = await getServerSession(authOptions);
 
-  console.log("KPI token debug:", {
-    hasSession: !!session,
-    hasUserToken: !!(session )?.user?.avtrToken,
-    hasMainToken: !!(session )?.user?.avtrMainToken,
-    userTokenPrefix: (session )?.user?.avtrToken?.slice(0, 8),
-  });
+  
     if (!session?.user) {
       return NextResponse.json(
         { error: "غير مسجّل دخول" },
@@ -229,29 +224,20 @@ export async function GET(request) {
       );
     }
 
-    const token = session.user.avtrMainToken;
-    const tokenExpiresAt =
-      session.user.avtrMainTokenExpiresAt;
-
+        const main = await ensureMainAvtrToken(pool);
+    const token = main?.token;
+    console.log("KPI token check:", {
+      tokenFound: !!token,
+      tokenEnd: token ? `...${token.slice(-6)}` : null,
+      expiresAt: main?.expiresAt ?? null,
+      sessionTokenEnd: session.user.avtrMainToken
+        ? `...${session.user.avtrMainToken.slice(-6)}`
+        : null,
+      sameAsSession: token === session.user.avtrMainToken,
+    });
     if (!token) {
       return NextResponse.json(
-        {
-          error:
-            "التوكن الرئيسي غير موجود، سجّل دخول من جديد",
-        },
-        { status: 401 },
-      );
-    }
-
-    if (
-      tokenExpiresAt &&
-      new Date(tokenExpiresAt).getTime() < Date.now()
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "انتهت صلاحية التوكن، سجّل دخول من جديد",
-        },
+        { error: "التوكن الرئيسي غير موجود" },
         { status: 401 },
       );
     }

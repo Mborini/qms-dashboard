@@ -1864,7 +1864,7 @@ export default function FailureStats({ items = [] }: FailureStatsProps) {
       </Modal>
 
       <Stack maw={1600} mx="auto">
-        {isAdmin && (
+       
           <>
             {/* =================================================
                 ADMIN PANEL
@@ -2022,7 +2022,7 @@ export default function FailureStats({ items = [] }: FailureStatsProps) {
               </Box>
 
               {/* ---------- BODY ---------- */}
-
+ {isAdmin && (
               <Stack gap="lg" p={{ base: "md", sm: "xl" }}>
                 {/* SOURCE FILTER */}
 
@@ -2189,12 +2189,12 @@ export default function FailureStats({ items = [] }: FailureStatsProps) {
                     </Button>
                   </SimpleGrid>
                 </Box>
-              </Stack>
+              </Stack>)}
             </Card>
 
-            <GeneralSummary items={filteredItems} />
+            <GeneralSummary isAdmin={isAdmin} items={filteredItems} />
           </>
-        )}
+        
 
         {/* =====================================================
             DISTRICT NAVIGATION

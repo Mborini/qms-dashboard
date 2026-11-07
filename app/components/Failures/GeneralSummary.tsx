@@ -46,6 +46,7 @@ type FailureItem = {
 };
 
 type GeneralSummaryProps = {
+  isAdmin: boolean;
   items?: FailureItem[];
 };
 
@@ -250,7 +251,7 @@ const tileStyle = (color: string) => ({
    COMPONENT
 ========================================================= */
 
-export default function GeneralSummary({ items = [] }: GeneralSummaryProps) {
+export default function GeneralSummary({ isAdmin, items = [] }: GeneralSummaryProps) {
   /* MODAL STATE */
 
   const [modalOpened, setModalOpened] = useState(false);
@@ -527,7 +528,7 @@ export default function GeneralSummary({ items = [] }: GeneralSummaryProps) {
             </SimpleGrid>
           </Stack>
         </Card>
-
+{isAdmin && (<>
         {/* =====================================================
             STATUS PANEL
         ===================================================== */}
@@ -670,6 +671,8 @@ export default function GeneralSummary({ items = [] }: GeneralSummaryProps) {
             </Box>
           </Stack>
         </Card>
+        </>
+       ) }
       </Stack>
     </>
   );

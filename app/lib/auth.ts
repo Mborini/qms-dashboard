@@ -9,7 +9,7 @@ import { refreshAvtrToken, ensureMainAvtrToken } from "./avtr";
 // Pool واحد فقط حتى مع الـ hot reload في وضع التطوير
 const globalForPg = globalThis as unknown as { pgPool?: Pool };
 
-const pool =
+export const pool =
   globalForPg.pgPool ??
   new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -159,7 +159,8 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({ token, user }: { token: AuthToken; user?: User }) {
+        async jwt({ token, user }: { token: AuthToken; user?: User }) {
+      // ===== أول تسجيل دخول =====
       if (user) {
         const authUser = user as AuthUser;
 
@@ -191,6 +192,18 @@ export const authOptions: NextAuthOptions = {
             }
           }
         }
+      }
+
+      // ===== كل قراءة للـ session: جيب آخر توكن رئيسي من الداتابيز =====
+      try {
+        const latest = await ensureMainAvtrToken(pool);
+
+        if (latest?.token) {
+          token.avtrMainToken = latest.token;
+          token.avtrMainTokenExpiresAt = latest.expiresAt;
+        }
+      } catch (error) {
+        console.error("JWT: failed to refresh main token:", error);
       }
 
       return token;

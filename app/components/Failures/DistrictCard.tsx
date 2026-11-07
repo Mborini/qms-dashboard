@@ -578,9 +578,18 @@ export default function DistrictCard({
   const reviewCount = districtStatuses["PendingSupervisorReview"] || 0;
   const rejectedCount = districtStatuses["Rejected"] || 0;
 
-  const achievementCount =
-    fieldCount + resolvedCount + reviewCount + rejectedCount;
+const achievementCount =
+  fieldCount + resolvedCount + reviewCount + rejectedCount;
 
+/* المنجز = تم الحل + مراجعة AVTR + مرفوض + انتظار التحقق الميداني
+   (نفس achievementCount) */
+const completedCount = achievementCount;
+
+/* المتبقي لليوم = رفض الحل + قيد التنفيذ + في انتظار القبول */
+const remainingCount =
+  (districtStatuses["ResolutionRejected"] || 0) +
+  (districtStatuses["InProgress"] || 0) +
+  (districtStatuses["PendingSpValidation"] || 0);
   const achievement = districtTotal
     ? Number(((achievementCount / districtTotal) * 100).toFixed(1))
     : 0;
@@ -950,19 +959,7 @@ export default function DistrictCard({
           </Group>
 
           <Group gap="md" wrap="nowrap">
-            <Box ta="end">
-              <Text
-                fw={800}
-                lh={1}
-                style={{ fontSize: 30, color: GOLD_LIGHT, ...tabular }}
-              >
-                {districtTotal.toLocaleString("en-US")}
-              </Text>
-
-              <Text size="10px" c={MUTED} fw={500} mt={4}>
-                إجمالي المخالفات
-              </Text>
-            </Box>
+      
 
             <ActionIcon
               variant="transparent"
@@ -987,67 +984,106 @@ export default function DistrictCard({
           </Group>
         </Group>
 
-        {isAdmin && (
-          <Box mt="lg" pt="md" style={{ borderTop: `1px solid ${LINE}` }}>
-            <Group justify="space-between" align="flex-end" mb={10}>
-              <Box>
-                <Text size="xs" fw={600} c={MUTED}>
-                  نسبة الإنجاز
-                </Text>
+        
+       <Box mt="lg" pt="md" style={{ borderTop: `1px solid ${LINE}` }}>
+  <Group
+    justify="space-between"
+    align="flex-end"
+    wrap="wrap"
+    gap="lg"
+    mb="md"
+  >
+    {/* نسبة الإنجاز */}
+    <Box>
+      <Text size="xs" fw={600} c={MUTED} mb={6}>
+        نسبة الإنجاز
+      </Text>
 
-                <Text
-                  fw={800}
-                  lh={1}
-                  c={TEXT}
-                  style={{ fontSize: 44, ...tabular }}
-                >
-                  {achievement}
-                  <Text span fw={600} c={GOLD_LIGHT} style={{ fontSize: 22 }}>
-                    %
-                  </Text>
-                </Text>
-              </Box>
-            </Group>
+      <Text fw={800} lh={1} c={TEXT} style={{ fontSize: 44, ...tabular }}>
+        {achievement}
+        <Text span fw={600} c={GOLD_LIGHT} style={{ fontSize: 22 }}>
+          %
+        </Text>
+      </Text>
+    </Box>
 
-            <Progress
-              value={Math.min(achievement, 100)}
-              radius="xl"
-              size={6}
-              mb="md"
-              styles={{
-                root: { background: "rgba(255,255,255,.14)" },
-                section: {
-                  background: `linear-gradient(90deg, ${GOLD}, ${GOLD_LIGHT})`,
-                },
-              }}
-            />
+    {/* الإجمالي / المنجز / المتبقي */}
+    <Group gap={0} wrap="nowrap" align="flex-end">
+      {[
+        { label: "إجمالي المخالفات", value: districtTotal, color: GOLD_LIGHT },
+        { label: "المنجز", value: completedCount, color: "#69DB7C" },
+        { label: "المتبقي اليوم", value: remainingCount, color: "#FF6B6B" },
+      ].map((s, i) => (
+        <Box
+          key={s.label}
+          px="md"
+          style={{
+            minWidth: 96,
+            textAlign: "center",
+            borderInlineStart: i === 0 ? "none" : `1px solid ${LINE}`,
+          }}
+        >
+          <Text
+            size="xs"
+            fw={600}
+            c={MUTED}
+            mb={6}
+            style={{ whiteSpace: "nowrap" }}
+          >
+            {s.label}
+          </Text>
 
-            <SimpleGrid cols={{ base: 2, sm: 4 }} spacing={0}>
-              {achievementStats.map((s, i) => (
-                <Box
-                  key={s.label}
-                  px="sm"
-                  py={4}
-                  style={{
-                    borderInlineStart: i === 0 ? "none" : `1px solid ${LINE}`,
-                  }}
-                >
-                  <Text
-                    fw={700}
-                    c={TEXT}
-                    style={{ fontSize: 21, lineHeight: 1.15, ...tabular }}
-                  >
-                    {s.value.toLocaleString("en-US")}
-                  </Text>
+          <Text
+            fw={800}
+            lh={1}
+            style={{ fontSize: 30, color: s.color, ...tabular }}
+          >
+            {s.value.toLocaleString("en-US")}
+          </Text>
+        </Box>
+      ))}
+    </Group>
+  </Group>
 
-                  <Text size="10px" c={MUTED} fw={500} mt={2}>
-                    {s.label}
-                  </Text>
-                </Box>
-              ))}
-            </SimpleGrid>
-          </Box>
-        )}
+  <Progress
+    value={Math.min(achievement, 100)}
+    radius="xl"
+    size={6}
+    mb="md"
+    styles={{
+      root: { background: "rgba(255,255,255,.14)" },
+      section: {
+        background: `linear-gradient(90deg, ${GOLD}, ${GOLD_LIGHT})`,
+      },
+    }}
+  />
+
+  <SimpleGrid cols={{ base: 2, sm: 4 }} spacing={0}>
+    {achievementStats.map((s, i) => (
+      <Box
+        key={s.label}
+        px="sm"
+        py={4}
+        style={{
+          borderInlineStart: i === 0 ? "none" : `1px solid ${LINE}`,
+        }}
+      >
+        <Text
+          fw={700}
+          c={TEXT}
+          style={{ fontSize: 21, lineHeight: 1.15, ...tabular }}
+        >
+          {s.value.toLocaleString("en-US")}
+        </Text>
+
+        <Text size="10px" c={MUTED} fw={500} mt={2}>
+          {s.label}
+        </Text>
+      </Box>
+    ))}
+  </SimpleGrid>
+</Box>
+      
       </Box>
 
       {/* =====================================================
@@ -1069,7 +1105,7 @@ export default function DistrictCard({
           </Text>
 
           <Group gap={8}>
-            {isAdmin && (
+            
               <Button
                 size="compact-sm"
                 variant="default"
@@ -1080,7 +1116,7 @@ export default function DistrictCard({
               >
                 الإنجازات
               </Button>
-            )}
+            
 
             <Button
               size="compact-sm"
