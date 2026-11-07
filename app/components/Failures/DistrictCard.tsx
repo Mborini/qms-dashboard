@@ -1,6 +1,6 @@
 "use client";
-
-import { useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 
 import {
@@ -26,6 +26,8 @@ import {
   IconUser,
   IconChartBar,
   IconTrophy,
+  IconChevronLeft,
+  IconAlertCircle,
 } from "@tabler/icons-react";
 
 import { toPng } from "html-to-image";
@@ -104,8 +106,7 @@ const getStatusLabel = (status: string) =>
   getStatusConfig(status)?.label ??
   (status === "Unknown" ? "غير محدد" : status);
 
-const getStatusIcon = (status: string) =>
-  getStatusConfig(status)?.icon ?? null;
+const getStatusIcon = (status: string) => getStatusConfig(status)?.icon ?? null;
 
 /* =========================================================
    COLOR HELPERS (تدعم أسماء ألوان Mantine و hex)
@@ -217,7 +218,7 @@ const ACHIEVEMENT_STATUSES = [
 
 const isAchievementStatus = (status: string) =>
   ACHIEVEMENT_STATUSES.includes(
-    status as (typeof ACHIEVEMENT_STATUSES)[number]
+    status as (typeof ACHIEVEMENT_STATUSES)[number],
   );
 
 /* =========================================================
@@ -268,7 +269,7 @@ const normalizeKpiGroups = (data: any) => {
 
     const calculatedTotal = Object.values(statuses).reduce(
       (sum: number, statusData: any) => sum + Number(statusData?.total ?? 0),
-      0
+      0,
     );
 
     const rawTotal = Number(value?.total);
@@ -287,7 +288,7 @@ const normalizeKpiGroups = (data: any) => {
         value?.nameAr ||
         value?.name ||
         value?.title ||
-        "مخالفات حسب مؤشرات الأداء"
+        "مخالفات حسب مؤشرات الأداء",
     )
       .replace(/^KPI:\s*/i, "")
       .trim();
@@ -349,7 +350,12 @@ const normalizeKpiGroups = (data: any) => {
           const v = value as any;
 
           const displayName =
-            v?.kpiNameAr ?? v?.kpiName ?? v?.nameAr ?? v?.name ?? v?.title ?? name;
+            v?.kpiNameAr ??
+            v?.kpiName ??
+            v?.nameAr ??
+            v?.name ??
+            v?.title ??
+            name;
 
           addKpi(displayName, value);
         }
@@ -431,7 +437,49 @@ export default function DistrictCard({
     main: "#74A7FF",
     light: SURFACE_2,
   };
+  const [accumulatedTotal, setAccumulatedTotal] = useState(0);
+  const [accumulatedIds, setAccumulatedIds] = useState<(string | number)[]>([]);
+  const [accumulatedLoading, setAccumulatedLoading] = useState(true);
+  const [accumulatedModalOpened, setAccumulatedModalOpened] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
 
+    const fetchAccumulated = async () => {
+      try {
+        setAccumulatedLoading(true);
+
+        const response = await fetch(
+          `/api/kpis/district/${encodeURIComponent(
+            district.replace(/^منطقة\s*/i, "").trim(),
+          )}`,
+          { signal: controller.signal },
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch accumulated failures");
+        }
+
+        const result = await response.json();
+
+        setAccumulatedTotal(Number(result.total ?? 0));
+        setAccumulatedIds(result.ids ?? []);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Accumulated failures error:", error);
+          setAccumulatedTotal(0);
+          setAccumulatedIds([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setAccumulatedLoading(false);
+        }
+      }
+    };
+
+    fetchAccumulated();
+
+    return () => controller.abort();
+  }, [district]);
   /* NORMALIZED BLOCKS */
 
   const normalizedBlocks = useMemo(() => {
@@ -441,8 +489,7 @@ export default function DistrictCard({
 
     Object.entries(kpiGroups).forEach(([key, value]) => {
       const existingKey = Object.keys(blocks).find(
-        (blockKey) =>
-          normalizeBlockName(blockKey) === normalizeBlockName(key)
+        (blockKey) => normalizeBlockName(blockKey) === normalizeBlockName(key),
       );
 
       if (existingKey) return;
@@ -459,7 +506,7 @@ export default function DistrictCard({
     const entries = Object.entries(normalizedBlocks);
 
     const normalBlocks = entries.filter(
-      ([blockName]) => !isKpiBlock(blockName)
+      ([blockName]) => !isKpiBlock(blockName),
     );
 
     const source = normalBlocks.length ? normalBlocks : entries;
@@ -477,13 +524,11 @@ export default function DistrictCard({
     });
 
     Object.values(metricBlocks).forEach((block: any) => {
-      Object.entries(block?.statuses || {}).forEach(
-        ([status, statusData]) => {
-          if (result[status] === undefined) result[status] = 0;
+      Object.entries(block?.statuses || {}).forEach(([status, statusData]) => {
+        if (result[status] === undefined) result[status] = 0;
 
-          result[status] += Number((statusData as any)?.total ?? 0);
-        }
-      );
+        result[status] += Number((statusData as any)?.total ?? 0);
+      });
     });
 
     return result;
@@ -509,44 +554,42 @@ export default function DistrictCard({
     > = {};
 
     Object.entries(metricBlocks).forEach(([, block]) => {
-      Object.entries(block?.statuses || {}).forEach(
-        ([status, statusData]) => {
-          if (!isAchievementStatus(status)) return;
+      Object.entries(block?.statuses || {}).forEach(([status, statusData]) => {
+        if (!isAchievementStatus(status)) return;
 
-          Object.entries((statusData as any)?.users || {}).forEach(
-            ([user, rawUserData]) => {
-              const userData = rawUserData as UserData;
-              const count = getUserCount(userData);
+        Object.entries((statusData as any)?.users || {}).forEach(
+          ([user, rawUserData]) => {
+            const userData = rawUserData as UserData;
+            const count = getUserCount(userData);
 
-              if (!users[user]) {
-                users[user] = {
-                  name: user,
-                  resolved: 0,
-                  field: 0,
-                  review: 0,
-                  rejected: 0,
-                  total: 0,
-                  ids: [],
-                };
-              }
-
-              if (status === "Resolved") users[user].resolved += count;
-
-              if (status === "PendingFieldMonitorVerification") {
-                users[user].field += count;
-              }
-
-              if (status === "PendingSupervisorReview") {
-                users[user].review += count;
-              }
-
-              if (status === "Rejected") users[user].rejected += count;
-
-              users[user].ids.push(...(userData.ids || []));
+            if (!users[user]) {
+              users[user] = {
+                name: user,
+                resolved: 0,
+                field: 0,
+                review: 0,
+                rejected: 0,
+                total: 0,
+                ids: [],
+              };
             }
-          );
-        }
-      );
+
+            if (status === "Resolved") users[user].resolved += count;
+
+            if (status === "PendingFieldMonitorVerification") {
+              users[user].field += count;
+            }
+
+            if (status === "PendingSupervisorReview") {
+              users[user].review += count;
+            }
+
+            if (status === "Rejected") users[user].rejected += count;
+
+            users[user].ids.push(...(userData.ids || []));
+          },
+        );
+      });
     });
 
     return Object.values(users)
@@ -564,9 +607,9 @@ export default function DistrictCard({
     () =>
       Object.values(metricBlocks).reduce(
         (sum: number, block: any) => sum + Number(block?.total || 0),
-        0
+        0,
       ),
-    [metricBlocks]
+    [metricBlocks],
   );
 
   const districtTotal = Number(data?.total || 0) || calculatedTotal;
@@ -578,18 +621,18 @@ export default function DistrictCard({
   const reviewCount = districtStatuses["PendingSupervisorReview"] || 0;
   const rejectedCount = districtStatuses["Rejected"] || 0;
 
-const achievementCount =
-  fieldCount + resolvedCount + reviewCount + rejectedCount;
+  const achievementCount =
+    fieldCount + resolvedCount + reviewCount + rejectedCount;
 
-/* المنجز = تم الحل + مراجعة AVTR + مرفوض + انتظار التحقق الميداني
+  /* المنجز = تم الحل + مراجعة AVTR + مرفوض + انتظار التحقق الميداني
    (نفس achievementCount) */
-const completedCount = achievementCount;
+  const completedCount = achievementCount;
 
-/* المتبقي لليوم = رفض الحل + قيد التنفيذ + في انتظار القبول */
-const remainingCount =
-  (districtStatuses["ResolutionRejected"] || 0) +
-  (districtStatuses["InProgress"] || 0) +
-  (districtStatuses["PendingSpValidation"] || 0);
+  /* المتبقي لليوم = رفض الحل + قيد التنفيذ + في انتظار القبول */
+  const remainingCount =
+    (districtStatuses["ResolutionRejected"] || 0) +
+    (districtStatuses["InProgress"] || 0) +
+    (districtStatuses["PendingSpValidation"] || 0);
   const achievement = districtTotal
     ? Number(((achievementCount / districtTotal) * 100).toFixed(1))
     : 0;
@@ -604,25 +647,23 @@ const remainingCount =
 
       if (!statusData) return;
 
-      Object.entries(statusData.users || {}).forEach(
-        ([user, rawUserData]) => {
-          const userData = rawUserData as UserData;
+      Object.entries(statusData.users || {}).forEach(([user, rawUserData]) => {
+        const userData = rawUserData as UserData;
 
-          (userData.ids || []).forEach((id) => {
-            if (failureMap.has(id)) return;
+        (userData.ids || []).forEach((id) => {
+          if (failureMap.has(id)) return;
 
-            failureMap.set(id, {
-              id,
-              district,
-              districtName: district,
-              block: blockName,
-              blockName,
-              status,
-              userName: user,
-            });
+          failureMap.set(id, {
+            id,
+            district,
+            districtName: district,
+            block: blockName,
+            blockName,
+            status,
+            userName: user,
           });
-        }
-      );
+        });
+      });
 
       (statusData.ids || []).forEach((id: string | number) => {
         if (failureMap.has(id)) return;
@@ -651,7 +692,7 @@ const remainingCount =
   const openUserStatusFailures = (
     user: string,
     status: string,
-    selectedBlockName: string
+    selectedBlockName: string,
   ) => {
     const failureMap = new Map<string | number, FailureItem>();
 
@@ -692,9 +733,7 @@ const remainingCount =
 
     const failures = Array.from(failureMap.values());
 
-    failures.sort((a, b) =>
-      String(a.id).localeCompare(String(b.id), "ar")
-    );
+    failures.sort((a, b) => String(a.id).localeCompare(String(b.id), "ar"));
 
     setSelectedUser({ name: user, failures });
     setOpened(true);
@@ -729,7 +768,7 @@ const remainingCount =
               userName,
             });
           });
-        }
+        },
       );
     });
 
@@ -778,7 +817,7 @@ const remainingCount =
           const key = statusMap[status];
 
           if (key) row[key] = Number((statusData as any)?.total || 0);
-        }
+        },
       );
 
       const field = Number(row["في انتظار التحقق الميداني"] || 0);
@@ -914,7 +953,7 @@ const remainingCount =
           position: "relative",
           background: `radial-gradient(55% 150% at 100% 0%, ${hexA(
             districtTheme.main,
-            0.42
+            0.42,
           )} 0%, transparent 70%), linear-gradient(135deg, ${INK}, #20345A)`,
           borderBottom: `1px solid ${LINE}`,
         }}
@@ -948,7 +987,13 @@ const remainingCount =
             </Box>
 
             <Box style={{ minWidth: 0 }}>
-              <Text fw={700} lh={1.3} c={TEXT} truncate style={{ fontSize: 19 }}>
+              <Text
+                fw={700}
+                lh={1.3}
+                c={TEXT}
+                truncate
+                style={{ fontSize: 19 }}
+              >
                 {district}
               </Text>
 
@@ -959,8 +1004,6 @@ const remainingCount =
           </Group>
 
           <Group gap="md" wrap="nowrap">
-      
-
             <ActionIcon
               variant="transparent"
               radius="xl"
@@ -984,106 +1027,249 @@ const remainingCount =
           </Group>
         </Group>
 
-        
-       <Box mt="lg" pt="md" style={{ borderTop: `1px solid ${LINE}` }}>
-  <Group
-    justify="space-between"
-    align="flex-end"
-    wrap="wrap"
-    gap="lg"
-    mb="md"
-  >
-    {/* نسبة الإنجاز */}
-    <Box>
-      <Text size="xs" fw={600} c={MUTED} mb={6}>
-        نسبة الإنجاز
-      </Text>
-
-      <Text fw={800} lh={1} c={TEXT} style={{ fontSize: 44, ...tabular }}>
-        {achievement}
-        <Text span fw={600} c={GOLD_LIGHT} style={{ fontSize: 22 }}>
-          %
-        </Text>
-      </Text>
-    </Box>
-
-    {/* الإجمالي / المنجز / المتبقي */}
-    <Group gap={0} wrap="nowrap" align="flex-end">
-      {[
-        { label: "إجمالي المخالفات", value: districtTotal, color: GOLD_LIGHT },
-        { label: "المنجز", value: completedCount, color: "#69DB7C" },
-        { label: "المتبقي اليوم", value: remainingCount, color: "#FF6B6B" },
-      ].map((s, i) => (
         <Box
-          key={s.label}
-          px="md"
+          mt="md"
+          pt="md"
           style={{
-            minWidth: 96,
-            textAlign: "center",
-            borderInlineStart: i === 0 ? "none" : `1px solid ${LINE}`,
+            borderTop: `1px solid ${LINE}`,
           }}
         >
-          <Text
-            size="xs"
-            fw={600}
-            c={MUTED}
-            mb={6}
-            style={{ whiteSpace: "nowrap" }}
+          {/* نسبة الإنجاز */}
+          <Box
+            mb="sm"
+            p="sm"
+            style={{
+              borderRadius: 12,
+              background:
+                "linear-gradient(135deg, rgba(39,65,105,.22), rgba(20,35,58,.32))",
+              border: "1px solid rgba(112,153,205,.18)",
+            }}
           >
-            {s.label}
-          </Text>
+            <Group justify="space-between" align="center" mb={9}>
+              <Group gap={8}>
+                <Box
+                  w={28}
+                  h={28}
+                  style={{
+                    borderRadius: 8,
+                    background: "rgba(91,151,218,.13)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <IconChartBar size={16} color="#83B7EC" />
+                </Box>
 
-          <Text
-            fw={800}
-            lh={1}
-            style={{ fontSize: 30, color: s.color, ...tabular }}
+                <Text size="sm" fw={700} c="#DCE8F5">
+                  نسبة الإنجاز
+                </Text>
+              </Group>
+
+              <Text
+                size="lg"
+                fw={800}
+                c="#8DCDBB"
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {achievement}%
+              </Text>
+            </Group>
+
+            <Progress
+              value={achievement}
+              size={7}
+              radius="xl"
+              color="#55B99A"
+              styles={{
+                root: { backgroundColor: "rgba(255,255,255,.08)" },
+                section: { transition: "width .5s ease" },
+              }}
+            />
+
+            <Group justify="space-between" mt={8}>
+              <Group gap={5}>
+                <Box
+                  w={7}
+                  h={7}
+                  style={{ borderRadius: 50, background: "#55B99A" }}
+                />
+                <Text size="xs" c="#A7B9CC">
+                  المنجز: {completedCount}
+                </Text>
+              </Group>
+
+              <Group gap={5}>
+                <Box
+                  w={7}
+                  h={7}
+                  style={{ borderRadius: 50, background: "#D6A85C" }}
+                />
+                <Text size="xs" c="#A7B9CC">
+                  المتبقي: {remainingCount}
+                </Text>
+              </Group>
+            </Group>
+          </Box>
+
+          {/* بطاقات الإحصائيات */}
+          <SimpleGrid
+            cols={{ base: 3, sm: 3, md: 5 }}
+            spacing="xs"
+            verticalSpacing="xs"
           >
-            {s.value.toLocaleString("en-US")}
-          </Text>
-        </Box>
-      ))}
-    </Group>
+            {/* الإجمالي (أزرق) */}
+            <Box
+              p="sm"
+              style={{
+                borderRadius: 11,
+                minHeight: 86,
+                background:
+                  "linear-gradient(145deg, rgba(65,111,166,.13), rgba(35,57,83,.18))",
+                border: "1px solid rgba(104,157,213,.20)",
+              }}
+            >
+              <Group justify="space-between" align="center" mb={8}>
+                <Text size="md" fw={600} c="#AFC2D8">
+                مخالفات اليوم
+                </Text>
+                <IconChartBar size={17} color="#79AEE3" />
+              </Group>
+
+              <Text size="xl" fw={800} c="#E5EFFA" lh={1.1}>
+                {districtTotal}
+              </Text>
+            </Box>
+
+            {/* المنجز (أخضر) */}
+            <Box
+              p="sm"
+              style={{
+                borderRadius: 11,
+                minHeight: 86,
+                background:
+                  "linear-gradient(145deg, rgba(51,139,113,.12), rgba(30,77,67,.18))",
+                border: "1px solid rgba(85,185,154,.20)",
+              }}
+            >
+              <Group justify="space-between" align="center" mb={8}>
+                <Text size="md" fw={600} c="#AFC9C1">
+                  المنجز اليوم
+                </Text>
+                <IconTrophy size={17} color="#65C5A4" />
+              </Group>
+
+              <Text size="xl" fw={800} c="#76D0B1" lh={1.1}>
+                {completedCount}
+              </Text>
+            </Box>
+
+            {/* المتبقي (كهرماني) */}
+            <Box
+              p="sm"
+              style={{
+                borderRadius: 11,
+                minHeight: 86,
+                background:
+                  "linear-gradient(145deg, rgba(166,124,57,.11), rgba(94,72,37,.17))",
+                border: "1px solid rgba(214,168,92,.20)",
+              }}
+            >
+              <Group justify="space-between" align="center" mb={8}>
+                <Text size="md" fw={600} c="#C9B995">
+                  المتبقي اليوم
+                </Text>
+                <IconAlertCircle size={17} color="#D6AD68" />
+              </Group>
+
+              <Text size="xl" fw={800} c="#E5BD78" lh={1.1}>
+                {remainingCount}
+              </Text>
+            </Box>
+            {/* المخالفات المتأخرة (أحمر + فلاش) */}
+         {/* المخالفات المتأخرة (أحمر + فلاش) */}
+<Box
+  component={motion.button}
+  onClick={() => setAccumulatedModalOpened(true)}
+  animate={
+    accumulatedTotal > 0 && !accumulatedLoading
+      ? {
+          opacity: [1, 0.85, 1],
+          boxShadow: [
+            "0 0 0 0 rgba(232,122,122,0)",
+            "0 0 12px 2px rgba(232,122,122,.35)",
+            "0 0 0 0 rgba(232,122,122,0)",
+          ],
+        }
+      : {
+          opacity: 1,
+          boxShadow: "0 0 0 0 rgba(232,122,122,0)",
+        }
+  }
+  transition={{
+    duration: 2,
+    repeat: accumulatedTotal > 0 && !accumulatedLoading ? Infinity : 0,
+    ease: "easeInOut",
+    times: [0, 0.5, 1],
+  }}
+  whileHover={{ scale: 1.02 }}
+  whileTap={{ scale: 0.98 }}
+  p="sm"
+  style={{
+    borderRadius: 11,
+    minHeight: 86,
+    width: "100%",
+    textAlign: "right",
+    cursor: "pointer",
+    color: "white",
+    background:
+      "linear-gradient(145deg, rgba(190,80,80,.16), rgba(100,40,45,.24))",
+    border: "1px solid rgba(232,122,122,.34)",
+  }}
+>
+  <Group justify="space-between" align="center" mb={8}>
+    <Text size="xs" fw={600} c="#E8B4B4">
+      المخالفات المتأخرة
+    </Text>
+    <IconAlertCircle size={17} color="#EE8A8A" />
   </Group>
 
-  <Progress
-    value={Math.min(achievement, 100)}
-    radius="xl"
-    size={6}
-    mb="md"
-    styles={{
-      root: { background: "rgba(255,255,255,.14)" },
-      section: {
-        background: `linear-gradient(90deg, ${GOLD}, ${GOLD_LIGHT})`,
-      },
-    }}
-  />
-
-  <SimpleGrid cols={{ base: 2, sm: 4 }} spacing={0}>
-    {achievementStats.map((s, i) => (
-      <Box
-        key={s.label}
-        px="sm"
-        py={4}
-        style={{
-          borderInlineStart: i === 0 ? "none" : `1px solid ${LINE}`,
-        }}
-      >
-        <Text
-          fw={700}
-          c={TEXT}
-          style={{ fontSize: 21, lineHeight: 1.15, ...tabular }}
-        >
-          {s.value.toLocaleString("en-US")}
-        </Text>
-
-        <Text size="10px" c={MUTED} fw={500} mt={2}>
-          {s.label}
-        </Text>
-      </Box>
-    ))}
-  </SimpleGrid>
+  <Group justify="space-between" align="center">
+    <Text size="xl" fw={800} c="#F5AAAA" lh={1.1}>
+      {accumulatedLoading ? "..." : accumulatedTotal}
+    </Text>
+    <IconChevronLeft size={15} color="#EE8A8A" />
+  </Group>
 </Box>
-      
+            <Box
+              onClick={() => setUsersModalOpened(true)}
+              p="sm"
+              style={{
+                borderRadius: 11,
+                minHeight: 86,
+                cursor: "pointer",
+                background:
+                  "linear-gradient(145deg, rgba(59,130,246,.13), rgba(30,64,120,.20))",
+                border: "1px solid rgba(96,165,250,.25)",
+              
+              }}
+            >
+              <Group justify="space-between" align="center" mb={8}>
+                <Text size="md" fw={600} c="#B8D2F0">
+                  أداء المشرفين
+                </Text>
+                <IconTrophy size={17} color="#60A5FA" />
+              </Group>
+
+              <Group justify="space-between" align="flex-end">
+                <Text size="xl" fw={800} c="#7DB8FF" lh={1.1}>
+                  {completedCount}
+                </Text>
+              </Group>
+            </Box>
+
+          </SimpleGrid>
+        </Box>
       </Box>
 
       {/* =====================================================
@@ -1095,41 +1281,10 @@ const remainingCount =
         style={{
           background: `radial-gradient(45% 35% at 0% 100%, ${hexA(
             districtTheme.main,
-            0.16
+            0.16,
           )} 0%, transparent 70%)`,
         }}
       >
-        <Group justify="space-between" mb={12}>
-          <Text fw={700} c={TEXT} style={{ fontSize: 16 }}>
-            توزيع الحالات
-          </Text>
-
-          <Group gap={8}>
-            
-              <Button
-                size="compact-sm"
-                variant="default"
-                radius="xl"
-                leftSection={<IconTrophy size={14} stroke={1.7} />}
-                onClick={() => setUsersModalOpened(true)}
-                style={goldBtn}
-              >
-                الإنجازات
-              </Button>
-            
-
-            <Button
-              size="compact-sm"
-              variant="default"
-              radius="xl"
-              onClick={() => setSummaryModalOpened(true)}
-              style={ghostBtn}
-            >
-              التفاصيل
-            </Button>
-          </Group>
-        </Group>
-
         <SimpleGrid cols={{ base: 2, sm: 4, md: 4 }} spacing={8} mb="xl">
           {Object.entries(districtStatuses).map(([status, count]) => {
             const color = getStatusColor(status);
@@ -1172,14 +1327,11 @@ const remainingCount =
 
         {/* ---------- BLOCKS + KPI ---------- */}
 
-        <SimpleGrid
-          cols={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }}
-          spacing={12}
-        >
+        <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} spacing={12}>
           {Object.entries(normalizedBlocks)
             .sort(
               ([, a], [, b]) =>
-                Number((b as any)?.total || 0) - Number((a as any)?.total || 0)
+                Number((b as any)?.total || 0) - Number((a as any)?.total || 0),
             )
             .map(([block, blockData]) => {
               const isKpiGroup = isKpiBlock(block);
@@ -1232,7 +1384,12 @@ const remainingCount =
                       </Box>
 
                       <Box style={{ minWidth: 0 }}>
-                        <Text fw={700} c={TEXT} truncate style={{ fontSize: 14 }}>
+                        <Text
+                          fw={700}
+                          c={TEXT}
+                          truncate
+                          style={{ fontSize: 14 }}
+                        >
                           {isKpiGroup ? displayName : `حي ${displayName}`}
                         </Text>
 
@@ -1250,7 +1407,7 @@ const remainingCount =
                       style={{ fontSize: 19, ...tabular }}
                     >
                       {Number((blockData as any)?.total || 0).toLocaleString(
-                        "en-US"
+                        "en-US",
                       )}
                     </Text>
                   </Group>
@@ -1260,12 +1417,12 @@ const remainingCount =
                       .sort(
                         ([, a], [, b]) =>
                           Number((b as any)?.total || 0) -
-                          Number((a as any)?.total || 0)
+                          Number((a as any)?.total || 0),
                       )
                       .map(([status, statusData]) => {
                         const statusColor = getStatusColor(status);
                         const usersEntries = Object.entries(
-                          (statusData as any)?.users || {}
+                          (statusData as any)?.users || {},
                         );
 
                         return (
@@ -1278,7 +1435,7 @@ const remainingCount =
                               background: SURFACE_3,
                               borderInlineStart: `2px solid ${shade(
                                 statusColor,
-                                5
+                                5,
                               )}`,
                             }}
                           >
@@ -1304,7 +1461,7 @@ const remainingCount =
 
                               <CountPill color={statusColor}>
                                 {Number(
-                                  (statusData as any)?.total || 0
+                                  (statusData as any)?.total || 0,
                                 ).toLocaleString("en-US")}
                               </CountPill>
                             </Group>
@@ -1316,11 +1473,11 @@ const remainingCount =
                                     .sort(
                                       ([, a], [, b]) =>
                                         getUserCount(b as UserData) -
-                                        getUserCount(a as UserData)
+                                        getUserCount(a as UserData),
                                     )
                                     .map(([user, rawUserData]) => {
                                       const userCount = getUserCount(
-                                        rawUserData as UserData
+                                        rawUserData as UserData,
                                       );
 
                                       return (
@@ -1335,7 +1492,7 @@ const remainingCount =
                                             openUserStatusFailures(
                                               user,
                                               status,
-                                              block
+                                              block,
                                             )
                                           }
                                           style={{
@@ -1363,7 +1520,10 @@ const remainingCount =
                                                 color: FAINT,
                                               }}
                                             >
-                                              <IconUser size={12} stroke={1.6} />
+                                              <IconUser
+                                                size={12}
+                                                stroke={1.6}
+                                              />
                                             </Box>
 
                                             <Text
@@ -1437,7 +1597,7 @@ const remainingCount =
                 const text = (selectedUser?.failures || [])
                   .map((item) => {
                     const blockName = String(
-                      item.blockName ?? item.block ?? ""
+                      item.blockName ?? item.block ?? "",
                     );
 
                     return `${item.id} - ${
@@ -1479,7 +1639,11 @@ const remainingCount =
                   >
                     <Group justify="space-between" align="center">
                       <Group gap="sm">
-                        <Text fw={800} c={TEXT} style={{ fontSize: 15, ...tabular }}>
+                        <Text
+                          fw={800}
+                          c={TEXT}
+                          style={{ fontSize: 15, ...tabular }}
+                        >
                           {item.id}
                         </Text>
 
@@ -1736,7 +1900,11 @@ const remainingCount =
                   </Table.Td>
 
                   <Table.Td>
-                    <Text fw={800} c={TEXT} style={{ fontSize: 13, ...tabular }}>
+                    <Text
+                      fw={800}
+                      c={TEXT}
+                      style={{ fontSize: 13, ...tabular }}
+                    >
                       {user.total}
                     </Text>
                   </Table.Td>
@@ -1746,7 +1914,98 @@ const remainingCount =
           </Table>
         </Box>
       </Modal>
+      <Modal
+        dir="rtl"
+        {...modalProps}
+        opened={accumulatedModalOpened}
+        onClose={() => setAccumulatedModalOpened(false)}
+        size="md"
+        title={`المخالفات المتأخرة - ${district}`}
+      >
+        <Stack gap="md">
+          <Box
+            p="lg"
+            style={{
+              textAlign: "center",
+              borderRadius: 16,
+              background: SURFACE_2,
+              border: `1px solid ${LINE}`,
+            }}
+          >
+            <Text size="xs" c={MUTED} mb={6}>
+              إجمالي المخالفات المتأخرة
+            </Text>
 
+            <Text
+              fw={800}
+              style={{
+                fontSize: 38,
+                color: "#74A7FF",
+                ...tabular,
+              }}
+            >
+              {accumulatedTotal.toLocaleString("en-US")}
+            </Text>
+
+            <Text size="xs" c={FAINT} mt={5}>
+              رفض الحل · قيد التنفيذ · في انتظار القبول
+            </Text>
+          </Box>
+
+          <Group justify="space-between">
+            <Text fw={700} c={TEXT}>
+              أرقام المخالفات
+            </Text>
+
+            <Button
+              size="xs"
+              radius="xl"
+              variant="default"
+              leftSection={<IconCopy size={14} />}
+              style={goldBtn}
+              disabled={!accumulatedIds.length}
+              onClick={() => {
+                navigator.clipboard.writeText(accumulatedIds.join("\n"));
+              }}
+            >
+              نسخ الأرقام
+            </Button>
+          </Group>
+
+          <ScrollArea h={350} offsetScrollbars>
+            <Stack gap={6}>
+              {accumulatedIds.map((id, index) => (
+                <Box
+                  key={`${id}-${index}`}
+                  px="md"
+                  py={10}
+                  style={{
+                    borderRadius: 10,
+                    background: SURFACE_2,
+                    border: `1px solid ${LINE}`,
+                  }}
+                >
+                  <Group justify="space-between">
+                    <Text size="xs" c={FAINT}>
+                      {index + 1}
+                    </Text>
+
+                    <Text fw={700} c={TEXT} style={tabular}>
+                      {id}
+                    </Text>
+                  </Group>
+                </Box>
+              ))}
+
+              {!accumulatedIds.length && (
+                <Text ta="center" c={MUTED} py="xl">
+                  لا توجد مخالفات متراكمة
+                </Text>
+              )}
+            </Stack>
+          </ScrollArea>
+        </Stack>
+      </Modal>
       {/* =====================================================
           FAILURE LIST MODAL
       ===================================================== */}
