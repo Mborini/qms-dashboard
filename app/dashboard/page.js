@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 
 import {
@@ -10,7 +10,6 @@ import {
   SimpleGrid,
   Text,
   Group,
-  ThemeIcon,
   Divider,
 } from "@mantine/core";
 
@@ -38,6 +37,30 @@ import {
 
 import { bungee } from "../layout";
 import { hasPermission } from "../lib/permissions";
+import { MODULES, SECTIONS } from "../lib/modules";
+
+/* =========================================================
+   ICONS  (اسم الأيقونة بـ modules.ts → الأيقونة الفعلية)
+========================================================= */
+
+
+const ICONS = {
+  IconChartBar,
+  IconMap,
+  IconRoute,
+  IconMapPin,
+  IconFileTypeXls,
+  IconMap2,
+  IconUsers,
+  IconTool,
+  IconHistory,
+  IconSettings,
+  IconTruck,
+  IconShield,
+  IconLock,
+  IconArrowsExchange,
+  IconFileText,
+};
 
 /* =========================================================
    DESIGN TOKENS  (نفس ألوان DistrictCard: Navy + Champagne Gold)
@@ -46,7 +69,6 @@ import { hasPermission } from "../lib/permissions";
 const INK = "#1A2A4A"; // الهيدر
 const SURFACE = "#213459"; // خلفية الصفحة
 const SURFACE_2 = "#2A4070"; // البطاقات
-const SURFACE_3 = "#324D84";
 const GOLD = "#C9A66B";
 const GOLD_LIGHT = "#E6CF9D";
 const TEXT = "#F3F6FC";
@@ -59,12 +81,12 @@ const FONT =
   '"IBM Plex Sans Arabic", "Cairo", "Tajawal", "Segoe UI", system-ui, sans-serif';
 
 /** شفافية للون hex */
-const hexA = (hex: string, a: number) =>
+const hexA = (hex, a) =>
   `${hex}${Math.round(a * 255)
     .toString(16)
     .padStart(2, "0")}`;
 
-const tabular = { fontVariantNumeric: "tabular-nums" as const };
+const tabular = { fontVariantNumeric: "tabular-nums" };
 
 /* =========================================================
    SECTION HEADER
@@ -78,14 +100,6 @@ function SectionHeader({
   collapsible = false,
   opened = true,
   onToggle,
-}: {
-  icon: ReactNode;
-  title: string;
-  description: string;
-  count: number;
-  collapsible?: boolean;
-  opened?: boolean;
-  onToggle?: () => void;
 }) {
   return (
     <Box
@@ -190,13 +204,6 @@ function ModuleCard({
   footer,
   icon,
   color,
-}: {
-  href: string;
-  title: string;
-  description: string;
-  footer: string;
-  icon: ReactNode;
-  color: string;
 }) {
   return (
     <Link
@@ -287,13 +294,14 @@ function ModuleCard({
 export default function Page() {
   const { data: session, status } = useSession();
 
-  const [maintenanceOpen, setMaintenanceOpen] = useState(true);
+  // الأقسام القابلة للطي اللي المستخدم طواها
+  const [collapsed, setCollapsed] = useState({});
 
   /* PERMISSIONS */
 
   const permissions = session?.user?.permissions || [];
 
-  const can = (permission: string) => hasPermission(permissions, permission);
+  const can = (permission) => hasPermission(permissions, permission);
 
   /* LOGOUT */
 
@@ -346,38 +354,12 @@ export default function Page() {
     );
   }
 
-  /* PERMISSION GROUPS */
+  /* VISIBLE SECTIONS  (من modules.ts حسب صلاحيات المستخدم) */
 
-  const operationsPermissions = [
-    "statistics",
-    "map",
-    "route_notes",
-    "bins",
-    "collection_areas",
-    "bin_export",
-    "vehicle_movements_history",
-  ];
-
-  const maintenancePermissions = [
-    "maintenance",
-    "maintenance_history",
-    "maintenance_types",
-    "vehicles",
-  ];
-
-  const adminPermissions = ["users", "roles", "permissions"];
-
-  /* VISIBILITY */
-
-  const showOperations = operationsPermissions.some(can);
-  const showMaintenance = maintenancePermissions.some(can);
-  const showAdmin = adminPermissions.some(can);
-
-  /* COUNTS */
-
-  const operationsCount = operationsPermissions.filter(can).length;
-  const maintenanceCount = maintenancePermissions.filter(can).length;
-  const adminCount = adminPermissions.filter(can).length;
+  const visibleSections = SECTIONS.map((section) => ({
+    section,
+    modules: MODULES.filter((m) => m.section === section.key && can(m.key)),
+  })).filter((s) => s.modules.length > 0);
 
   /* =======================================================
      RETURN
@@ -445,16 +427,14 @@ export default function Page() {
               justifySelf: "center",
             }}
           >
-           
-
             <Text
               component="span"
               className={bungee.className}
               style={{
                 fontSize: 24,
                 lineHeight: 1,
-                background:                   "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
-
+                background:
+                  "linear-gradient(110deg, #1864ab 0%, #228be6 40%, #15aabf 75%, #12b886 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -462,7 +442,8 @@ export default function Page() {
             >
               Matrix
             </Text>
-             <Text
+
+            <Text
               component="span"
               style={{
                 fontFamily: "Inter, sans-serif",
@@ -497,265 +478,58 @@ export default function Page() {
       =================================================== */}
 
       <Container dir="ltr" size={1150} pt={40} pb={45}>
-        {/* =================================================
-            OPERATIONS
-        ================================================= */}
+        {visibleSections.map(({ section , modules }, index) => {
+          const SectionIcon = ICONS[section.icon];
+          const isLast = index === visibleSections.length - 1;
+          const opened = !collapsed[section.key];
 
-        {showOperations && (
-          <Box dir="rtl" className="dashboard-section" mb={60}>
-            <SectionHeader
-              icon={<IconMap2 size={27} stroke={1.6} />}
-              title="العمليات"
-              description="إدارة العمليات، الملاحظات، المخالفات, الخرائط، المناطق وادارة الحاويات."
-              count={operationsCount}
-            />
+          return (
+            <Box key={section.key}>
+              {index > 0 && <Divider mb={60} color={LINE} />}
 
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
-              {can("statistics") && (
-                <ModuleCard
-                  href="/failures/stats"
-                  title="احصائيات المخالفات"
-                  description="عرض وتحليل احصائيات المخالفات، المؤشرات والبيانات التشغيلية."
-                  footer="فتح الاحصائيات"
-                  icon={<IconChartBar size={28} stroke={1.6} />}
-                  color="#2563EB"
+              <Box
+                dir={section.dir}
+                className="dashboard-section"
+                mb={isLast ? 20 : 60}
+              >
+                <SectionHeader
+                  icon={<SectionIcon size={27} stroke={1.6} />}
+                  title={section.title}
+                  description={section.description}
+                  count={modules.length}
+                  collapsible={section.collapsible}
+                  opened={opened}
+                  onToggle={() =>
+                    setCollapsed((prev) => ({
+                      ...prev,
+                      [section.key]: !prev[section.key],
+                    }))
+                  }
                 />
-              )}
 
-              {can("statistics") && (
-                <ModuleCard
-                  href="/DailyReport"
-                  title="التقرير اليومي"
-                  description="التقرير اليومي، المؤشرات والبيانات التشغيلية."
-                  footer="فتح التقرير اليومي"
-                  icon={<IconFileText size={28} stroke={1.6} />}
-                  color="#2563EB"
-                />
-              )}
+                {opened && (
+                  <SimpleGrid cols={section.cols} spacing="lg">
+                    {modules.map((m) => {
+                      const Icon = ICONS[m.icon];
 
-              {can("statistics") && (
-                <ModuleCard
-                  href="/WBReport"
-                  title="تقرير الاوزان اليومي"
-                  description="تقرير الاوزان اليومي."
-                  footer="فتح تقرير الاوزان"
-                  icon={<IconFileText size={28} stroke={1.6} />}
-                  color="#2563EB"
-                />
-              )}
-
-              {can("statistics") && (
-                <ModuleCard
-                  href="/analyzedWBReport"
-                  title="تقرير الاوزان المحلل"
-                  description="تقرير الاوزان المحلل."
-                  footer="فتح محلل تقرير الاوزان"
-                  icon={<IconFileText size={28} stroke={1.6} />}
-                  color="#2563EB"
-                />
-              )}
-
-              {can("vehicle_movements_history") && (
-                <ModuleCard
-                  href="/vehicle-movements/history"
-                  title="سجل حركة المركبات"
-                  description="مراجعة وتحليل سجلات حركة المركبات التاريخية والنشاط التشغيلي."
-                  footer="فتح سجل الحركة"
-                  icon={<IconHistory size={28} stroke={1.6} />}
-                  color="#7C3AED"
-                />
-              )}
-
-              {can("statistics") && (
-                <ModuleCard
-                  href="/vehicle-movements"
-                  title="حركة المركبات"
-                  description="مراقبة حركة المركبات، النشاط اليومي وسجلات الحركة التشغيلية."
-                  footer="فتح حركة المركبات"
-                  icon={<IconArrowsExchange size={28} stroke={1.6} />}
-                  color="#DB2777"
-                />
-              )}
-
-              {can("map") && (
-                <ModuleCard
-                  href="/failures/osm"
-                  title="خرائط المخالفات"
-                  description="عرض المخالفات على الخرائط، مراجعة المواقع وتحليل البيانات الجغرافية."
-                  footer="فتح الخرائط"
-                  icon={<IconMap size={28} stroke={1.6} />}
-                  color="#F76707"
-                />
-              )}
-
-              {can("route_notes") && (
-                <ModuleCard
-                  href="/route-notes"
-                  title="ملاحظات تتبع المركبات"
-                  description="عرض وإدارة ملاحظات تتبع المركبات، الملاحظات التشغيلية والمواقع."
-                  footer="فتح ملاحظات التتبع"
-                  icon={<IconRoute size={28} stroke={1.6} />}
-                  color="#FA5252"
-                />
-              )}
-
-              {can("bins") && (
-                <ModuleCard
-                  href="/binCollection/map"
-                  title="اداة جمع مواقع الحاويات"
-                  description="عرض مواقع الحاويات على الخرائط، مراجعة المواقع وتحليل البيانات الجغرافية."
-                  footer="فتح خريطة الجمع"
-                  icon={<IconMapPin size={28} stroke={1.6} />}
-                  color="#FCC419"
-                />
-              )}
-
-              {can("collection_areas") && (
-                <ModuleCard
-                  href="/binCollection/collection-areas/manage"
-                  title="مناطق الجمع"
-                  description="إدارة مناطق الجمع، المناطق والحدود التشغيلية."
-                  footer="إدارة المناطق"
-                  icon={<IconMap2 size={28} stroke={1.6} />}
-                  color="#A1887F"
-                />
-              )}
-
-              {can("bin_export") && (
-                <ModuleCard
-                  href="/binCollection/export-bins"
-                  title="تصدير بيانات الحاويات"
-                  description="تصدير بيانات الحاويات، المواقع والمعلومات التشغيلية."
-                  footer="تصدير البيانات"
-                  icon={<IconFileTypeXls size={28} stroke={1.6} />}
-                  color="#40C057"
-                />
-              )}
-            </SimpleGrid>
-          </Box>
-        )}
-
-        {showOperations && showMaintenance && (
-          <Divider mb={60} color={LINE} />
-        )}
-
-        {/* =================================================
-            MAINTENANCE
-        ================================================= */}
-
-        {showMaintenance && (
-          <Box dir="rtl" className="dashboard-section" mb={60}>
-            <SectionHeader
-              icon={<IconTool size={27} stroke={1.6} />}
-              title="الصيانة"
-              description="ادخال و اخراج المركبات من والى الصيانة، إدارة أنواع الصيانة والمركبات."
-              count={maintenanceCount}
-              collapsible
-              opened={maintenanceOpen}
-              onToggle={() => setMaintenanceOpen((value) => !value)}
-            />
-
-            {maintenanceOpen && (
-              <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg">
-                {can("maintenance") && (
-                  <ModuleCard
-                    href="/maintenance/management"
-                    title="ادارة الصيانة"
-                    description="ادخال و اخراج المركبات من والى الصيانة"
-                    footer="فتح إدارة الصيانة"
-                    icon={<IconTool size={28} stroke={1.6} />}
-                    color="#40C057"
-                  />
+                      return (
+                        <ModuleCard
+                          key={m.key}
+                          href={m.href}
+                          title={m.title}
+                          description={m.description}
+                          footer={m.footer}
+                          icon={<Icon size={28} stroke={1.6} />}
+                          color={m.color}
+                        />
+                      );
+                    })}
+                  </SimpleGrid>
                 )}
-
-                {can("maintenance_history") && (
-                  <ModuleCard
-                    href="/maintenance/history"
-                    title="سجلات الصيانة"
-                    description="مشاهدة وتحليل سجلات الصيانة، الأعمال السابقة والتقارير."
-                    footer="فتح سجلات الصيانة"
-                    icon={<IconHistory size={28} stroke={1.6} />}
-                    color="#20C997"
-                  />
-                )}
-
-                {can("maintenance_types") && (
-                  <ModuleCard
-                    href="/maintenance/setup"
-                    title="انواع الصيانة"
-                    description="ادارة أنواع الصيانة، الفئات والإعدادات الخاصة بها."
-                    footer="فتح إعدادات الصيانة"
-                    icon={<IconSettings size={28} stroke={1.6} />}
-                    color="#22B8CF"
-                  />
-                )}
-
-                {can("vehicles") && (
-                  <ModuleCard
-                    href="/maintenance/vehicles"
-                    title="المركبات"
-                    description="إدارة المركبات ومعلوماتها."
-                    footer="فتح إدارة المركبات"
-                    icon={<IconTruck size={28} stroke={1.6} />}
-                    color="#74A7FF"
-                  />
-                )}
-              </SimpleGrid>
-            )}
-          </Box>
-        )}
-
-        {showMaintenance && showAdmin && <Divider mb={60} color={LINE} />}
-
-        {/* =================================================
-            ADMINISTRATION
-        ================================================= */}
-
-        {showAdmin && (
-          <Box className="dashboard-section" mb={20}>
-            <SectionHeader
-              icon={<IconUsers size={27} stroke={1.6} />}
-              title="Administration"
-              description="Users, roles and system access"
-              count={adminCount}
-            />
-
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
-              {can("users") && (
-                <ModuleCard
-                  href="/admin/users"
-                  title="User Management"
-                  description="Create, edit and manage system users and their roles."
-                  footer="Manage Users"
-                  icon={<IconUsers size={28} stroke={1.6} />}
-                  color="#228BE6"
-                />
-              )}
-
-              {can("roles") && (
-                <ModuleCard
-                  href="/admin/roles"
-                  title="Roles Management"
-                  description="Create, edit and manage system roles and access levels."
-                  footer="Manage Roles"
-                  icon={<IconShield size={28} stroke={1.6} />}
-                  color="#845EF7"
-                />
-              )}
-
-              {can("permissions") && (
-                <ModuleCard
-                  href="/admin/permissions"
-                  title="Permissions Management"
-                  description="Assign permissions to roles and control system access."
-                  footer="Manage Permissions"
-                  icon={<IconLock size={28} stroke={1.6} />}
-                  color="#F06595"
-                />
-              )}
-            </SimpleGrid>
-          </Box>
-        )}
+              </Box>
+            </Box>
+          );
+        })}
       </Container>
 
       {/* FOOTER */}
@@ -782,37 +556,37 @@ export default function Page() {
           padding: 14px 16px 0;
         }
 
-       .glass-nav {
-  position: relative;
-  max-width: 1150px;
-  margin: 0 auto;
-  padding: 9px 14px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 12px;
-  border-radius: 999px;
-  overflow: hidden;
+        .glass-nav {
+          position: relative;
+          max-width: 1150px;
+          margin: 0 auto;
+          padding: 9px 14px;
+          display: grid;
+          grid-template-columns: 1fr auto 1fr;
+          align-items: center;
+          gap: 12px;
+          border-radius: 999px;
+          overflow: hidden;
 
-  background: rgba(255,255,255,.04);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  backdrop-filter: blur(14px) saturate(160%);
-  border: 1px solid rgba(255,255,255,.16);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.30),
-    inset 0 -1px 0 rgba(255,255,255,.05),
-    0 10px 28px -14px rgba(10,20,45,.5);
-}
+          background: rgba(255,255,255,.04);
+          -webkit-backdrop-filter: blur(14px) saturate(160%);
+          backdrop-filter: blur(14px) saturate(160%);
+          border: 1px solid rgba(255,255,255,.16);
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,.30),
+            inset 0 -1px 0 rgba(255,255,255,.05),
+            0 10px 28px -14px rgba(10,20,45,.5);
+        }
 
-/* specular highlight */
-.glass-nav::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 55% 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0));
-  pointer-events: none;
-}
+        /* specular highlight */
+        .glass-nav::before {
+          content: "";
+          position: absolute;
+          inset: 0 0 55% 0;
+          border-radius: inherit;
+          background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0));
+          pointer-events: none;
+        }
 
         .glass-nav > * { position: relative; }
 
