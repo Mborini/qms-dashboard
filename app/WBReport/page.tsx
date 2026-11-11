@@ -34,6 +34,7 @@ import {
   IconUpload,
   IconScale,
   IconTarget,
+  IconCalendarStats,
 } from "@tabler/icons-react";
 
 /*
@@ -48,6 +49,8 @@ type Trip = {
   driver: string;
   shift: string;
   date: string; // yyyy-MM-dd
+    exitDate: string; // yyyy-MM-dd (تاريخ الخروج)
+
   loaded: number;
   empty: number;
   net: number;
@@ -81,6 +84,12 @@ function fmt(v: number) {
 function formatDate(key: string) {
   const [y, m, d] = key.split("-");
   return `${d}/${m}/${y}`;
+}
+
+function formatPeriod(p: { from: string; to: string }) {
+  return p.from === p.to
+    ? formatDate(p.from)
+    : `من ${formatDate(p.from)} إلى ${formatDate(p.to)}`;
 }
 
 function normalize(value: unknown): string {
@@ -129,34 +138,62 @@ function makeKey(y: number, m: number, d: number) {
   ).padStart(2, "0")}`;
 }
 
-function getDateKey(value: unknown): string | null {
+type DateOrder = "dmy" | "mdy";
+
+function latinDigits(text: string) {
+  return text
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
+}
+
+/** يحدد هل التواريخ النصية يوم/شهر أو شهر/يوم من خلال أي قيمة فيها رقم أكبر من 12. */
+function detectDateOrder(values: unknown[]): DateOrder {
+  let dmy = 0;
+  let mdy = 0;
+  for (const v of values) {
+    if (typeof v !== "string") continue;
+    const m = latinDigits(normalize(v)).match(
+      /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})/
+    );
+    if (!m) continue;
+    if (Number(m[1]) > 12) dmy++;
+    if (Number(m[2]) > 12) mdy++;
+  }
+  return mdy > dmy ? "mdy" : "dmy";
+}
+
+function getDateKey(
+  value: unknown,
+  order: DateOrder = "dmy",
+  date1904 = false
+): string | null {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return makeKey(value.getFullYear(), value.getMonth() + 1, value.getDate());
   }
 
   if (typeof value === "number" && Number.isFinite(value)) {
-    const p = XLSX.SSF.parse_date_code(value);
+    const p = XLSX.SSF.parse_date_code(value, { date1904 } as any);
     if (!p) return null;
     return makeKey(p.y, p.m, p.d);
   }
 
-  const text = normalize(value).replace(/[٠-٩]/g, (d) =>
-    String("٠١٢٣٤٥٦٧٨٩".indexOf(d))
-  );
-
-  const dmy = text.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})/);
-  if (dmy) {
-    const d = Number(dmy[1]);
-    const m = Number(dmy[2]);
-    const y = Number(dmy[3]);
-    return isValidDate(y, m, d) ? makeKey(y, m, d) : null;
-  }
+  const text = latinDigits(normalize(value));
 
   const ymd = text.match(/^(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})/);
   if (ymd) {
     const y = Number(ymd[1]);
     const m = Number(ymd[2]);
     const d = Number(ymd[3]);
+    return isValidDate(y, m, d) ? makeKey(y, m, d) : null;
+  }
+
+  const first = text.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})/);
+  if (first) {
+    const a = Number(first[1]);
+    const b = Number(first[2]);
+    const y = Number(first[3]);
+    const d = order === "dmy" ? a : b;
+    const m = order === "dmy" ? b : a;
     return isValidDate(y, m, d) ? makeKey(y, m, d) : null;
   }
 
@@ -479,7 +516,71 @@ export default function TripsReportPage() {
       pct: target > 0 ? round2((total / target) * 100) : null,
     };
   }, [weightGroups]);
+// مجموع أوزان كل آلية في كل يوم
+const dailyTable = useMemo(() => {
+const dates = Array.from(
+    new Set(filteredTrips.map((t) => t.exitDate))
+  ).sort();
+  const map = new Map<
+    string,
+    {
+      vehicle: string;
+      type: string;
+      days: Map<string, number>;
+      trips: number;
+      total: number;
+    }
+  >();
 
+  for (const t of filteredTrips) {
+    if (!map.has(t.vehicle)) {
+      map.set(t.vehicle, {
+        vehicle: t.vehicle,
+        type: t.type,
+        days: new Map(),
+        trips: 0,
+        total: 0,
+      });
+    }
+    const row = map.get(t.vehicle)!;
+    row.days.set(t.date, (row.days.get(t.date) ?? 0) + t.net);
+    row.trips++;
+    row.total += t.net;
+  }
+
+  const rows = Array.from(map.values())
+    .map((r) => ({
+      ...r,
+      days: new Map(Array.from(r.days).map(([d, v]) => [d, round2(v)])),
+      total: round2(r.total),
+    }))
+    .sort((a, b) =>
+      a.vehicle.localeCompare(b.vehicle, "en", { numeric: true })
+    );
+
+  // مجموع كل يوم لكل الآليات
+  const dayTotals = new Map<string, number>();
+  let grand = 0;
+  let grandTrips = 0;
+  for (const r of rows) {
+    grand += r.total;
+    grandTrips += r.trips;
+    r.days.forEach((v, d) =>
+      dayTotals.set(d, round2((dayTotals.get(d) ?? 0) + v))
+    );
+  }
+
+ return {
+    dates,
+    period: dates.length
+      ? { from: dates[0], to: dates[dates.length - 1] }
+      : null,
+    rows,
+    dayTotals,
+    grand: round2(grand),
+    grandTrips,
+  };
+}, [filteredTrips]);
   // أسماء المناطق في تبويب الأهداف: الافتراضية + أي منطقة أخرى من الملف
   const targetNames = useMemo(() => {
     const names = [...DEFAULT_TARGET_REGIONS];
@@ -524,16 +625,17 @@ export default function TripsReportPage() {
 
       let headerRow = -1;
       let idx = {
-        vehicle: -1,
-        type: -1,
-        region: -1,
-        driver: -1,
-        shift: -1,
-        entry: -1,
-        loaded: -1,
-        empty: -1,
-        net: -1,
-      };
+  vehicle: -1,
+  type: -1,
+  region: -1,
+  driver: -1,
+  shift: -1,
+  entry: -1,
+  exit: -1,
+  loaded: -1,
+  empty: -1,
+  net: -1,
+};
 
       for (let r = 0; r < Math.min(rows.length, 30); r++) {
         const headers = (rows[r] || []).map(cleanHeader);
@@ -555,6 +657,7 @@ export default function TripsReportPage() {
             type: headers.findIndex((h) => h.includes("نوع")),
             driver: headers.findIndex((h) => h.includes("سائق")),
             shift: headers.findIndex((h) => h.includes("شفت")),
+            exit: headers.findIndex((h) => h.includes("خروج")),
             loaded: headers.findIndex((h) => h.includes("قائم")),
             empty: headers.findIndex((h) => h.includes("فارغ")),
           };
@@ -579,6 +682,16 @@ export default function TripsReportPage() {
         );
       }
 
+      // اكتشاف صيغة التواريخ النصية (يوم/شهر أو شهر/يوم) ونظام تواريخ Excel
+    const dateOrder = detectDateOrder(
+  rows
+    .slice(headerRow + 1)
+    .flatMap((row) =>
+      row ? [row[idx.entry], idx.exit === -1 ? "" : row[idx.exit]] : []
+    )
+);
+      const is1904 = !!(workbook.Workbook as any)?.WBProps?.date1904;
+
       const result: Trip[] = [];
       let skippedDate = 0;
 
@@ -591,24 +704,35 @@ export default function TripsReportPage() {
         const vehicle = normalize(row[idx.vehicle]);
         if (!vehicle) continue;
 
-        const date = getDateKey(row[idx.entry]);
+const date = getDateKey(row[idx.entry], dateOrder, is1904);
 
+if (!date) {
+  skippedDate++;
+  continue;
+}
+
+// تاريخ الخروج، وإذا كان فارغًا أو غير مفهوم نرجع لتاريخ الدخول
+const exitDate =
+  (idx.exit === -1
+    ? null
+    : getDateKey(row[idx.exit], dateOrder, is1904)) ?? date;
         if (!date) {
           skippedDate++;
           continue;
         }
 
         result.push({
-          vehicle,
-          type: normalize(get(row, idx.type)),
-          region: normalize(row[idx.region]) || "بدون منطقة",
-          driver: normalize(get(row, idx.driver)),
-          shift: normalize(get(row, idx.shift)),
-          date,
-          loaded: toNumber(get(row, idx.loaded)),
-          empty: toNumber(get(row, idx.empty)),
-          net: toNumber(row[idx.net]),
-        });
+  vehicle,
+  type: normalize(get(row, idx.type)),
+  region: normalize(row[idx.region]) || "بدون منطقة",
+  driver: normalize(get(row, idx.driver)),
+  shift: normalize(get(row, idx.shift)),
+  date,
+  exitDate,
+  loaded: toNumber(get(row, idx.loaded)),
+  empty: toNumber(get(row, idx.empty)),
+  net: toNumber(row[idx.net]),
+});
       }
 
       if (result.length === 0) {
@@ -625,8 +749,10 @@ export default function TripsReportPage() {
       setPeriod({ from: dates[0], to: dates[dates.length - 1] });
 
       setTrips(result);
+
+      const uniqueDays = new Set(result.map((t) => t.date)).size;
       setMessage(
-        `تمت القراءة بنجاح: ${result.length} نقلة.${
+        `تمت القراءة بنجاح: ${result.length} نقلة في ${uniqueDays} يوم.${
           skippedDate > 0
             ? ` (تم تجاهل ${skippedDate} صف بتاريخ غير مفهوم)`
             : ""
@@ -780,9 +906,7 @@ export default function TripsReportPage() {
 
     ws.mergeCells(2, 1, 2, totalCols);
     const sub = ws.getCell(2, 1);
-    sub.value = period
-      ? `التاريخ : ${formatDate(period.from)}}`
-      : "";
+    sub.value = period ? `التاريخ : ${formatPeriod(period)}` : "";
     paint(sub, { bg: C.header, color: C.white, bold: true, size: 12 });
     ws.getRow(2).height = 24;
 
@@ -944,8 +1068,6 @@ export default function TripsReportPage() {
       numFmt: "0.0%",
     });
 
-
-
     /* ---------- تنزيل الملف ---------- */
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
@@ -962,132 +1084,349 @@ export default function TripsReportPage() {
     a.remove();
     URL.revokeObjectURL(url);
   }
-
-  /* --------------------------- تصدير PDF --------------------------- */
-
- async function handleExportPdf() {
-  if (weightGroups.length === 0) {
+async function handleExportDaily() {
+  if (dailyTable.rows.length === 0) {
     setError("لا توجد بيانات لتصديرها.");
     return;
   }
 
-  setPdfLoading(true);
+  const ExcelJS = (await import("exceljs")).default;
 
-  try {
-    const esc = (v: unknown) =>
-      String(v ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+  const C = {
+    navy: "FF1F3864",
+    header: "FF2F5597",
+    light: "FFDDEBF7",
+    band: "FFF5F7FA",
+    white: "FFFFFFFF",
+    orangeBg: "FFFCE4D6",
+    orangeFg: "FF9C4A00",
+    indigo: "FF3949AB",
+    border: "FFBFC5CE",
+    grayFg: "FF7F7F7F",
+  };
+  const thin = { style: "thin" as const, color: { argb: C.border } };
+  const border = { top: thin, left: thin, bottom: thin, right: thin };
+  const NUM = "#,##0.00";
 
-    const COL = {
-      navy: "#1F3864",
-      header: "#2F5597",
-      headerW: "#4472C4",
-      light: "#DDEBF7",
-      band: "#F5F7FA",
-      indigo: "#3949AB",
-      orangeBg: "#FCE4D6",
-      orangeFg: "#9C4A00",
-      border: "#BFC5CE",
+  const paint = (
+    cell: any,
+    o: {
+      bg?: string;
+      color?: string;
+      bold?: boolean;
+      size?: number;
+      numFmt?: string;
+    } = {}
+  ) => {
+    if (o.bg) {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: o.bg },
+      };
+    }
+    cell.font = {
+      name: "Calibri",
+      size: o.size ?? 11,
+      bold: o.bold ?? false,
+      color: { argb: o.color ?? "FF262626" },
     };
-
-    const pctColors = (pct: number | null): [string, string] => {
-      if (pct === null) return ["#EDEDED", "#7F7F7F"];
-      if (pct >= 100) return ["#C6EFCE", "#006100"];
-      if (pct >= 70) return ["#FFEB9C", "#7F6000"];
-      return ["#FFC7CE", "#9C0006"];
+    cell.alignment = {
+      horizontal: "center",
+      vertical: "middle",
+      wrapText: true,
+      readingOrder: "rtl",
     };
+    cell.border = border;
+    if (o.numFmt) cell.numFmt = o.numFmt;
+  };
 
-    // حجم الخط (مصغّر) - يتقلص تلقائيًا عند كثرة أعمدة النقلات
-    const fs = maxVehicleTrips > 14 ? 6.5 : maxVehicleTrips > 8 ? 7.5 : 9;
+  const { dates, rows, dayTotals, grand, grandTrips } = dailyTable;
 
-    const th = (text: string, cls = "") => `<th class="${cls}">${text}</th>`;
-    const td = (content: string, style = "", attrs = "") =>
-      `<td ${attrs} style="${style}">${content}</td>`;
+  const firstDayCol = 3;
+  const tripsCol = firstDayCol + dates.length;
+  const totalCol = tripsCol + 1;
 
-    /* ---------- رأس الجدول ---------- */
-    const head =
-      th("المنطقة") +
-      th("رقم الآلية") +
-      th("عدد النقلات") +
-      Array.from({ length: maxVehicleTrips }, (_, k) =>
-        th(`وزن النقلة ${k + 1}`, "w")
-      ).join("") +
-      th("مجموع أوزان الآلية") +
-      th("مجموع أوزان المنطقة") +
-      th("الهدف اليومي") +
-      th("نسبة تحقيق الهدف");
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "تقرير النقلات";
+  wb.created = new Date();
 
-    /* ---------- الصفوف (tbody لكل منطقة حتى لا تنقسم بين صفحتين) ---------- */
-    const body = weightGroups
-      .map((g, gi) => {
-        const bandBg = gi % 2 === 0 ? "#FFFFFF" : COL.band;
-        const [pBg, pFg] = pctColors(g.pct);
-        const span = `rowspan="${g.rows.length}"`;
+  const ws = wb.addWorksheet("مجموع الأوزان اليومي", {
+    views: [
+      {
+        rightToLeft: true,
+        showGridLines: false,
+        state: "frozen",
+        xSplit: 2,
+        ySplit: 5,
+      },
+    ],
+    pageSetup: {
+      orientation: "landscape",
+      paperSize: 9,
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+    },
+    properties: { tabColor: { argb: C.header } },
+  });
 
-        const rows = g.rows
-          .map((v, i) => {
-            let row = "<tr>";
+  ws.getColumn(1).width = 16;
+  ws.getColumn(2).width = 16;
+  for (let k = 0; k < dates.length; k++) {
+    ws.getColumn(firstDayCol + k).width = 13;
+  }
+  ws.getColumn(tripsCol).width = 12;
+  ws.getColumn(totalCol).width = 20;
 
-            if (i === 0) {
+  // العنوان
+  ws.mergeCells(1, 1, 1, totalCol);
+  const title = ws.getCell(1, 1);
+  title.value = "مجموع الأوزان اليومي لكل آلية";
+  paint(title, { bg: C.navy, color: C.white, bold: true, size: 18 });
+  ws.getRow(1).height = 36;
+
+  ws.mergeCells(2, 1, 2, totalCol);
+  const sub = ws.getCell(2, 1);
+  sub.value = period ? `التاريخ : ${formatPeriod(period)}` : "";
+  paint(sub, { bg: C.header, color: C.white, bold: true, size: 12 });
+  ws.getRow(2).height = 24;
+
+  ws.mergeCells(3, 1, 3, totalCol);
+  const summary = ws.getCell(3, 1);
+  summary.value = `عدد الآليات: ${rows.length}     |     عدد النقلات: ${fmt(
+    grandTrips
+  )}     |     إجمالي الأوزان: ${fmt(grand)}`;
+  paint(summary, { bg: C.light, color: C.navy, bold: true, size: 12 });
+  ws.getRow(3).height = 24;
+
+  ws.getRow(4).height = 8;
+
+  // صف العناوين
+  const headers = [
+    "رقم الآلية",
+    "نوع الآلية",
+    ...dates.map(formatDate),
+    "عدد النقلات",
+    "المجموع الكلي للآلية",
+  ];
+  headers.forEach((text, i) => {
+    const cell = ws.getCell(5, i + 1);
+    cell.value = text;
+    paint(cell, { bg: C.header, color: C.white, bold: true });
+  });
+  ws.getRow(5).height = 34;
+
+  // البيانات
+  let r = 6;
+  rows.forEach((row, ri) => {
+    const bandBg = ri % 2 === 0 ? C.white : C.band;
+    ws.getRow(r).height = 22;
+
+    const veh = ws.getCell(r, 1);
+    veh.value = row.vehicle;
+    paint(veh, { bg: C.light, color: C.navy, bold: true });
+
+    const type = ws.getCell(r, 2);
+    type.value = row.type;
+    paint(type, { bg: bandBg });
+
+    dates.forEach((d, k) => {
+      const c = ws.getCell(r, firstDayCol + k);
+      const v = row.days.get(d);
+      if (v !== undefined) {
+        c.value = v;
+        paint(c, { bg: bandBg, numFmt: NUM });
+      } else {
+        c.value = "—";
+        paint(c, { bg: bandBg, color: C.grayFg });
+      }
+    });
+
+    const cnt = ws.getCell(r, tripsCol);
+    cnt.value = row.trips;
+    paint(cnt, { bg: C.orangeBg, color: C.orangeFg, bold: true });
+
+    const tot = ws.getCell(r, totalCol);
+    tot.value = row.total;
+    paint(tot, { bg: C.indigo, color: C.white, bold: true, numFmt: NUM });
+
+    r++;
+  });
+
+  // صف الإجمالي
+  ws.getRow(r).height = 28;
+  const lbl = ws.getCell(r, 1);
+  lbl.value = "الإجمالي";
+  paint(lbl, { bg: C.navy, color: C.white, bold: true, size: 12 });
+  ws.mergeCells(r, 1, r, 2);
+
+  dates.forEach((d, k) => {
+    const c = ws.getCell(r, firstDayCol + k);
+    c.value = dayTotals.get(d) ?? 0;
+    paint(c, {
+      bg: C.navy,
+      color: C.white,
+      bold: true,
+      size: 12,
+      numFmt: NUM,
+    });
+  });
+
+  const tc = ws.getCell(r, tripsCol);
+  tc.value = grandTrips;
+  paint(tc, { bg: C.navy, color: C.white, bold: true, size: 12 });
+
+  const gt = ws.getCell(r, totalCol);
+  gt.value = grand;
+  paint(gt, {
+    bg: C.navy,
+    color: C.white,
+    bold: true,
+    size: 12,
+    numFmt: NUM,
+  });
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = period
+    ? `الأوزان_اليومية_${period.from}_${period.to}.xlsx`
+    : "الأوزان_اليومية.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+  /* --------------------------- تصدير PDF --------------------------- */
+
+  async function handleExportPdf() {
+    if (weightGroups.length === 0) {
+      setError("لا توجد بيانات لتصديرها.");
+      return;
+    }
+
+    setPdfLoading(true);
+
+    try {
+      const esc = (v: unknown) =>
+        String(v ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+
+      const COL = {
+        navy: "#1F3864",
+        header: "#2F5597",
+        headerW: "#4472C4",
+        light: "#DDEBF7",
+        band: "#F5F7FA",
+        indigo: "#3949AB",
+        orangeBg: "#FCE4D6",
+        orangeFg: "#9C4A00",
+        border: "#BFC5CE",
+      };
+
+      const pctColors = (pct: number | null): [string, string] => {
+        if (pct === null) return ["#EDEDED", "#7F7F7F"];
+        if (pct >= 100) return ["#C6EFCE", "#006100"];
+        if (pct >= 70) return ["#FFEB9C", "#7F6000"];
+        return ["#FFC7CE", "#9C0006"];
+      };
+
+      // حجم الخط (مصغّر) - يتقلص تلقائيًا عند كثرة أعمدة النقلات
+      const fs = maxVehicleTrips > 14 ? 6.5 : maxVehicleTrips > 8 ? 7.5 : 9;
+
+      const th = (text: string, cls = "") => `<th class="${cls}">${text}</th>`;
+      const td = (content: string, style = "", attrs = "") =>
+        `<td ${attrs} style="${style}">${content}</td>`;
+
+      /* ---------- رأس الجدول ---------- */
+      const head =
+        th("المنطقة") +
+        th("رقم الآلية") +
+        th("عدد النقلات") +
+        Array.from({ length: maxVehicleTrips }, (_, k) =>
+          th(`وزن النقلة ${k + 1}`, "w")
+        ).join("") +
+        th("مجموع أوزان الآلية") +
+        th("مجموع أوزان المنطقة") +
+        th("الهدف اليومي") +
+        th("نسبة تحقيق الهدف");
+
+      /* ---------- الصفوف (tbody لكل منطقة حتى لا تنقسم بين صفحتين) ---------- */
+      const body = weightGroups
+        .map((g, gi) => {
+          const bandBg = gi % 2 === 0 ? "#FFFFFF" : COL.band;
+          const [pBg, pFg] = pctColors(g.pct);
+          const span = `rowspan="${g.rows.length}"`;
+
+          const rows = g.rows
+            .map((v, i) => {
+              let row = "<tr>";
+
+              if (i === 0) {
+                row += td(
+                  esc(g.region),
+                  `background:${COL.light};color:${COL.navy};font-weight:700;text-align:right;font-size:${fs + 1}px`,
+                  span
+                );
+              }
+
+              row += td(esc(v.vehicle), `background:${bandBg};font-weight:700`);
               row += td(
-                esc(g.region),
-                `background:${COL.light};color:${COL.navy};font-weight:700;text-align:right;font-size:${fs + 1}px`,
-                span
+                String(v.weights.length),
+                `background:${COL.orangeBg};color:${COL.orangeFg};font-weight:700`
               );
-            }
 
-            row += td(esc(v.vehicle), `background:${bandBg};font-weight:700`);
-            row += td(
-              String(v.weights.length),
-              `background:${COL.orangeBg};color:${COL.orangeFg};font-weight:700`
-            );
+              for (let k = 0; k < maxVehicleTrips; k++) {
+                row +=
+                  v.weights[k] !== undefined
+                    ? td(fmt(v.weights[k]), `background:${bandBg}`)
+                    : td("—", `background:${bandBg};color:#9a9a9a`);
+              }
 
-            for (let k = 0; k < maxVehicleTrips; k++) {
-              row +=
-                v.weights[k] !== undefined
-                  ? td(fmt(v.weights[k]), `background:${bandBg}`)
-                  : td("—", `background:${bandBg};color:#9a9a9a`);
-            }
-
-            row += td(
-              fmt(v.total),
-              `background:${COL.light};color:${COL.navy};font-weight:700`
-            );
-
-            if (i === 0) {
               row += td(
-                fmt(g.total),
-                `background:${COL.indigo};color:#fff;font-weight:700;font-size:${fs + 1}px`,
-                span
+                fmt(v.total),
+                `background:${COL.light};color:${COL.navy};font-weight:700`
               );
-              row += td(
-                g.daily > 0
-                  ? fmt(g.daily)
-                  : `<span style="color:#9a9a9a">لم يُحدد</span>`,
-                `background:${bandBg};font-weight:700`,
-                span
-              );
-              row += td(
-                g.pct === null ? "—" : `${fmt(g.pct)}%`,
-                `background:${pBg};color:${pFg};font-weight:700;font-size:${fs + 1}px`,
-                span
-              );
-            }
 
-            return row + "</tr>";
-          })
-          .join("");
+              if (i === 0) {
+                row += td(
+                  fmt(g.total),
+                  `background:${COL.indigo};color:#fff;font-weight:700;font-size:${fs + 1}px`,
+                  span
+                );
+                row += td(
+                  g.daily > 0
+                    ? fmt(g.daily)
+                    : `<span style="color:#9a9a9a">لم يُحدد</span>`,
+                  `background:${bandBg};font-weight:700`,
+                  span
+                );
+                row += td(
+                  g.pct === null ? "—" : `${fmt(g.pct)}%`,
+                  `background:${pBg};color:${pFg};font-weight:700;font-size:${fs + 1}px`,
+                  span
+                );
+              }
 
-        return `<tbody class="grp">${rows}</tbody>`;
-      })
-      .join("");
+              return row + "</tr>";
+            })
+            .join("");
 
-    /* ---------- صف الإجمالي ---------- */
-    const [tBg, tFg] = pctColors(weightsOverall.pct);
-    const dark = `background:${COL.navy};color:#fff;font-weight:700;font-size:${fs + 1}px`;
-    const totalRow = `<tbody class="grp"><tr>
+          return `<tbody class="grp">${rows}</tbody>`;
+        })
+        .join("");
+
+      /* ---------- صف الإجمالي ---------- */
+      const [tBg, tFg] = pctColors(weightsOverall.pct);
+      const dark = `background:${COL.navy};color:#fff;font-weight:700;font-size:${fs + 1}px`;
+      const totalRow = `<tbody class="grp"><tr>
       ${td("الإجمالي", dark, `colspan="${3 + maxVehicleTrips}"`)}
       ${td(fmt(weightsOverall.total), dark, 'colspan="2"')}
       ${td(weightsOverall.target > 0 ? fmt(weightsOverall.target) : "—", dark)}
@@ -1097,14 +1436,11 @@ export default function TripsReportPage() {
       )}
     </tr></tbody>`;
 
-    const chip = (text: string, bg: string, fg: string) =>
-      `<span class="chip" style="background:${bg};color:${fg}">${text}</span>`;
+      const fileName = period
+        ? `أوزان_النقلات_${period.from}_${period.to}`
+        : "أوزان_النقلات";
 
-    const fileName = period
-      ? `أوزان_النقلات_${period.from}_${period.to}`
-      : "أوزان_النقلات";
-
-    const html = `<!DOCTYPE html>
+      const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
 <meta charset="utf-8" />
@@ -1157,16 +1493,11 @@ export default function TripsReportPage() {
   }
   tbody.grp { break-inside: avoid; page-break-inside: avoid; }
   tr { break-inside: avoid; page-break-inside: avoid; }
-  .legend { margin-top: 10px; font-size: 9px; font-weight: 700; color: ${COL.navy}; break-inside: avoid; }
-  .chip {
-    display: inline-block; font-weight: 700; font-size: 9px;
-    padding: 2px 6px; border: 1px solid ${COL.border}; margin-inline-start: 6px;
-  }
 </style>
 </head>
 <body>
   <div class="banner">تقرير الأوزان</div>
-  <div class="sub">${period ? `التاريخ : ${formatDate(period.from)}` : ""}</div>
+  <div class="sub">${period ? `التاريخ : ${formatPeriod(period)}` : ""}</div>
   <div class="sum">
     عدد الآليات: ${report.uniqueVehicles} &nbsp;|&nbsp;
     عدد النقلات: ${fmt(report.totalTrips)} &nbsp;|&nbsp;
@@ -1178,46 +1509,44 @@ export default function TripsReportPage() {
     ${body}
     ${totalRow}
   </table>
-
-  
 </body>
 </html>`;
 
-    /* ---------- الطباعة عبر iframe مخفي ---------- */
-    const iframe = document.createElement("iframe");
-    iframe.setAttribute("aria-hidden", "true");
-    iframe.style.cssText =
-      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
-    document.body.appendChild(iframe);
+      /* ---------- الطباعة عبر iframe مخفي ---------- */
+      const iframe = document.createElement("iframe");
+      iframe.setAttribute("aria-hidden", "true");
+      iframe.style.cssText =
+        "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+      document.body.appendChild(iframe);
 
-    const win = iframe.contentWindow!;
-    const doc = win.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
+      const win = iframe.contentWindow!;
+      const doc = win.document;
+      doc.open();
+      doc.write(html);
+      doc.close();
 
-    if (doc.fonts?.ready) await doc.fonts.ready;
-    await new Promise((r) => setTimeout(r, 250));
+      if (doc.fonts?.ready) await doc.fonts.ready;
+      await new Promise((r) => setTimeout(r, 250));
 
-    // اسم الملف الافتراضي في نافذة الحفظ يؤخذ من عنوان الصفحة
-    const prevTitle = document.title;
-    document.title = fileName;
+      // اسم الملف الافتراضي في نافذة الحفظ يؤخذ من عنوان الصفحة
+      const prevTitle = document.title;
+      document.title = fileName;
 
-    const cleanup = () => {
-      document.title = prevTitle;
-      setTimeout(() => iframe.remove(), 500);
-    };
-    win.onafterprint = cleanup;
+      const cleanup = () => {
+        document.title = prevTitle;
+        setTimeout(() => iframe.remove(), 500);
+      };
+      win.onafterprint = cleanup;
 
-    win.focus();
-    win.print();
-  } catch (err) {
-    console.error(err);
-    setError("تعذر إنشاء ملف PDF.");
-  } finally {
-    setPdfLoading(false);
+      win.focus();
+      win.print();
+    } catch (err) {
+      console.error(err);
+      setError("تعذر إنشاء ملف PDF.");
+    } finally {
+      setPdfLoading(false);
+    }
   }
-}
 
   /* ------------------------------ UI ------------------------------ */
 
@@ -1453,7 +1782,9 @@ export default function TripsReportPage() {
                     leftSection={<IconScale size={16} />}
                   >
                     أوزان النقلات لكل آلية
-                  </Tabs.Tab>
+                  </Tabs.Tab><Tabs.Tab value="daily" leftSection={<IconCalendarStats size={16} />}>
+  المجموع اليومي لكل آلية
+</Tabs.Tab>
                   <Tabs.Tab
                     value="regions"
                     leftSection={<IconMapPin size={16} />}
@@ -1503,7 +1834,7 @@ export default function TripsReportPage() {
                     </Group>
                   </Group>
 
-                  <ScrollArea >
+                  <ScrollArea>
                     <Table
                       withTableBorder
                       withColumnBorders
@@ -1657,7 +1988,89 @@ export default function TripsReportPage() {
                     </Table>
                   </ScrollArea>
                 </Tabs.Panel>
+{/* Daily totals per vehicle */}
+<Tabs.Panel value="daily" pt="md">
+  <Group justify="space-between" mb="sm">
+    <Text size="sm" c="dimmed">
+      مجموع أوزان كل آلية في كل يوم، وفي آخر عمود المجموع الكلي للآلية.
+    </Text>
+    <Button
+      variant="light"
+      color="green"
+      onClick={handleExportDaily}
+      leftSection={<IconDownload size={18} />}
+    >
+      تصدير Excel
+    </Button>
+  </Group>
 
+  <ScrollArea>
+    <Table
+      withTableBorder
+      withColumnBorders
+      withRowBorders
+      striped
+      highlightOnHover
+      styles={{
+        th: { textAlign: "center", whiteSpace: "nowrap" },
+        td: { textAlign: "center", whiteSpace: "nowrap" },
+      }}
+    >
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th style={{ textAlign: "right" }}>رقم الآلية</Table.Th>
+          <Table.Th>نوع الآلية</Table.Th>
+          {dailyTable.dates.map((d) => (
+            <Table.Th key={d}>{formatDate(d)}</Table.Th>
+          ))}
+          <Table.Th>عدد النقلات</Table.Th>
+          <Table.Th>المجموع الكلي للآلية</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
+        {dailyTable.rows.map((row) => (
+          <Table.Tr key={row.vehicle}>
+            <Table.Td style={{ textAlign: "right" }}>
+              <Text fw={600} size="sm">
+                {row.vehicle}
+              </Text>
+            </Table.Td>
+            <Table.Td>{row.type}</Table.Td>
+            {dailyTable.dates.map((d) => (
+              <Table.Td key={`${row.vehicle}-${d}`}>
+                {row.days.has(d) ? fmt(row.days.get(d)!) : "—"}
+              </Table.Td>
+            ))}
+            <Table.Td>
+              <Badge color="orange" variant="light">
+                {row.trips}
+              </Badge>
+            </Table.Td>
+            <Table.Td>
+              <Badge color="indigo" variant="filled">
+                {fmt(row.total)}
+              </Badge>
+            </Table.Td>
+          </Table.Tr>
+        ))}
+        {dailyTable.rows.length > 0 && (
+          <Table.Tr style={{ fontWeight: 700 }}>
+            <Table.Td colSpan={2} style={{ textAlign: "right" }}>
+              الإجمالي
+            </Table.Td>
+            {dailyTable.dates.map((d) => (
+              <Table.Td key={`total-${d}`}>
+                {fmt(dailyTable.dayTotals.get(d) ?? 0)}
+              </Table.Td>
+            ))}
+            <Table.Td>{fmt(dailyTable.grandTrips)}</Table.Td>
+            <Table.Td>{fmt(dailyTable.grand)}</Table.Td>
+          </Table.Tr>
+        )}
+      </Table.Tbody>
+    </Table>
+  </ScrollArea>
+</Tabs.Panel>
                 {/* Regions */}
                 <Tabs.Panel value="regions" pt="md">
                   <ScrollArea>
@@ -1717,7 +2130,7 @@ export default function TripsReportPage() {
 
                 {/* Vehicles */}
                 <Tabs.Panel value="vehicles" pt="md">
-                  <ScrollArea >
+                  <ScrollArea>
                     <Table
                       striped
                       highlightOnHover
